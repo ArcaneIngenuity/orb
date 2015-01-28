@@ -354,13 +354,13 @@ void Renderer_clear()
 	glClear(GL_COLOR_BUFFER_BIT);
 }
 
-void Renderer_instance(GLuint program, GLuint vao, const GLfloat * matVP, const GLvoid * instanceData, const GLvoid * indices, GLsizei elementCount, GLsizei instanceCount) //instanceCount=3, instanceData=(const GLvoid *) model->transformMatrices,vao=this->vao, elementCount=6, indices=this->indices
+void Renderer_instance(Program * program, GLuint vao, const GLfloat * matVP, const GLvoid * instanceData, const GLvoid * indices, GLsizei elementCount, GLsizei instanceCount) //instanceCount=3, instanceData=(const GLvoid *) model->transformMatrices,vao=this->vao, elementCount=6, indices=this->indices
 {
-	glUseProgram(program);
+	glUseProgram(program->id);
 	
 	//prep uniforms...(general to all instances)
 	//...view-projection matrix (general to all instancing approaches)
-	GLint vpLoc = glGetUniformLocation(program, "vp");
+	GLint vpLoc = glGetUniformLocation(program->id, "vp");
 	glUniformMatrix4fv(vpLoc, 1, GL_FALSE, (GLfloat *)matVP);
 	
 	//upload instance data
@@ -371,7 +371,9 @@ void Renderer_instance(GLuint program, GLuint vao, const GLfloat * matVP, const 
 	
 	//bind vertex array & draw
 	glBindVertexArray(vao);
-	glDrawElementsInstanced(GL_TRIANGLES, elementCount, GL_UNSIGNED_SHORT, indices, instanceCount); //TODO optimise for character parts(!) to only use GL_UNSIGNED_BYTE if possible, i.e. 0-255 vertices - could be faster, see http://www.songho.ca/opengl/gl_vertexarray.html, search on word "maximum"
+	glDrawElementsInstanced(program->renderMode, elementCount, GL_UNSIGNED_SHORT, indices, instanceCount); //TODO optimise for character parts(!) to only use GL_UNSIGNED_BYTE if possible, i.e. 0-255 vertices - could be faster, see http://www.songho.ca/opengl/gl_vertexarray.html, search on word "maximum"
+	//glDrawElementsInstanced(GL_TRIANGLES, elementCount, GL_UNSIGNED_SHORT, indices, instanceCount); //TODO optimise for character parts(!) to only use GL_UNSIGNED_BYTE if possible, i.e. 0-255 vertices - could be faster, see http://www.songho.ca/opengl/gl_vertexarray.html, search on word "maximum"
+	//glDrawElementsInstanced(GL_LINE_STRIP, elementCount, GL_UNSIGNED_SHORT, indices, instanceCount); //TODO optimise for character parts(!) to only use GL_UNSIGNED_BYTE if possible, i.e. 0-255 vertices - could be faster, see http://www.songho.ca/opengl/gl_vertexarray.html, search on word "maximum"
 	glBindVertexArray(0);
 }
 

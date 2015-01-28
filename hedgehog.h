@@ -86,12 +86,9 @@ typedef struct Program
 {
 	//contains information on a single shader pass
 	//batching & instancing require *exactly* the same state per instance - this includes uniforms & attributes
-	
-	GLuint id;
-	
-	//support all possible attributes and use only those necessary (composition).
 	char * name;
-
+	GLuint id;
+	GLuint renderMode; //GL_TRIANGLES or whatever
 } Program;
 
 //for multipass rendering.
@@ -189,7 +186,7 @@ void Shader_construct(Shader * this);
 void Program_construct(Program * this, GLuint vertex_shader, GLuint fragment_shader); //we pass in a reference to a position in an already-defined array. This lets us keep our structures local.
 
 void Renderer_clear();
-void Renderer_instance(GLuint program, GLuint vao, const GLfloat * matVP, const GLvoid * instanceData, const GLvoid * indices, int elementCount, int instanceCount);
+void Renderer_instance(Program * program, GLuint vao, const GLfloat * matVP, const GLvoid * instanceData, const GLvoid * indices, int elementCount, int instanceCount);
 
 
 //void Matrix_setProjectionPerspective(mat4x4 matrix, float near, float far, float top, float right);
