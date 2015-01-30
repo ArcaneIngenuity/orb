@@ -7,9 +7,9 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include "../src/stb_image_aug.h"
 #include "linmath.h"
-#include "loader.h"
 #include "../../curtmap/src/curtmap.h"
 
 #define HH_SHADERS_MAX 64
@@ -53,6 +53,18 @@ typedef struct Mesh
 	GLuint sampler_state;
 } Mesh;
 
+typedef struct Renderable
+{
+	Mesh * mesh;
+	Texture * texture; //TODO later this should go on Material, which goes on in here?
+	
+	//Material materials[];
+	//A Material consists of:
+	//-a ShaderPath/Pipe, which consists of multiple shader Programs running in sequence
+	//-the parameters needed to populate that pipe at each stage
+
+} Renderable;
+
 //both ShaderComponents will have these (duplicated) -- however we will check in against out and type against type
 typedef struct ShaderVariable
 {
@@ -92,10 +104,15 @@ typedef struct Program
 } Program;
 
 //for multipass rendering.
-typedef struct ProgramSeries
+typedef struct ProgramPath
 {
+	//a series of programs, each with a defined input and output interface
+	//interfaces must be fulfilled on input end.
+	//as for output end, we must put that out to some render target.
 
-} ProgramSeries;
+	//some inputs come from previous Programs; others from elsewhere. We need to figure out how that should be done.
+
+} ProgramPath;
 
 typedef struct Material
 {
@@ -190,6 +207,8 @@ void Renderer_instance(Program * program, GLuint vao, const GLfloat * matVP, con
 
 
 //void Matrix_setProjectionPerspective(mat4x4 matrix, float near, float far, float top, float right);
+
+char* Text_load(char* filename);
 
 void GLFW_errorCallback(int error, const char * description);
 bool GLTool_isExtensionSupported(const char * extension); //redundant, see GLFW

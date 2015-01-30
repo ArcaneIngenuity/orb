@@ -367,6 +367,13 @@ void Renderer_instance(Program * program, GLuint vao, const GLfloat * matVP, con
 	glBindBuffer(GL_ARRAY_BUFFER, 1); //TODO use const instead of literal buffer name
 	glBufferData(GL_ARRAY_BUFFER, sizeof(mat4x4) * instanceCount, instanceData, GL_DYNAMIC_DRAW); //GL_STREAM_DRAW?
 	
+	//glBufferSubData(GL_ARRAY_BUFFER,
+	//TODO consider storing 2 buffers for each dynamic object - from https://www.opengl.org/sdk/docs/man3/xhtml/glBufferSubData.xml
+	//"Consider using multiple buffer objects to avoid stalling the rendering pipeline during data store updates.
+	//If any rendering in the pipeline makes reference to data in the buffer object being updated by glBufferSubData, especially
+	//from the specific region being updated, that rendering must drain from the pipeline before the data store can be updated."
+	
+	
 	//TODO the above is per-instance model matrix. We additionally need per-instance ID so we don't have to repeat ID ad nauseam as a vertex attribute.
 	
 	//bind vertex array & draw
@@ -424,5 +431,39 @@ bool isExtensionSupported(const char * extension)
 	return false;
 }
 
+char* Text_load(char* filename)
+{
+	//should be portable - http://stackoverflow.com/questions/14002954/c-programming-how-to-read-the-whole-file-contents-into-a-buffer
+	FILE *file = fopen(filename, "rb"); //open for reading
+	fseek(file, 0, SEEK_END); //seek to end
+	long fileSize = ftell(file); //get current position in stream
+	fseek(file, 0, SEEK_SET); //seek to start
+	printf("abc");
+	printf("? %ld", fileSize);
 
+	char *str = malloc(fileSize + 1); //allocate enough room for file + null terminator (\0)
+
+	if (str != NULL) //if allocation succeeded
+	{
+		printf("fileSize...%ld\n", fileSize);
+		size_t freadResult;
+		freadResult = fread(str, 1, fileSize, file); //read elements as one byte each, into string, from file. 
+		printf("freadResult...%d\n", freadResult);
+		
+		if (freadResult != fileSize)
+		{
+			fputs ("Reading error", stderr);
+			//exit (3);
+			
+			str = NULL;
+			return str;
+		}
+		
+		fclose(file);
+
+		str[fileSize] = 0;//'\0'; //last element is null termination.
+	}
+
+	return str;
+}
 
