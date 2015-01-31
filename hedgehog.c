@@ -304,6 +304,61 @@ void Shader_construct(Shader * this)//, const char* shader_str, GLenum shader_ty
 		printf("glCompileShader() success.\n");
 	}
 }
+/*
+//search on "layout qualifiers" here: https://www.opengl.org/registry/doc/GLSLangSpec.3.30.6.pdf
+void Shader_validateAttributeInterface(Shader * out, Shader * in)
+{
+	Attribute * attributeIn, attributeOut;
+	char * nameIn;
+
+	//check in array order of the in Shader's attributes map, since it's the one that must get the right inputs
+	for (int i = 0; i < in->attributesByName.count; i++)
+	{
+		nameIn = in->attributesByName.keys[i];
+		attributeIn = in->attributesByName.values[i];
+		
+		if (attributeIn->polarity == ATTRIBUTE_QUALIFIER_IN ||
+			attributeIn->polarity == ATTRIBUTE_QUALIFIER_INOUT) //and in has the expected polarity
+		{
+			attributeOut = get(out->attributesByName, nameIn);	
+			if (attributeOut != NULL) //same name exists in the out Shader
+			{
+				if (attributeOut->polarity == ATTRIBUTE_QUALIFIER_OUT ||
+					attributeOut->polarity == ATTRIBUTE_QUALIFIER_INOUT) //and out has the expected polarity
+				{
+					if (attributeOut->typeBase == attributeIn->typeBase) //VEC, MAT, etc.
+				}
+				
+			}
+		
+		}
+
+		
+	}
+}
+*/
+//to deal with dependency fullfilment: sometimes the result of some step a will not only input to b, but also to c.
+//since b is earlier, we must resolve c early enough to input to b.
+//so, since all we get in is a dependency graph, we must break this into phases a,b,c etc. with everything happening early enough to influence dependent phases.
+//the only logical way to do this is to walk back from root, adding requisite shaders to preceding phases, and if thereafter we find they are requisite to an earlier phase, change the phase they occur in.
+//Phases as discrete objects will help visualisation once we get the shader builder going. we can hit a button to order into phases and see what this looks like. 
+
+
+//Phases are basically "parallel" runs of Program.
+//But consider this: If a group of functionality, none of which is dependent on any of the rest, is run together, can't we do this all as one program?
+//a dynamically built shader program. Combine everything needed for that phase into one vs, one gs, one fs and be done.
+
+//then we can simply keep a map of shader function strings? with tokens that get replaced as appropriate?
+
+//however, some results can be immediately calculated, i.e. in the current phase.
+//while other results have to be produced by a full shader pass.
+
+//what is the logical distinction between these?... to require a full pass, one or more of these cases must apply:
+//-must be rendered / seen (final result)
+//-must be interacted with on CPU e.g. id buffer (need render buffer for user feedback)
+//-must be interpolated in terms of fragments / surfaces e.g. normal buffer
+//-need depth or other internal info (can only be gotten from GL internals by a fullscreen rasterisation) PRE-CACHED rather than accessed here and there
+
 
 //------------------Program------------------//
 
@@ -314,28 +369,23 @@ void Program_construct(Program * this, GLuint vertex_shader, GLuint fragment_sha
 	// Attach the shaders to the program
 	glAttachShader(id, vertex_shader);
 	glAttachShader(id, fragment_shader);
-	//TODO check for errors
-	
 	printf("gl error %i\n", glGetError());
-	// Link the program
+	
+	// Link program and check success
 	glLinkProgram(id);
-	
-	
 	if (!linkProgramSuccess(id))
 	{
-	printf("gln error %i\n", glGetError());
 		GLint infoLogLength;
 		glGetProgramiv(id, GL_INFO_LOG_LENGTH, &infoLogLength);
 		
 		GLchar* infoLog[infoLogLength + 1];
 		glGetProgramInfoLog(id, infoLogLength + 1, NULL, *infoLog);
 		printf("glLinkProgram() failed: %s\n", infoLog);
-		
-		//TODO encapsulate the below in a exitOnFatalError() that can be used anywhere.
-		//TODO set up error codes for untimely exit.
+		printf("gl error %i\n", glGetError());
 		//glfwTerminate();
 		//exit(-1);
 		
+		//TODO do these atexit
 		//Delete shaders; won't take effect unless they are detached first.
 		glDetachShader(id, vertex_shader);
 		glDetachShader(id, fragment_shader);
@@ -344,9 +394,6 @@ void Program_construct(Program * this, GLuint vertex_shader, GLuint fragment_sha
 	}
 	else
 		printf("glLinkProgram() success.\n");
-		
-printf("gl error %i\n", glGetError());
-	//return program;
 }
 
 void Renderer_clear()
@@ -354,7 +401,7 @@ void Renderer_clear()
 	glClear(GL_COLOR_BUFFER_BIT);
 }
 
-void Renderer_instance(Program * program, GLuint vao, const GLfloat * matVP, const GLvoid * instanceData, const GLvoid * indices, GLsizei elementCount, GLsizei instanceCount) //instanceCount=3, instanceData=(const GLvoid *) model->transformMatrices,vao=this->vao, elementCount=6, indices=this->indices
+void Renderer_instance(Program * program, GLuint vao, const GLfloat * matVP, const GLvoid * indices, int elementCount, int instanceCount, const GLvoid * instanceData)
 {
 	glUseProgram(program->id);
 	
@@ -378,33 +425,32 @@ void Renderer_instance(Program * program, GLuint vao, const GLfloat * matVP, con
 	
 	//bind vertex array & draw
 	glBindVertexArray(vao);
-	glDrawElementsInstanced(program->renderMode, elementCount, GL_UNSIGNED_SHORT, indices, instanceCount); //TODO optimise for character parts(!) to only use GL_UNSIGNED_BYTE if possible, i.e. 0-255 vertices - could be faster, see http://www.songho.ca/opengl/gl_vertexarray.html, search on word "maximum"
-	//glDrawElementsInstanced(GL_TRIANGLES, elementCount, GL_UNSIGNED_SHORT, indices, instanceCount); //TODO optimise for character parts(!) to only use GL_UNSIGNED_BYTE if possible, i.e. 0-255 vertices - could be faster, see http://www.songho.ca/opengl/gl_vertexarray.html, search on word "maximum"
-	//glDrawElementsInstanced(GL_LINE_STRIP, elementCount, GL_UNSIGNED_SHORT, indices, instanceCount); //TODO optimise for character parts(!) to only use GL_UNSIGNED_BYTE if possible, i.e. 0-255 vertices - could be faster, see http://www.songho.ca/opengl/gl_vertexarray.html, search on word "maximum"
+	glDrawElementsInstanced(program->topology, elementCount, GL_UNSIGNED_SHORT, indices, instanceCount);
+	//TODO optimise draw call by reducing index type for character parts(!) to only use GL_UNSIGNED_BYTE if possible,
+	//i.e. 0-255 vertices - could be faster, see http://www.songho.ca/opengl/gl_vertexarray.html, search on "maximum".
+
 	glBindVertexArray(0);
 }
 
-//TODO remove - Renderer_instance is enough?
 //TODO instead of matM, a void * arg pointing to wherever all the uniforms for this object lie. same for attributes?
-/*
-void Renderer_single(GLuint program, GLuint vao, GLfloat * matVP, GLfloat * matM, const GLvoid * indices, int elementCount)
+void Renderer_single(Program * program, GLuint vao, const GLfloat * matVP, const GLvoid * indices, int elementCount, const GLfloat * matM)
 {
-	glUseProgram(program);
+	glUseProgram(program->id);
 	
 	//prep uniforms...
 	//...view-projection matrix
-	GLint vpLoc = glGetUniformLocation(program, "vp");
+	GLint vpLoc = glGetUniformLocation(program->id, "vp");
 	glUniformMatrix4fv(vpLoc, 1, GL_FALSE, (GLfloat *)matVP);
 	//...model matrix
-	GLint mLoc = glGetUniformLocation(program, "m");
+	GLint mLoc = glGetUniformLocation(program->id, "m");
 	glUniformMatrix4fv(mLoc, 1, GL_FALSE, (GLfloat *)matM);
 
 	//bind vertex array & draw
 	glBindVertexArray(vao);
-	glDrawElements(GL_TRIANGLES, elementCount, GL_UNSIGNED_SHORT, this->indices);
+	glDrawElements(GL_TRIANGLES, elementCount, GL_UNSIGNED_SHORT, indices);
 	glBindVertexArray(0);
 }
-*/
+
 
 //------------------TOOLS------------------//
 

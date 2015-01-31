@@ -20,20 +20,19 @@
 typedef struct Texture
 {
 	 /** OpenGL's texture ID as gotten from glGenTextures(). */
-    GLuint id;// = -1;
-    
+    GLuint id;
+	
     /** The texture unit ordinal (NOT internal OpenGL code e.g. GL_TEXTURE0) currently in use for this texture. */
-    //TODO may remove this as it may be better kept out at the view level?
-    int unit;// = -1;
+    GLuint unit;
     
     /** The byte buffer representing the decoded image data. */
 	unsigned char * data;
     
     /** Texture width. */
-    int width;// = -1;
+    int width;
     
     /** Texture height. */
-    int height;// = -1;
+    int height;
 	
 	/** Texture components / channels. */
 	int components;
@@ -41,6 +40,8 @@ typedef struct Texture
 
 typedef struct Mesh
 {
+	GLuint topology; //GL_TRIANGLES or whatever (see also Program)
+
 	GLushort index[180 * 180 * 4 * 3]; // DEV for now, make it the max size of a chunk! [TILES_ACROSS * TILES_ACROSS * TRIANGLES_PER_TILE * 3];
  	//GLushort id;
 	GLfloat position[181*181*2*3]; //values per short = 2^16
@@ -50,9 +51,10 @@ typedef struct Mesh
 	GLsizei positionCount;
 	
 	GLuint vao;
-	GLuint sampler_state;
+	GLuint sampler;
 } Mesh;
 
+//Materials are either treated explicitly or simply as the input interface + matching renderable information for a given ProgramPath
 typedef struct Renderable
 {
 	Mesh * mesh;
@@ -63,6 +65,8 @@ typedef struct Renderable
 	//-a ShaderPath/Pipe, which consists of multiple shader Programs running in sequence
 	//-the parameters needed to populate that pipe at each stage
 
+	
+	GLuint positionBuffer; //HACK, should be in DynamicModel
 } Renderable;
 
 //both ShaderComponents will have these (duplicated) -- however we will check in against out and type against type
@@ -84,8 +88,24 @@ typedef struct Shader
 	GLuint id;
 	GLenum type; //(NOPE!) SHADER_VERTEX, _FRAGMENT, _GEOMETRY, _TESSELATION_CONTROL, _TESSELATION_EVALULATION
 	const char * source;
+	
+	//inputs:
+	CurtMap attributesByName;
+	CurtMap uniformsByName;
+	
+	//shader version
 } Shader;
 
+//NB this is only needed once we get to the stage where we determine if we can compact the pipeline more, since it will be built of functions
+typedef struct ShaderFunction
+{
+	//arguments
+	
+	//return value
+
+} ShaderFunction;
+
+/*
 //joins one shader's input to another's output... if appropriate
 typedef struct ShaderPipe
 {
@@ -93,26 +113,68 @@ typedef struct ShaderPipe
 	ShaderVariable to;
 	unsigned char status; //fixed / broken / warning
 } ShaderPipe;
+*/
+
+typedef struct Attribute
+{
+	char name[8];
+	char type[8];
+	char typeBase[8]; //vec, mat or whatever
+	char typeNumeric[8]; //float, int or whatever
+	int components; //count
+	int elements; //count of array size
+	
+	//qualifiers
+	bool polarity; //in/out/inout
+	GLuint location; //layout, e.g. layout(location = 3)
+	GLuint index; //layout, e.g. layout(location = 3, index = 1) UNUSED
+} Attribute;
+
+typedef struct Uniform
+{
+	char name[8];
+	char type[8];
+	char typeBase[8]; //vec, mat or whatever
+	char typeNumeric[8]; //float, int or whatever
+	int components; //count
+	int elements; //count of array size
+	//qualifiers
+	
+	bool isTexture; //some special calls for textures: tex and sampler. TODO actually, this comes from reading the type
+} Uniform;
 
 typedef struct Program
 {
 	//contains information on a single shader pass
 	//batching & instancing require *exactly* the same state per instance - this includes uniforms & attributes
 	char * name;
+	//char * version (copied from shaders' version, or later used to dictate this)
+	
 	GLuint id;
-	GLuint renderMode; //GL_TRIANGLES or whatever
+	GLuint topology; //GL_TRIANGLES or whatever (see also Mesh)
+	
+	Shader vertex;
+	Shader geometry;
+	Shader fragment;
+	
+	//inputs: as vertex shader's inputs?
+
+	//output (frame or render) buffer
 } Program;
 
-//for multipass rendering.
-typedef struct ProgramPath
+
+typedef struct RenderPath
 {
-	//a series of programs, each with a defined input and output interface
+	//Tree * rootProgram; //we work backwards from the root, fulfilling each set of input dependencies till we reach the root and can conclude.
+	
+	//for multipass rendering.
+	//a tree of programs, each with a defined input and output interface, that lead to a single program producing a final result
 	//interfaces must be fulfilled on input end.
 	//as for output end, we must put that out to some render target.
 
 	//some inputs come from previous Programs; others from elsewhere. We need to figure out how that should be done.
 
-} ProgramPath;
+} RenderPath;
 
 typedef struct Material
 {
@@ -171,11 +233,8 @@ typedef struct Hedgehog
 	CurtMap shadersByName;
 	CurtMap texturesByName;
 	CurtMap materialsByName;
-
-	//current - necessary?
-	//maybe if we wrap OpenGL call to say, Program_makeCurrent()
-	//Program program;
 	
+	CurtMap renderPathsByName;
 } Hedgehog;
 const struct Hedgehog hedgehogEmpty;
 
@@ -203,7 +262,8 @@ void Shader_construct(Shader * this);
 void Program_construct(Program * this, GLuint vertex_shader, GLuint fragment_shader); //we pass in a reference to a position in an already-defined array. This lets us keep our structures local.
 
 void Renderer_clear();
-void Renderer_instance(Program * program, GLuint vao, const GLfloat * matVP, const GLvoid * instanceData, const GLvoid * indices, int elementCount, int instanceCount);
+void Renderer_instance(Program * program, GLuint vao, const GLfloat * matVP, const GLvoid * indices, int elementCount, int instanceCount, const GLvoid * instanceData);
+void Renderer_single(Program * program, GLuint vao, const GLfloat * matVP, const GLvoid * indices, int elementCount, const GLfloat * matM);
 
 
 //void Matrix_setProjectionPerspective(mat4x4 matrix, float near, float far, float top, float right);
