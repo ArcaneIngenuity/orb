@@ -45,7 +45,7 @@ typedef struct Mesh
 	GLushort index[180 * 180 * 4 * 3]; // DEV for now, make it the max size of a chunk! [TILES_ACROSS * TILES_ACROSS * TRIANGLES_PER_TILE * 3];
  	//GLushort id;
 	GLfloat position[181*181*2*3]; //values per short = 2^16
-	GLfloat textureCoordinate[181*181*2*3]; //values per short = 2^16
+	GLfloat texcoord[181*181*2*3]; //values per short = 2^16
 	
 	GLsizei indexCount;
 	GLsizei positionCount;
@@ -53,6 +53,15 @@ typedef struct Mesh
 	GLuint vao;
 	GLuint sampler;
 } Mesh;
+
+
+typedef struct MeshInstances
+{
+	Mesh * mesh;
+	GLsizei count;
+	GLuint buffer;
+	const GLvoid * data;
+} MeshInstances;
 
 //Materials are either treated explicitly or simply as the input interface + matching renderable information for a given ProgramPath
 typedef struct Renderable
@@ -67,6 +76,7 @@ typedef struct Renderable
 
 	
 	GLuint positionBuffer; //HACK, should be in DynamicModel
+	GLuint texcoordBuffer; //HACK, should be in DynamicModel
 } Renderable;
 
 //both ShaderComponents will have these (duplicated) -- however we will check in against out and type against type
@@ -262,7 +272,8 @@ void Shader_construct(Shader * this);
 void Program_construct(Program * this, GLuint vertex_shader, GLuint fragment_shader); //we pass in a reference to a position in an already-defined array. This lets us keep our structures local.
 
 void Renderer_clear();
-void Renderer_instance(Program * program, GLuint vao, const GLfloat * matVP, const GLvoid * indices, int elementCount, int instanceCount, const GLvoid * instanceData);
+//void Renderer_instance(Program * program, GLuint vao, const GLfloat * matVP, const GLvoid * indices, int elementCount, int instanceCount, const GLvoid * instanceData);
+void Renderer_instance(Program * program, MeshInstances * meshInstances, const GLfloat * matVP);
 void Renderer_single(Program * program, GLuint vao, const GLfloat * matVP, const GLvoid * indices, int elementCount, const GLfloat * matM);
 
 

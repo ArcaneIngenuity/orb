@@ -243,8 +243,7 @@ GLuint GLBuffer_create(
     glGenBuffers(1, &buffer);
     glBindBuffer(target, buffer);
     glBufferData(target, size, data, usage);
-	//glBindBuffer(target, 0);
-	printf("buffer id %i", buffer);
+	printf("buffer id %i\n", buffer);
     return buffer;
 }
 
@@ -401,19 +400,23 @@ void Renderer_clear()
 	glClear(GL_COLOR_BUFFER_BIT);
 }
 
-void Renderer_instance(Program * program, GLuint vao, const GLfloat * matVP, const GLvoid * indices, int elementCount, int instanceCount, const GLvoid * instanceData)
+void Renderer_instance(Program * program, MeshInstances * meshInstances, const GLfloat * matVP)//GLuint vao, const GLfloat * matVP, const GLvoid * indices, int elementCount, int instanceCount, const GLvoid * instanceData)
 {
+	printf(".OPENGL ERROR %i\n", glGetError());
 	glUseProgram(program->id);
-	
+	Mesh * mesh = meshInstances->mesh;
+	glBindVertexArray(mesh->vao);
+	//printf("=OPENGL ERROR %i\n", glGetError());
 	//prep uniforms...(general to all instances)
 	//...view-projection matrix (general to all instancing approaches)
 	GLint vpLoc = glGetUniformLocation(program->id, "vp");
 	glUniformMatrix4fv(vpLoc, 1, GL_FALSE, (GLfloat *)matVP);
-	
+	//printf("-OPENGL ERROR %i\n", glGetError());
 	//upload instance data
-	glBindBuffer(GL_ARRAY_BUFFER, 1); //TODO use const instead of literal buffer name
-	glBufferData(GL_ARRAY_BUFFER, sizeof(mat4x4) * instanceCount, instanceData, GL_DYNAMIC_DRAW); //GL_STREAM_DRAW?
 	
+	glBindBuffer(GL_ARRAY_BUFFER, meshInstances->buffer); //TODO use const instead of literal buffer name
+	glBufferData(GL_ARRAY_BUFFER, sizeof(mat4x4) * meshInstances->count, meshInstances->data, GL_DYNAMIC_DRAW); //GL_STREAM_DRAW?
+	//printf("-OPENGL ERROR %i\n", glGetError());
 	//glBufferSubData(GL_ARRAY_BUFFER,
 	//TODO consider storing 2 buffers for each dynamic object - from https://www.opengl.org/sdk/docs/man3/xhtml/glBufferSubData.xml
 	//"Consider using multiple buffer objects to avoid stalling the rendering pipeline during data store updates.
@@ -424,12 +427,17 @@ void Renderer_instance(Program * program, GLuint vao, const GLfloat * matVP, con
 	//TODO the above is per-instance model matrix. We additionally need per-instance ID so we don't have to repeat ID ad nauseam as a vertex attribute.
 	
 	//bind vertex array & draw
-	glBindVertexArray(vao);
-	glDrawElementsInstanced(program->topology, elementCount, GL_UNSIGNED_SHORT, indices, instanceCount);
+	
+	//printf("-OPENGL ERROR %i\n", glGetError());
+	printf("?? %d %d %d", program->topology == GL_TRIANGLES, mesh->indexCount, meshInstances->count);
+	glDrawElementsInstanced(program->topology, mesh->indexCount, GL_UNSIGNED_SHORT, mesh->index, meshInstances->count);
 	//TODO optimise draw call by reducing index type for character parts(!) to only use GL_UNSIGNED_BYTE if possible,
 	//i.e. 0-255 vertices - could be faster, see http://www.songho.ca/opengl/gl_vertexarray.html, search on "maximum".
-
+	printf("-OPENGL ERROR %i\n", glGetError());
 	glBindVertexArray(0);
+	
+	glUseProgram(0);
+	//printf("+OPENGL ERROR %i\n", glGetError());
 }
 
 //TODO instead of matM, a void * arg pointing to wherever all the uniforms for this object lie. same for attributes?
