@@ -397,52 +397,57 @@ void Program_construct(Program * this, GLuint vertex_shader, GLuint fragment_sha
 
 void Renderer_clear()
 {
-	//glClear(GL_COLOR_BUFFER_BIT);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
-void Renderer_instance(Program * program, MeshInstances * meshInstances, const GLfloat * matVP)//GLuint vao, const GLfloat * matVP, const GLvoid * indices, int elementCount, int instanceCount, const GLvoid * instanceData)
+void Renderer_clearColor()
 {
-	printf(".OPENGL ERROR %i\n", glGetError());
-	glUseProgram(program->id);
+	 glClear(GL_COLOR_BUFFER_BIT);
+}
+
+void Renderer_clearDepth()
+{
+	 glClear(GL_DEPTH_BUFFER_BIT);
+}
+
+void Renderer_instance(Program * program, MeshInstances * meshInstances, const GLfloat * matVP)
+{
 	Mesh * mesh = meshInstances->mesh;
+
+	glUseProgram(program->id);
 	glBindVertexArray(mesh->vao);
-	//
+	
 	//prep uniforms...(general to all instances)
 	//...view-projection matrix (general to all instancing approaches)
 	GLint vpLoc = glGetUniformLocation(program->id, "vp");
 	glUniformMatrix4fv(vpLoc, 1, GL_FALSE, (GLfloat *)matVP);
-	printf("=OPENGL ERROR %i\n", glGetError());
-	//upload instance data
 	
+	//upload instance data
 	glBindBuffer(GL_ARRAY_BUFFER, meshInstances->buffer); //TODO use const instead of literal buffer name
-	glBufferData(GL_ARRAY_BUFFER, sizeof(mat4x4) * meshInstances->count, meshInstances->data, GL_DYNAMIC_DRAW); //GL_STREAM_DRAW?
-	printf("/OPENGL ERROR %i\n", glGetError());
-	//glBufferSubData(GL_ARRAY_BUFFER,
+	glBufferData(GL_ARRAY_BUFFER, sizeof(mat4x4) * meshInstances->count, meshInstances->data, GL_DYNAMIC_DRAW); 
+	//TODO specify usage (e.g. GL_DYNAMIC_DRAW) on the Mesh? Or better yet, on the particular Renderable using Mesh.
+	//TODO glBufferSubData(GL_ARRAY_BUFFER,
 	//TODO consider storing 2 buffers for each dynamic object - from https://www.opengl.org/sdk/docs/man3/xhtml/glBufferSubData.xml
 	//"Consider using multiple buffer objects to avoid stalling the rendering pipeline during data store updates.
 	//If any rendering in the pipeline makes reference to data in the buffer object being updated by glBufferSubData, especially
 	//from the specific region being updated, that rendering must drain from the pipeline before the data store can be updated."
-	
-	
 	//TODO the above is per-instance model matrix. We additionally need per-instance ID so we don't have to repeat ID ad nauseam as a vertex attribute.
 	
 	//bind vertex array & draw
 	glDrawElementsInstanced(program->topology, mesh->indexCount, GL_UNSIGNED_SHORT, mesh->index, meshInstances->count);
 	//TODO optimise draw call by reducing index type for character parts(!) to only use GL_UNSIGNED_BYTE if possible,
 	//i.e. 0-255 vertices - could be faster, see http://www.songho.ca/opengl/gl_vertexarray.html, search on "maximum".
-	printf("-OPENGL ERROR %i\n", glGetError());
-	glBindVertexArray(0);
-	
+
+	glBindVertexArray(0);	
 	glUseProgram(0);
-	printf("+OPENGL ERROR %i\n", glGetError());
 }
 
+//TODO should pass Mesh instead of MeshInstances, though in same arg position.
 //TODO instead of matM, a void * arg pointing to wherever all the uniforms for this object lie. same for attributes?
 void Renderer_single(Program * program, GLuint vao, const GLfloat * matVP, const GLvoid * indices, int elementCount, const GLfloat * matM)
 {
-	
 	glUseProgram(program->id);
+	glBindVertexArray(vao);
 	
 	//prep uniforms...
 	//...view-projection matrix
@@ -452,11 +457,10 @@ void Renderer_single(Program * program, GLuint vao, const GLfloat * matVP, const
 	GLint mLoc = glGetUniformLocation(program->id, "m");
 	glUniformMatrix4fv(mLoc, 1, GL_FALSE, (GLfloat *)matM);
 	
-	//bind vertex array & draw
-	glBindVertexArray(vao);
 	glDrawElements(GL_TRIANGLES, elementCount, GL_UNSIGNED_SHORT, indices);
+	
 	glBindVertexArray(0);
-
+	glUseProgram(0);
 }
 
 
