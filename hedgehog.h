@@ -42,10 +42,9 @@ typedef struct Mesh
 {
 	GLuint topology; //GL_TRIANGLES or whatever (see also Program)
 
-	GLushort index[180 * 180 * 4 * 3]; // DEV for now, make it the max size of a chunk! [TILES_ACROSS * TILES_ACROSS * TRIANGLES_PER_TILE * 3];
- 	//GLushort id;
-	GLfloat position[181*181*2*3]; //values per short = 2^16
-	GLfloat texcoord[181*181*2*3]; //values per short = 2^16
+	GLushort * index;
+	GLfloat  * position;
+	GLfloat  * texcoord;
 	
 	GLsizei indexCount;
 	GLsizei positionCount;
@@ -75,8 +74,8 @@ typedef struct Renderable
 	//-the parameters needed to populate that pipe at each stage
 
 	
-	GLuint positionBuffer; //HACK, should be in DynamicModel
-	GLuint texcoordBuffer; //HACK, should be in DynamicModel
+	GLuint positionBuffer; //HACK, TODO should be in DynamicModel
+	GLuint texcoordBuffer; //HACK, TODO should be in DynamicModel
 } Renderable;
 
 //both ShaderComponents will have these (duplicated) -- however we will check in against out and type against type
