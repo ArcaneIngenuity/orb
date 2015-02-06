@@ -16,6 +16,58 @@
 #define HH_PROGRAMS_MAX 64
 #define HH_TEXTURES_MAX 1024
 #define HH_MATERIALS_MAX 64
+#define HH_ATTRIBUTES_MAX 8
+
+#define POSITION_COMPONENTS			3
+#define TEXCOORD_COMPONENTS			2
+#define VERTICES_PER_TRIANGLE        3
+
+#define X 0
+#define Y 1
+#define Z 2
+
+
+//instance of the abstract, non-mesh-specific concept of a vertex attribute.
+//there could be many ShaderAttributes which would work with a given Mesh Attribute, and vice versa, so no point linking these directly.
+//the shader
+typedef struct ShaderAttribute 
+{
+	char name[8]; //or instead, as key or numeric constant index?
+	char type[8]; //vec2, mat4 etc.
+	char typeCompound[8]; //vec, mat etc.
+	char typeNumeric[8]; //float, int etc.
+	int components; //2, 3, 16 etc.void * 
+	
+	
+
+	//qualifiers
+	bool polarity; //in/out/inout
+	GLuint location; //layout, e.g. layout(location = 3)
+	GLuint index; //layout, e.g. layout(location = 3, index = 1) UNUSED
+} ShaderAttribute;
+
+//Mesh Attribute is just raw data. It is up to ShaderPrograms (ShaderAttributes) to know what to do with it.
+typedef struct Attribute 
+{
+	//length is in the Mesh holding the Attribute.
+	void * vertex; //ShaderAttribute will know how to read it, depending on which attribute it is.
+	GLuint id; //buffer id
+} Attribute;
+
+typedef struct Uniform
+{
+	char name[8];
+	char type[8];
+	char typeBase[8]; //vec, mat or whatever
+	char typeNumeric[8]; //float, int or whatever
+	int components; //count
+	int elements; //count of array size
+	//qualifiers
+	
+	void * value;
+	
+	bool isTexture; //some special calls for textures: tex and sampler. TODO actually, this comes from reading the type
+} Uniform;
 
 typedef struct Texture
 {
@@ -38,16 +90,24 @@ typedef struct Texture
 	int components;
 } Texture;
 
+typedef struct Face
+{
+	GLushort index[VERTICES_PER_TRIANGLE]; //into the owning Mesh's arrays: position, texcoord etc.
+	GLfloat normal[VERTICES_PER_TRIANGLE];
+} Face;
+
 typedef struct Mesh
 {
 	GLuint topology; //GL_TRIANGLES or whatever (see also Program)
 
-	GLushort * index;
-	GLfloat  * position;
-	GLfloat  * texcoord;
+	Attribute attribute[HH_ATTRIBUTES_MAX]; //also contains positions needed for faces
+	Face * face;
+	
+	GLushort * index; //what we send to GPU.... TODO generate from face
 	
 	GLsizei indexCount;
-	GLsizei vertexCount;
+	GLsizei vertexCount; //to be applied to each attribute
+	GLsizei faceCount;
 	
 	GLuint vao;
 	GLuint sampler;
@@ -72,10 +132,6 @@ typedef struct Renderable
 	//A Material consists of:
 	//-a ShaderPath/Pipe, which consists of multiple shader Programs running in sequence
 	//-the parameters needed to populate that pipe at each stage
-
-	
-	GLuint positionBuffer; //HACK, TODO should be in DynamicModel
-	GLuint texcoordBuffer; //HACK, TODO should be in DynamicModel
 } Renderable;
 
 //both ShaderComponents will have these (duplicated) -- however we will check in against out and type against type
@@ -123,34 +179,6 @@ typedef struct ShaderPipe
 	unsigned char status; //fixed / broken / warning
 } ShaderPipe;
 */
-
-typedef struct Attribute
-{
-	char name[8];
-	char type[8];
-	char typeBase[8]; //vec, mat or whatever
-	char typeNumeric[8]; //float, int or whatever
-	int components; //count
-	int elements; //count of array size
-	
-	//qualifiers
-	bool polarity; //in/out/inout
-	GLuint location; //layout, e.g. layout(location = 3)
-	GLuint index; //layout, e.g. layout(location = 3, index = 1) UNUSED
-} Attribute;
-
-typedef struct Uniform
-{
-	char name[8];
-	char type[8];
-	char typeBase[8]; //vec, mat or whatever
-	char typeNumeric[8]; //float, int or whatever
-	int components; //count
-	int elements; //count of array size
-	//qualifiers
-	
-	bool isTexture; //some special calls for textures: tex and sampler. TODO actually, this comes from reading the type
-} Uniform;
 
 typedef struct Program
 {
