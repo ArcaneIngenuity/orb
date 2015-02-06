@@ -47,7 +47,7 @@ typedef struct Mesh
 	GLfloat  * texcoord;
 	
 	GLsizei indexCount;
-	GLsizei positionCount;
+	GLsizei vertexCount;
 	
 	GLuint vao;
 	GLuint sampler;
