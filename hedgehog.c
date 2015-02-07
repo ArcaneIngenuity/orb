@@ -191,7 +191,7 @@ Texture * Texture_construct()
 Texture * Texture_load(const char * filename)
 {
 	Texture * texture = Texture_construct();
-	
+	texture->name = (char *) filename;
 	texture->data = stbi_load(filename, &(texture->width), &(texture->height), &(texture->components), 0);
 	
 	return texture;
@@ -201,34 +201,6 @@ Texture * Texture_load(const char * filename)
 GLuint Texture_getTextureUnitConstant(Texture * this)
 {
 	return this->unit + GL_TEXTURE0;
-}
-
-bool Texture_setParametersStandard(Texture * texture, int unit, bool repeat)
-{
-	if (unit > 31 || unit < 0)
-		return false; //Texture unit ordinal must be in range 0-31.
-
-	texture->unit = unit; //or must we access the original?
-	
-	glActiveTexture(GL_TEXTURE0 + unit); //eg. 0 + 33984 = GL_TEXTURE0, while 31 + 33984 = GL_TEXTURE31.
-	glBindTexture(GL_TEXTURE_2D, texture->id);
-	//glPixelStorei(GL_PACK_ALIGNMENT, 4);
-	//glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-	//http://stackoverflow.com/questions/5885223/android-opengl-es-texture-mapping-drawing-problem-skewed-images
-	//TODO check for GL error using glew/glfw
-	
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texture->width, texture->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, texture->data); //after glTexParameteri? https://www.opengl.org/discussion_boards/showthread.php/133040-glTexParameteri-before-glTexImage2D
-	//TODO check for GL error using glew/glfw
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, repeat ? GL_REPEAT : GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, repeat ? GL_REPEAT : GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	//TODO check for GL error using glew/glfw
-	
-	glBindTexture(GL_TEXTURE_2D, 0); //unbind
-	
-	return true;
 }
 
 //------------------GLBuffer------------------//

@@ -18,6 +18,8 @@
 #define HH_MATERIALS_MAX 64
 #define HH_ATTRIBUTES_MAX 8
 
+#define RGB_COMPONENTS			3
+#define RGBA_COMPONENTS			4
 #define POSITION_COMPONENTS			3
 #define TEXCOORD_COMPONENTS			2
 #define VERTICES_PER_TRIANGLE        3
@@ -71,23 +73,25 @@ typedef struct Uniform
 
 typedef struct Texture
 {
-	 /** OpenGL's texture ID as gotten from glGenTextures(). */
-    GLuint id;
-	
-    /** The texture unit ordinal (NOT internal OpenGL code e.g. GL_TEXTURE0) currently in use for this texture. */
-    GLuint unit;
+	char * name; //or as key?
     
     /** The byte buffer representing the decoded image data. */
 	unsigned char * data;
     
     /** Texture width. */
-    int width;
+    GLsizei width;
     
     /** Texture height. */
-    int height;
+    GLsizei height;
 	
 	/** Texture components / channels. */
-	int components;
+	GLsizei components;
+	
+	 /** OpenGL's texture ID as gotten from glGenTextures(). */
+    GLuint id;
+	
+    /** The texture unit ordinal (NOT internal OpenGL code e.g. GL_TEXTURE0) currently in use for this texture. */
+    GLuint unit;
 } Texture;
 
 typedef struct Face
@@ -280,7 +284,6 @@ Texture * Texture_load(const char * filename);
 Texture * Texture_loadFromMemory(const char * filename);
 
 GLenum Texture_getTextureUnitConstant(Texture * this);
-bool Texture_setParametersStandard(Texture * texture, int unit, bool repeat);
 int Texture_free(Texture * texture);
 
 void * Texture_read2(int x, int y, void * texel);
