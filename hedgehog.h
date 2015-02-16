@@ -10,7 +10,6 @@
 #include <stdio.h>
 #include "../src/stb_image_aug.h"
 #include "linmath.h"
-#include "../../curtmap/src/curtmap.h"
 
 #define HH_SHADERS_MAX 64
 #define HH_PROGRAMS_MAX 64
@@ -18,6 +17,8 @@
 #define HH_MATERIALS_MAX 64
 #define HH_ATTRIBUTES_MAX 8
 
+#define R_COMPONENTS			1
+#define RG_COMPONENTS			2
 #define RGB_COMPONENTS			3
 #define RGBA_COMPONENTS			4
 #define POSITION_COMPONENTS			3
@@ -27,6 +28,93 @@
 #define X 0
 #define Y 1
 #define Z 2
+
+#ifndef M_PI
+#define M_PI           3.14159265358979323846
+#endif
+
+#include "../../curt/list_generic.h"
+#include "../../curt/map_generic.h"
+
+typedef struct BMFontInfo
+{
+	char * face;
+	unsigned short size;
+	bool bold;
+	bool italic;
+	char * charset;
+	bool unicode;
+	unsigned short stretchH;
+	bool smooth;
+	unsigned char aa;
+	unsigned short paddingUp;
+	unsigned short paddingRight;
+	unsigned short paddingDown;
+	unsigned short paddingLeft;
+	unsigned short spacingH;
+	unsigned short spacingV;
+	unsigned short outline;
+	
+} BMFontInfo;
+const struct BMFontInfo bmFontInfoEmpty;
+
+typedef struct BMFontCommon
+{
+	unsigned short lineHeight;
+	unsigned short base;
+	unsigned short scaleW;
+	unsigned short scaleH;
+	unsigned char pages;
+	bool packed;
+	unsigned char alphaChnl;
+	unsigned char redChnl;
+	unsigned char greenChnl;
+	unsigned char blueChnl;
+} BMFontCommon;
+const struct BMFontCommon bmFontCommonEmpty;
+
+typedef struct BMFontCharacter
+{
+	unsigned short id; //used as index into bmFont.characters array.
+	unsigned short x;
+	unsigned short y;
+	unsigned short width;
+	unsigned short height;
+	unsigned short xoffset;
+	unsigned short yoffset;
+	unsigned short xadvance;
+	unsigned char page;
+	unsigned char chnl;
+} BMFontCharacter;
+const struct BMFontCharacter bmFontCharacterEmpty;
+
+
+typedef struct BMFontKerning
+{
+	unsigned short first; //id
+	unsigned short second; //id
+	unsigned short amount;
+} BMFontKerning;
+const struct BMFontKerning bmFontKerningEmpty;
+
+typedef struct BMFontPage
+{
+	unsigned char id;
+	const char * file;
+} BMFontPage;
+const struct BMFontPage bmFontPageEmpty;
+
+typedef struct BMFont
+{
+	BMFontInfo info;
+	BMFontCommon common;
+	
+	BMFontPage pages[16];
+	BMFontCharacter characters[256]; //use BMFontCharacter.id as array index.
+	BMFontKerning kerningsByFirst[256]; //index by first id, matches second array
+	BMFontKerning kerningsBySecond[256]; //index by second id, matches first array
+} BMFont;
+const struct BMFont bmFontEmpty;
 
 
 //instance of the abstract, non-mesh-specific concept of a vertex attribute.
@@ -159,8 +247,8 @@ typedef struct Shader
 	const char * source;
 	
 	//inputs:
-	CurtMap attributesByName;
-	CurtMap uniformsByName;
+	Map attributesByName;
+	Map uniformsByName;
 	
 	//shader version
 } Shader;
@@ -261,24 +349,27 @@ typedef struct Color
 } Color;
 
 typedef struct Hedgehog
-{
-	int shaderCount;
-	int textureCount;
-	int materialsCount;
-	int programCount;
+{	
+	Map programsByName;
+	Map shadersByName;
+	Map texturesByName;
+	Map materialsByName;
+	//Map renderPathsByName;
+	
+	//until we create merged map and list that contain not only pointers to arrays but also the arrays themselves... use these as backing arrays
 	Shader shaders[HH_SHADERS_MAX];
 	Texture textures[HH_TEXTURES_MAX];
 	Material materials[HH_MATERIALS_MAX];
 	Program programs[HH_PROGRAMS_MAX];
-	CurtMap programsByName;
-	CurtMap shadersByName;
-	CurtMap texturesByName;
-	CurtMap materialsByName;
 	
-	CurtMap renderPathsByName;
+	Key shaderKeys[HH_SHADERS_MAX];
+	Key textureKeys[HH_TEXTURES_MAX];
+	Key materialKeys[HH_MATERIALS_MAX];
+	Key programKeys[HH_PROGRAMS_MAX];
 } Hedgehog;
 const struct Hedgehog hedgehogEmpty;
 
+void Hedgehog_construct(Hedgehog * this);
 Texture * Texture_construct();
 Texture * Texture_load(const char * filename);
 Texture * Texture_loadFromMemory(const char * filename);

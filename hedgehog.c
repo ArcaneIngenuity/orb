@@ -436,6 +436,29 @@ void Renderer_single(Program * program, GLuint vao, const GLfloat * matVP, const
 }
 
 
+void Hedgehog_construct(Hedgehog * this)
+{
+	this->programsByName.keys = this->programKeys;
+	this->programsByName.entries = (void *) &this->programs;
+	this->programsByName.capacity = sizeof(this->programs);
+	this->programsByName.fail = NULL;
+	
+	this->shadersByName.keys = this->shaderKeys;
+	this->shadersByName.entries = (void *) &this->shaders;
+	this->shadersByName.capacity = sizeof(this->shaders);
+	this->shadersByName.fail = NULL;
+	
+	this->texturesByName.keys = this->textureKeys;
+	this->texturesByName.entries = (void *) &this->textures;
+	this->texturesByName.capacity = sizeof(this->textures);
+	this->texturesByName.fail = NULL;
+	
+	this->materialsByName.keys = this->materialKeys;
+	this->materialsByName.entries = (void *) &this->materials;
+	this->materialsByName.capacity = sizeof(this->materials);
+	this->materialsByName.fail = NULL;
+}
+
 //------------------TOOLS------------------//
 
 bool isExtensionSupported(const char * extension)
