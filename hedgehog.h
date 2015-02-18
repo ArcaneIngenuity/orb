@@ -205,14 +205,14 @@ typedef struct Mesh
 	GLuint sampler;
 } Mesh;
 
-
-typedef struct MeshInstances
+typedef struct Transform
 {
-	Mesh * mesh;
-	GLsizei count;
-	GLuint buffer;
-	const GLvoid * data;
-} MeshInstances;
+	mat4x4 matrix; //TODO problem: these need to be kept separate for instancing :) so use a pointer or don't put it here.
+	vec3 position;
+	vec3 rotation;
+	//quat rotation;
+} Transform;
+const struct Transform transformEmpty;
 
 //Materials are either treated explicitly or simply as the input interface + matching renderable information for a given ProgramPath
 typedef struct Renderable
@@ -220,11 +220,24 @@ typedef struct Renderable
 	Mesh * mesh;
 	Texture * texture; //TODO later this should go on Material, which goes on in here?
 	
+	Transform * transform;
+	//mat4x4 matM; //TODO should be in a transfrom object.
+	
 	//Material materials[];
 	//A Material consists of:
 	//-a ShaderPath/Pipe, which consists of multiple shader Programs running in sequence
 	//-the parameters needed to populate that pipe at each stage
 } Renderable;
+
+typedef struct RenderableSet
+{
+	Mesh * mesh;
+	//Texture * texture; //TODO later this should go on Material, which goes on in here?
+	
+	GLsizei count;
+	GLuint buffer;
+	const GLvoid * data; //for now, model matrices.
+} RenderableSet;
 
 //both ShaderComponents will have these (duplicated) -- however we will check in against out and type against type
 typedef struct ShaderVariable
@@ -319,15 +332,6 @@ typedef struct Material
 
 } Material;
 
-typedef struct Transform
-{
-	mat4x4 matrix;
-	vec3 position;
-	vec3 rotation;
-	//quat rotation;
-} Transform;
-const struct Transform transformEmpty;
-
 typedef struct Camera
 {
 	Transform transform;
@@ -389,14 +393,13 @@ GLuint GLBuffer_create(
 	GLenum usage
 );
 
+void Shader_load(Hedgehog * this, char * name);
 void Shader_construct(Shader * this);
 void Program_construct(Program * this, GLuint vertex_shader, GLuint fragment_shader); //we pass in a reference to a position in an already-defined array. This lets us keep our structures local.
 
 void Renderer_clear();
-//void Renderer_instance(Program * program, GLuint vao, const GLfloat * matVP, const GLvoid * indices, int elementCount, int instanceCount, const GLvoid * instanceData);
-void Renderer_instance(Program * program, MeshInstances * meshInstances, const GLfloat * matVP);
-void Renderer_single(Program * program, GLuint vao, const GLfloat * matVP, const GLvoid * indices, int elementCount, const GLfloat * matM);
-
+void Renderer_set(Program * program, RenderableSet * renderableSet, const GLfloat * matVP);
+void Renderer_one  (Program * program, Renderable * renderable,                   const GLfloat * matVP);
 
 //void Matrix_setProjectionPerspective(mat4x4 matrix, float near, float far, float top, float right);
 

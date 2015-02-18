@@ -241,6 +241,73 @@ bool linkProgramSuccess(int program)
 }
 
 //------------------Shader------------------//
+void Shader_load(Hedgehog * this, char * name)
+{
+	Shader * vert;
+	Shader * frag;
+	Program * program;
+	
+	vert = malloc(sizeof(Shader));
+	frag = malloc(sizeof(Shader));
+	vert->type = GL_VERTEX_SHADER;
+	frag->type = GL_FRAGMENT_SHADER;
+	
+	char * path = ".\\shaders\\";
+	
+	size_t lengthName = strlen(name); //5 = .vert
+	size_t lengthPath = strlen(name); //5 = .vert
+	//printf("l=%d\n", lengthName);
+	char vertFilepath[lengthPath+lengthName+1+4];
+	strcpy(vertFilepath, path);
+	strcat(vertFilepath, name);
+	strcat(vertFilepath, ".vert");
+	vert->source = Text_load(vertFilepath);
+	
+	char fragFilepath[lengthPath+lengthName+1+4]; //5 = .frag
+	strcpy(fragFilepath, path);
+	strcat(fragFilepath, name);
+	strcat(fragFilepath, ".frag");
+	frag->source = Text_load(fragFilepath);
+	
+	printf("vertFilepath %s\n", vertFilepath);
+	printf("fragFilepath %s\n", fragFilepath);
+	
+	printf("vert %s\n\n", vert->source);
+	printf("frag %s\n\n", frag->source);
+	
+	Shader_construct(vert);
+	Shader_construct(frag);
+	
+	int final = lengthName < 8 ? lengthName : 8 - 1;
+	
+	char vertKey[8+1];
+	strncpy(vertKey, name, 8);
+	vertKey[final] = 'v'; //set last character to distinguish. TODO should be either first null or last character.
+	vertKey[final+1] = '\0';
+	printf("v=%s\n", vertKey);
+	//TODO check whether key exists
+	put(&this->shadersByName, vertKey, vert); //diffusev
+	
+	char fragKey[8+1];
+	strncpy(fragKey, name, 8);
+	fragKey[final] = 'f'; //set last character to distinguish. TODO should be either first null or last character.
+	fragKey[final+1] = '\0';
+	
+	printf("f=%s\n", fragKey);
+	//TODO check whether key exists
+	put(&this->shadersByName, fragKey, frag); //diffusef
+	
+	program = malloc(sizeof(Program));
+	Program_construct(program, vert->id, frag->id);
+	program->topology = GL_TRIANGLES;
+	//TODO check whether key exists
+	char progKey[8+1];
+	strncpy(progKey, name, 8);
+	progKey[8] = '\0';
+	printf("p=%s\n", progKey);
+	put(&this->programsByName, progKey, program);
+
+}
 
 void Shader_construct(Shader * this)//, const char* shader_str, GLenum shader_type)
 {
@@ -382,9 +449,9 @@ void Renderer_clearDepth()
 	 glClear(GL_DEPTH_BUFFER_BIT);
 }
 
-void Renderer_instance(Program * program, MeshInstances * meshInstances, const GLfloat * matVP)
+void Renderer_set(Program * program, RenderableSet * renderableSet, const GLfloat * matVP)
 {
-	Mesh * mesh = meshInstances->mesh;
+	Mesh * mesh = renderableSet->mesh;
 
 	glUseProgram(program->id);
 	glBindVertexArray(mesh->vao);
@@ -395,8 +462,8 @@ void Renderer_instance(Program * program, MeshInstances * meshInstances, const G
 	glUniformMatrix4fv(vpLoc, 1, GL_FALSE, (GLfloat *)matVP);
 	
 	//upload instance data
-	glBindBuffer(GL_ARRAY_BUFFER, meshInstances->buffer); //TODO use const instead of literal buffer name
-	glBufferData(GL_ARRAY_BUFFER, sizeof(mat4x4) * meshInstances->count, meshInstances->data, GL_DYNAMIC_DRAW); 
+	glBindBuffer(GL_ARRAY_BUFFER, renderableSet->buffer); //TODO use const instead of literal buffer name
+	glBufferData(GL_ARRAY_BUFFER, sizeof(mat4x4) * renderableSet->count, renderableSet->data, GL_DYNAMIC_DRAW); 
 	//TODO specify usage (e.g. GL_DYNAMIC_DRAW) on the Mesh? Or better yet, on the particular Renderable using Mesh.
 	//TODO glBufferSubData(GL_ARRAY_BUFFER,
 	//TODO consider storing 2 buffers for each dynamic object - from https://www.opengl.org/sdk/docs/man3/xhtml/glBufferSubData.xml
@@ -406,7 +473,7 @@ void Renderer_instance(Program * program, MeshInstances * meshInstances, const G
 	//TODO the above is per-instance model matrix. We additionally need per-instance ID so we don't have to repeat ID ad nauseam as a vertex attribute.
 	
 	//bind vertex array & draw
-	glDrawElementsInstanced(program->topology, mesh->indexCount, GL_UNSIGNED_SHORT, mesh->index, meshInstances->count);
+	glDrawElementsInstanced(program->topology, mesh->indexCount, GL_UNSIGNED_SHORT, mesh->index, renderableSet->count);
 	//TODO optimise draw call by reducing index type for character parts(!) to only use GL_UNSIGNED_BYTE if possible,
 	//i.e. 0-255 vertices - could be faster, see http://www.songho.ca/opengl/gl_vertexarray.html, search on "maximum".
 
@@ -414,12 +481,14 @@ void Renderer_instance(Program * program, MeshInstances * meshInstances, const G
 	glUseProgram(0);
 }
 
-//TODO should pass Mesh instead of MeshInstances, though in same arg position.
+//TODO should pass Mesh instead of RenderableSet, though in same arg position.
 //TODO instead of matM, a void * arg pointing to wherever all the uniforms for this object lie. same for attributes?
-void Renderer_single(Program * program, GLuint vao, const GLfloat * matVP, const GLvoid * indices, int elementCount, const GLfloat * matM)
+void Renderer_one(Program * program, Renderable * renderable/*const GLfloat * matM*/, const GLfloat * matVP)
 {
+	Mesh * mesh = renderable->mesh;
+
 	glUseProgram(program->id);
-	glBindVertexArray(vao);
+	glBindVertexArray(mesh->vao);
 	
 	//prep uniforms...
 	//...view-projection matrix
@@ -427,9 +496,9 @@ void Renderer_single(Program * program, GLuint vao, const GLfloat * matVP, const
 	glUniformMatrix4fv(vpLoc, 1, GL_FALSE, (GLfloat *)matVP);
 	//...model matrix
 	GLint mLoc = glGetUniformLocation(program->id, "m");
-	glUniformMatrix4fv(mLoc, 1, GL_FALSE, (GLfloat *)matM);
+	glUniformMatrix4fv(mLoc, 1, GL_FALSE, (GLfloat *)renderable->transform->matrix);
 	
-	glDrawElements(GL_TRIANGLES, elementCount, GL_UNSIGNED_SHORT, indices);
+	glDrawElements(GL_TRIANGLES, mesh->indexCount, GL_UNSIGNED_SHORT, mesh->index);
 	
 	glBindVertexArray(0);
 	glUseProgram(0);
