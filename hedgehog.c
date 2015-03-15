@@ -7,6 +7,13 @@ void GLFW_errorCallback(int error, const char * description)
 	printf ("GLFW ERROR: code %i msg: %s\n", error, description);
 }
 
+void Mesh_calculateNormals(Mesh * this)
+{
+	
+	//this->normals
+
+}
+
 void Axes_create(float radius, float bodyLength, float headLength, GLushort * index, GLfloat * position) {
 /*
 	GLushort indices[6] = {
@@ -110,10 +117,10 @@ void Axes_create(float radius, float bodyLength, float headLength, GLushort * in
 	};
 	*/
 }
-
+/*
 void Transform_update(Transform* this)
 {
-	/*
+	
 	//Do matrix calculation for this transform.
 	if (this->parent)
 		mat4x4_dup(this->matrix , this->parent->matrix);
@@ -146,10 +153,10 @@ void Transform_update(Transform* this)
 	
 	//SET MATRIX
 	matrix.mul(translation.cpy()).mul(rotation.cpy());         
-	*/
+	
 
 }
-
+*/
 void Camera_lookAt()
 {
 	//lookingAt;
@@ -272,8 +279,8 @@ void Shader_load(Hedgehog * this, char * name)
 	printf("vertFilepath %s\n", vertFilepath);
 	printf("fragFilepath %s\n", fragFilepath);
 	
-	printf("vert %s\n\n", vert->source);
-	printf("frag %s\n\n", frag->source);
+	//printf("vert %s\n\n", vert->source);
+	//printf("frag %s\n\n", frag->source);
 	
 	Shader_construct(vert);
 	Shader_construct(frag);
@@ -449,6 +456,73 @@ void Renderer_clearDepth()
 	 glClear(GL_DEPTH_BUFFER_BIT);
 }
 
+void Renderer_createFullscreenQuadRTT(Hedgehog * this, GLuint positionVertexAttributeIndex, GLuint texcoordVertexAttributeIndex)
+{
+	mat4x4_identity(this->fullscreenQuadMatrix);
+	
+	//mesh + associated VAO
+	Mesh * mesh = this->fullscreenQuad.mesh;
+	mesh->topology = GL_TRIANGLES;
+	mesh->indexCount = 6;
+	mesh->vertexCount = 4;
+	mesh->index = malloc(sizeof(GLushort) * mesh->indexCount);
+	//mesh->attribute = malloc(VERTEX_ATTRIBUTES_COUNT * sizeof(Attribute *));
+	mesh->attribute[positionVertexAttributeIndex].vertex = malloc(sizeof(GLfloat) * mesh->vertexCount * TEXCOORD_COMPONENTS);
+	mesh->attribute[texcoordVertexAttributeIndex].vertex = malloc(sizeof(GLfloat) * mesh->vertexCount * TEXCOORD_COMPONENTS);
+	
+	Attribute * position = &mesh->attribute[positionVertexAttributeIndex];
+	Attribute * texcoord = &mesh->attribute[texcoordVertexAttributeIndex];
+
+	//create vertex attributes using static initialisers, then copy these into the Mesh
+	GLushort _index[6] = {
+		0, 1, 2,
+		2, 3, 0
+	};
+	
+	GLfloat _position[8] = {
+		-1.0, -1.0,
+		+1.0, -1.0,
+		+1.0, +1.0,
+		-1.0, +1.0
+	};
+	
+	GLfloat _texcoord[8] = {
+		//y-inverted due to texture space flip
+		0.0, 0.0,
+		1.0, 0.0,
+		1.0, 1.0,
+		0.0, 1.0
+	};
+
+	memcpy(mesh->index, _index, sizeof(_index));
+	memcpy(position->vertex, _position, sizeof(_position));
+	memcpy(texcoord->vertex, _texcoord, sizeof(_texcoord));
+	
+	printf("index %d %d\n", sizeof(_index), mesh->indexCount * 2);
+	printf("pos   %d %d\n", sizeof(_position), mesh->vertexCount * 4);
+	printf("texco %d %d\n", sizeof(_texcoord), mesh->vertexCount * 4);
+	
+	glGenVertexArrays(1, &(mesh->vao)); //VAO frees us from having to call glGetAttribLocation & glVertexAttribPointer on each modify op
+	glBindVertexArray(mesh->vao);
+	
+	//positions
+	glGenBuffers(1, &position->id);
+	glBindBuffer(GL_ARRAY_BUFFER, position->id);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * mesh->vertexCount * TEXCOORD_COMPONENTS, position->vertex, GL_DYNAMIC_DRAW);
+	glVertexAttribPointer(positionVertexAttributeIndex, TEXCOORD_COMPONENTS, GL_FLOAT, GL_FALSE, 0, 0); //provide data / layout info; "take buffer that is bound at the time called and associates that buffer with the current VAO"
+	glEnableVertexAttribArray(positionVertexAttributeIndex); //enable attribute for use
+	
+	//texcoords
+	glGenBuffers(1, &texcoord->id);
+	glBindBuffer(GL_ARRAY_BUFFER, texcoord->id);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * mesh->vertexCount * TEXCOORD_COMPONENTS, texcoord->vertex, GL_DYNAMIC_DRAW);
+	glVertexAttribPointer(texcoordVertexAttributeIndex, TEXCOORD_COMPONENTS, GL_FLOAT, GL_FALSE, 0, 0); //provide data / layout info; "take buffer that is bound at the time called and associates that buffer with the current VAO"
+	glEnableVertexAttribArray(texcoordVertexAttributeIndex); //enable attribute for use
+	
+	//unbind
+	glBindVertexArray(0);
+}
+/*
 void Renderer_set(Program * program, RenderableSet * renderableSet, const GLfloat * matVP)
 {
 	Mesh * mesh = renderableSet->mesh;
@@ -480,10 +554,10 @@ void Renderer_set(Program * program, RenderableSet * renderableSet, const GLfloa
 	glBindVertexArray(0);	
 	glUseProgram(0);
 }
-
+*/
 //TODO should pass Mesh instead of RenderableSet, though in same arg position.
 //TODO instead of matM, a void * arg pointing to wherever all the uniforms for this object lie. same for attributes?
-void Renderer_one(Program * program, Renderable * renderable/*const GLfloat * matM*/, const GLfloat * matVP)
+void Renderer_one(Hedgehog * this, Program * program, Renderable * renderable, const GLfloat * matM, const GLfloat * matVP)
 {
 	Mesh * mesh = renderable->mesh;
 
@@ -496,7 +570,7 @@ void Renderer_one(Program * program, Renderable * renderable/*const GLfloat * ma
 	glUniformMatrix4fv(vpLoc, 1, GL_FALSE, (GLfloat *)matVP);
 	//...model matrix
 	GLint mLoc = glGetUniformLocation(program->id, "m");
-	glUniformMatrix4fv(mLoc, 1, GL_FALSE, (GLfloat *)renderable->transform->matrix);
+	glUniformMatrix4fv(mLoc, 1, GL_FALSE, (GLfloat *)matM);
 	
 	glDrawElements(GL_TRIANGLES, mesh->indexCount, GL_UNSIGNED_SHORT, mesh->index);
 	
@@ -526,6 +600,11 @@ void Hedgehog_construct(Hedgehog * this)
 	this->materialsByName.entries = (void *) &this->materials;
 	this->materialsByName.capacity = sizeof(this->materials);
 	this->materialsByName.fail = NULL;
+	
+	//reintroduce if we bring transform list back into hedgehog.
+	//Renderable * renderable = &this->renderable;
+	//for (int i = 0; i < HH_TRANSFORMS_MAX; i++)
+	//	mat4x4_identity(renderable->matrix[i]);
 }
 
 //------------------TOOLS------------------//
@@ -560,7 +639,7 @@ char* Text_load(char* filename)
 	fseek(file, 0, SEEK_END); //seek to end
 	long fileSize = ftell(file); //get current position in stream
 	fseek(file, 0, SEEK_SET); //seek to start
-	printf("abc");
+	printf(filename);
 	printf("? %ld", fileSize);
 
 	char *str = malloc(fileSize + 1); //allocate enough room for file + null terminator (\0)
@@ -570,7 +649,7 @@ char* Text_load(char* filename)
 		printf("fileSize...%ld\n", fileSize);
 		size_t freadResult;
 		freadResult = fread(str, 1, fileSize, file); //read elements as one byte each, into string, from file. 
-		printf("freadResult...%d\n", freadResult);
+		//printf("freadResult...%d\n", freadResult);
 		
 		if (freadResult != fileSize)
 		{
@@ -585,7 +664,7 @@ char* Text_load(char* filename)
 
 		str[fileSize] = 0;//'\0'; //last element is null termination.
 	}
-
+	
 	return str;
 }
 

@@ -11,11 +11,7 @@
 #include "../src/stb_image_aug.h"
 #include "linmath.h"
 
-#define HH_SHADERS_MAX 64
-#define HH_PROGRAMS_MAX 64
-#define HH_TEXTURES_MAX 1024
-#define HH_MATERIALS_MAX 64
-#define HH_ATTRIBUTES_MAX 8
+//FIXED CONSTANTS
 
 #define R_COMPONENTS			1
 #define RG_COMPONENTS			2
@@ -31,6 +27,44 @@
 
 #ifndef M_PI
 #define M_PI           3.14159265358979323846
+#endif
+
+//USER CONSTANTS (define before inclusion of this header to override)
+
+#ifndef	HH_SHADERS_MAX
+#define HH_SHADERS_MAX 64
+#endif
+
+#ifndef	HH_PROGRAMS_MAX
+#define HH_PROGRAMS_MAX 64
+#endif
+
+#ifndef	HH_TEXTURES_MAX
+#define HH_TEXTURES_MAX 128
+#endif
+
+#ifndef	HH_TEXTURES_RENDERABLE_MAX
+#define HH_TEXTURES_RENDERABLE_MAX 8
+#endif
+
+#ifndef	HH_MESHES_MAX
+#define HH_MESHES_MAX 256
+#endif
+
+#ifndef	HH_MATERIALS_MAX
+#define HH_MATERIALS_MAX 64
+#endif
+
+#ifndef	HH_RENDERABLES_MAX
+#define HH_RENDERABLES_MAX 256
+#endif
+
+#ifndef	HH_ATTRIBUTES_MAX
+#define HH_ATTRIBUTES_MAX 8
+#endif
+
+#ifndef	HH_TRANSFORMS_MAX
+#define HH_TRANSFORMS_MAX 1024
 #endif
 
 #include "../../curt/list_generic.h"
@@ -116,7 +150,6 @@ typedef struct BMFont
 } BMFont;
 const struct BMFont bmFontEmpty;
 
-
 //instance of the abstract, non-mesh-specific concept of a vertex attribute.
 //there could be many ShaderAttributes which would work with a given Mesh Attribute, and vice versa, so no point linking these directly.
 //the shader
@@ -127,8 +160,6 @@ typedef struct ShaderAttribute
 	char typeCompound[8]; //vec, mat etc.
 	char typeNumeric[8]; //float, int etc.
 	int components; //2, 3, 16 etc.void * 
-	
-	
 
 	//qualifiers
 	bool polarity; //in/out/inout
@@ -180,6 +211,9 @@ typedef struct Texture
 	
     /** The texture unit ordinal (NOT internal OpenGL code e.g. GL_TEXTURE0) currently in use for this texture. */
     GLuint unit;
+	
+	/** Did texels get modified / need upload? */
+	bool changed;
 } Texture;
 
 typedef struct Face
@@ -203,37 +237,34 @@ typedef struct Mesh
 	
 	GLuint vao;
 	GLuint sampler;
+	
+	/** Did vertices get modified / need upload? */
+	bool changed;
 } Mesh;
 
-typedef struct Transform
-{
-	mat4x4 matrix; //TODO problem: these need to be kept separate for instancing :) so use a pointer or don't put it here.
-	vec3 position;
-	vec3 rotation;
-	//quat rotation;
-} Transform;
-const struct Transform transformEmpty;
-
+//Renderable is a combination (typically unique) of some Mesh (vertex data) and some Material (shader + uniforms).
 //Materials are either treated explicitly or simply as the input interface + matching renderable information for a given ProgramPath
 typedef struct Renderable
 {
+	//occasional upload i.e. not performance-critical, so these objects can be pointers to structs.
 	Mesh * mesh;
-	Texture * texture; //TODO later this should go on Material, which goes on in here?
-	
-	Transform * transform;
-	//mat4x4 matM; //TODO should be in a transfrom object.
-	
+	Texture * textures[HH_TEXTURES_RENDERABLE_MAX]; 
+	//TODO Material (with Texture)
 	//Material materials[];
 	//A Material consists of:
 	//-a ShaderPath/Pipe, which consists of multiple shader Programs running in sequence
 	//-the parameters needed to populate that pipe at each stage
 } Renderable;
+const struct Renderable renderableEmpty;
 
+//TODO you will need to memcpy out the range of units used in a single instances draw call
+//TODO make it use a particular Mesh, Material (with Texture) etc.
 typedef struct RenderableSet
 {
-	Mesh * mesh;
-	//Texture * texture; //TODO later this should go on Material, which goes on in here?
-	
+	Renderable * renderable;
+
+	//we always need a contiguous buffer. So to keep things fast, client app *should*
+	//memcpy out a contiguous block from a super-array: this means pre-sorting.
 	GLsizei count;
 	GLuint buffer;
 	const GLvoid * data; //for now, model matrices.
@@ -334,13 +365,9 @@ typedef struct Material
 
 typedef struct Camera
 {
-	Transform transform;
-	
-	//quat quaternion;
 	vec3* lookingAt; //ongoing
 	vec3* movingWith; //ongoing
-	//TODO other options that allow cinematic effects
-	//Entity entity;
+	//TODO options that allow cinematic effects
 } Camera;
 const struct Camera cameraEmpty;
 
@@ -361,19 +388,34 @@ typedef struct Hedgehog
 	//Map renderPathsByName;
 	
 	//until we create merged map and list that contain not only pointers to arrays but also the arrays themselves... use these as backing arrays
-	Shader shaders[HH_SHADERS_MAX];
-	Texture textures[HH_TEXTURES_MAX];
+	Shader   shaders[HH_SHADERS_MAX];
+	Texture  textures[HH_TEXTURES_MAX];
 	Material materials[HH_MATERIALS_MAX];
-	Program programs[HH_PROGRAMS_MAX];
+	Program  programs[HH_PROGRAMS_MAX];
 	
 	Key shaderKeys[HH_SHADERS_MAX];
 	Key textureKeys[HH_TEXTURES_MAX];
 	Key materialKeys[HH_MATERIALS_MAX];
 	Key programKeys[HH_PROGRAMS_MAX];
+	//TODO - these lists but not generic / pointer - int lists! then remove same fields from Renderables.
+	//List changedMesh; //indices of Renderables that changed vertex data
+	//List changedMaterials; //indices of Renderables that changed uniforms
+	
+	//should be in the order they are to be rendered in
+	Renderable renderables[HH_RENDERABLES_MAX];
+	
+	//Transforms may not all have associated renderables...
+	
+	//TODO incorporate as separate RTT renderables array?
+	Renderable fullscreenQuad;
+	mat4x4 fullscreenQuadMatrix;
 } Hedgehog;
 const struct Hedgehog hedgehogEmpty;
 
 void Hedgehog_construct(Hedgehog * this);
+
+void Mesh_calculateNormals(Mesh * this);
+
 Texture * Texture_construct();
 Texture * Texture_load(const char * filename);
 Texture * Texture_loadFromMemory(const char * filename);
@@ -399,7 +441,8 @@ void Program_construct(Program * this, GLuint vertex_shader, GLuint fragment_sha
 
 void Renderer_clear();
 void Renderer_set(Program * program, RenderableSet * renderableSet, const GLfloat * matVP);
-void Renderer_one  (Program * program, Renderable * renderable,                   const GLfloat * matVP);
+void Renderer_one(Hedgehog * this, Program * program, Renderable * renderable, const GLfloat * matM, const GLfloat * matVP);
+void Renderer_createFullscreenQuadRTT(Hedgehog * this, GLuint positionVertexAttributeIndex, GLuint texcoordVertexAttributeIndex);
 
 //void Matrix_setProjectionPerspective(mat4x4 matrix, float near, float far, float top, float right);
 
