@@ -441,27 +441,27 @@ void Program_construct(Program * this, GLuint vertex_shader, GLuint fragment_sha
 		printf("glLinkProgram() success.\n");
 }
 
-void Renderer_clear()
+void Hedgehog_clear()
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
-void Renderer_clearColor()
+void Hedgehog_clearColor()
 {
 	 glClear(GL_COLOR_BUFFER_BIT);
 }
 
-void Renderer_clearDepth()
+void Hedgehog_clearDepth()
 {
 	 glClear(GL_DEPTH_BUFFER_BIT);
 }
 
-void Renderer_createFullscreenQuadRTT(Hedgehog * this, GLuint positionVertexAttributeIndex, GLuint texcoordVertexAttributeIndex)
+void Hedgehog_createFullscreenQuad(Hedgehog * this, GLuint positionVertexAttributeIndex, GLuint texcoordVertexAttributeIndex)
 {
 	mat4x4_identity(this->fullscreenQuadMatrix);
 	
 	//mesh + associated VAO
-	Mesh * mesh = this->fullscreenQuad.mesh;
+	Mesh * mesh = this->fullscreenQuad.mesh = malloc(sizeof(Mesh));;
 	mesh->topology = GL_TRIANGLES;
 	mesh->indexCount = 6;
 	mesh->vertexCount = 4;
@@ -523,7 +523,7 @@ void Renderer_createFullscreenQuadRTT(Hedgehog * this, GLuint positionVertexAttr
 	glBindVertexArray(0);
 }
 /*
-void Renderer_set(Program * program, RenderableSet * renderableSet, const GLfloat * matVP)
+void Hedgehog_renderSet(Program * program, RenderableSet * renderableSet, const GLfloat * matVP)
 {
 	Mesh * mesh = renderableSet->mesh;
 
@@ -557,25 +557,23 @@ void Renderer_set(Program * program, RenderableSet * renderableSet, const GLfloa
 */
 //TODO should pass Mesh instead of RenderableSet, though in same arg position.
 //TODO instead of matM, a void * arg pointing to wherever all the uniforms for this object lie. same for attributes?
-void Renderer_one(Hedgehog * this, Program * program, Renderable * renderable, const GLfloat * matM, const GLfloat * matVP)
+void Hedgehog_renderOne(Hedgehog * this, Renderable * renderable, const GLfloat * matM, const GLfloat * matVP)
 {
 	Mesh * mesh = renderable->mesh;
 
-	glUseProgram(program->id);
 	glBindVertexArray(mesh->vao);
 	
 	//prep uniforms...
 	//...view-projection matrix
-	GLint vpLoc = glGetUniformLocation(program->id, "vp");
+	GLint vpLoc = glGetUniformLocation(this->program->id, "vp");
 	glUniformMatrix4fv(vpLoc, 1, GL_FALSE, (GLfloat *)matVP);
 	//...model matrix
-	GLint mLoc = glGetUniformLocation(program->id, "m");
+	GLint mLoc = glGetUniformLocation(this->program->id, "m");
 	glUniformMatrix4fv(mLoc, 1, GL_FALSE, (GLfloat *)matM);
 	
 	glDrawElements(GL_TRIANGLES, mesh->indexCount, GL_UNSIGNED_SHORT, mesh->index);
 	
 	glBindVertexArray(0);
-	glUseProgram(0);
 }
 
 
@@ -607,6 +605,26 @@ void Hedgehog_construct(Hedgehog * this)
 	//	mat4x4_identity(renderable->matrix[i]);
 }
 
+Program * Hedgehog_setCurrentProgram(Hedgehog * this, char * name)
+{
+	if (name == NULL)
+	{
+		this->program = NULL;
+		glUseProgram(0);
+	}
+	else
+	{
+		this->program = (Program *)get(&this->programsByName, name);//"text\0\0\0\0"); //set program used for diffuse and depth passes
+		glUseProgram(this->program->id);
+	}
+	return this->program;
+}
+
+Program * Hedgehog_getCurrentProgram(Hedgehog * this)
+{
+	return this->program;
+}
+	
 //------------------TOOLS------------------//
 
 bool isExtensionSupported(const char * extension)

@@ -56,7 +56,7 @@
 #endif
 
 #ifndef	HH_RENDERABLES_MAX
-#define HH_RENDERABLES_MAX 256
+#define HH_RENDERABLES_MAX 512
 #endif
 
 #ifndef	HH_ATTRIBUTES_MAX
@@ -226,6 +226,7 @@ typedef struct Mesh
 {
 	GLuint topology; //GL_TRIANGLES or whatever (see also Program)
 
+	//TODO bounds only require a single attribute. Maybe we should make this a pointer to an array? But Attribute is really small, points to data elsewhere.
 	Attribute attribute[HH_ATTRIBUTES_MAX]; //also contains positions needed for faces
 	Face * face;
 	
@@ -404,6 +405,8 @@ typedef struct Hedgehog
 	//should be in the order they are to be rendered in
 	Renderable renderables[HH_RENDERABLES_MAX];
 	
+	Program * program; //the current shader program TODO should be an index into array? then use a getter to access. 
+	
 	//Transforms may not all have associated renderables...
 	
 	//TODO incorporate as separate RTT renderables array?
@@ -413,6 +416,8 @@ typedef struct Hedgehog
 const struct Hedgehog hedgehogEmpty;
 
 void Hedgehog_construct(Hedgehog * this);
+Program * Hedgehog_setCurrentProgram(Hedgehog * this, char * name);
+Program * Hedgehog_getCurrentProgram(Hedgehog * this);
 
 void Mesh_calculateNormals(Mesh * this);
 
@@ -439,10 +444,10 @@ void Shader_load(Hedgehog * this, char * name);
 void Shader_construct(Shader * this);
 void Program_construct(Program * this, GLuint vertex_shader, GLuint fragment_shader); //we pass in a reference to a position in an already-defined array. This lets us keep our structures local.
 
-void Renderer_clear();
-void Renderer_set(Program * program, RenderableSet * renderableSet, const GLfloat * matVP);
-void Renderer_one(Hedgehog * this, Program * program, Renderable * renderable, const GLfloat * matM, const GLfloat * matVP);
-void Renderer_createFullscreenQuadRTT(Hedgehog * this, GLuint positionVertexAttributeIndex, GLuint texcoordVertexAttributeIndex);
+void Hedgehog_clear();
+void Hedgehog_renderSet(Program * program, RenderableSet * renderableSet, const GLfloat * matVP);
+void Hedgehog_renderOne(Hedgehog * this, Renderable * renderable, const GLfloat * matM, const GLfloat * matVP);
+void Hedgehog_createFullscreenQuad(Hedgehog * this, GLuint positionVertexAttributeIndex, GLuint texcoordVertexAttributeIndex);
 
 //void Matrix_setProjectionPerspective(mat4x4 matrix, float near, float far, float top, float right);
 
