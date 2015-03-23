@@ -688,3 +688,7 @@ char* Text_load(char* filename)
 	return str;
 }
 
+float Hedgehog_smoothstep(float t)
+{
+	return 3 * t * t - 2 * t * t * t;
+}

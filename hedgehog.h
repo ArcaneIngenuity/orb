@@ -456,4 +456,6 @@ char* Text_load(char* filename);
 void GLFW_errorCallback(int error, const char * description);
 bool GLTool_isExtensionSupported(const char * extension); //redundant, see GLFW
 
+float Hedgehog_smoothstep(float t);
+
 #endif //HEDGEHOG_H
