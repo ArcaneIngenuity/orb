@@ -466,7 +466,6 @@ void Hedgehog_createFullscreenQuad(Hedgehog * this, GLuint positionVertexAttribu
 	mesh->indexCount = 6;
 	mesh->vertexCount = 4;
 	mesh->index = malloc(sizeof(GLushort) * mesh->indexCount);
-	//mesh->attribute = malloc(VERTEX_ATTRIBUTES_COUNT * sizeof(Attribute *));
 	mesh->attribute[positionVertexAttributeIndex].vertex = malloc(sizeof(GLfloat) * mesh->vertexCount * TEXCOORD_COMPONENTS);
 	mesh->attribute[texcoordVertexAttributeIndex].vertex = malloc(sizeof(GLfloat) * mesh->vertexCount * TEXCOORD_COMPONENTS);
 	
@@ -571,7 +570,10 @@ void Hedgehog_renderOne(Hedgehog * this, Renderable * renderable, const GLfloat 
 	GLint mLoc = glGetUniformLocation(this->program->id, "m");
 	glUniformMatrix4fv(mLoc, 1, GL_FALSE, (GLfloat *)matM);
 	
-	glDrawElements(GL_TRIANGLES, mesh->indexCount, GL_UNSIGNED_SHORT, mesh->index);
+	if (mesh->index == NULL)
+		glDrawArrays(mesh->topology, 0, mesh->vertexCount);
+	else
+		glDrawElements(mesh->topology, mesh->indexCount, GL_UNSIGNED_SHORT, mesh->index);
 	
 	glBindVertexArray(0);
 }

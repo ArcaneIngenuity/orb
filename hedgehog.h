@@ -8,25 +8,25 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "../src/stb_image_aug.h"
+#include "../src/stb/stb_image_aug.h"
 #include "linmath.h"
 
 //FIXED CONSTANTS
 
-#define R_COMPONENTS			1
-#define RG_COMPONENTS			2
-#define RGB_COMPONENTS			3
-#define RGBA_COMPONENTS			4
-#define POSITION_COMPONENTS			3
-#define TEXCOORD_COMPONENTS			2
-#define VERTICES_PER_TRIANGLE        3
+#define R_COMPONENTS 1
+#define RG_COMPONENTS 2
+#define RGB_COMPONENTS 3
+#define RGBA_COMPONENTS 4
+#define POSITION_COMPONENTS 3
+#define TEXCOORD_COMPONENTS 2
+#define VERTICES_PER_TRIANGLE 3
 
 #define X 0
 #define Y 1
 #define Z 2
 
 #ifndef M_PI
-#define M_PI           3.14159265358979323846
+#define M_PI 3.14159265358979323846
 #endif
 
 //USER CONSTANTS (define before inclusion of this header to override)
@@ -170,7 +170,7 @@ typedef struct ShaderAttribute
 //Mesh Attribute is just raw data. It is up to ShaderPrograms (ShaderAttributes) to know what to do with it.
 typedef struct Attribute 
 {
-	//length is in the Mesh holding the Attribute.
+	//count is in the Mesh holding the Attribute.
 	void * vertex; //ShaderAttribute will know how to read it, depending on which attribute it is.
 	GLuint id; //buffer id
 } Attribute;
