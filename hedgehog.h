@@ -12,6 +12,9 @@
 #include "linmath.h"
 
 //FIXED CONSTANTS
+#define X 0
+#define Y 1
+#define Z 2
 
 #define R_COMPONENTS 1
 #define RG_COMPONENTS 2
@@ -21,9 +24,9 @@
 #define TEXCOORD_COMPONENTS 2
 #define VERTICES_PER_TRIANGLE 3
 
-#define X 0
-#define Y 1
-#define Z 2
+#ifndef MESH_VERTICES_SHORT_MAX
+#define MESH_VERTICES_SHORT_MAX 65536
+#endif
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -39,16 +42,12 @@
 #define HH_PROGRAMS_MAX 64
 #endif
 
+#ifndef	HH_RENDERTEXTURES_MAX
+#define HH_RENDERTEXTURES_MAX 8
+#endif
+
 #ifndef	HH_TEXTURES_MAX
 #define HH_TEXTURES_MAX 128
-#endif
-
-#ifndef	HH_TEXTURES_RENDERABLE_MAX
-#define HH_TEXTURES_RENDERABLE_MAX 8
-#endif
-
-#ifndef	HH_MESHES_MAX
-#define HH_MESHES_MAX 256
 #endif
 
 #ifndef	HH_MATERIALS_MAX
@@ -57,6 +56,14 @@
 
 #ifndef	HH_RENDERABLES_MAX
 #define HH_RENDERABLES_MAX 512
+#endif
+
+#ifndef	HH_TEXTURES_RENDERABLE_MAX
+#define HH_TEXTURES_RENDERABLE_MAX 16
+#endif
+
+#ifndef	HH_MESHES_MAX
+#define HH_MESHES_MAX 256
 #endif
 
 #ifndef	HH_ATTRIBUTES_MAX
@@ -388,14 +395,18 @@ typedef struct Hedgehog
 	Map materialsByName;
 	//Map renderPathsByName;
 	
+	Map renderTexturesByName;
+	
 	//until we create merged map and list that contain not only pointers to arrays but also the arrays themselves... use these as backing arrays
 	Shader   shaders[HH_SHADERS_MAX];
 	Texture  textures[HH_TEXTURES_MAX];
+	Texture  renderTextures[HH_RENDERTEXTURES_MAX];
 	Material materials[HH_MATERIALS_MAX];
 	Program  programs[HH_PROGRAMS_MAX];
 	
 	Key shaderKeys[HH_SHADERS_MAX];
 	Key textureKeys[HH_TEXTURES_MAX];
+	Key rendertextureKeys[HH_RENDERTEXTURES_MAX];
 	Key materialKeys[HH_MATERIALS_MAX];
 	Key programKeys[HH_PROGRAMS_MAX];
 	//TODO - these lists but not generic / pointer - int lists! then remove same fields from Renderables.
