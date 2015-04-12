@@ -259,7 +259,15 @@ void Shader_load(Hedgehog * this, char * name)
 	vert->type = GL_VERTEX_SHADER;
 	frag->type = GL_FRAGMENT_SHADER;
 	
+	#if __linux__
+	char * path = "./shaders/";
+	#elif _WIN32
 	char * path = ".\\shaders\\";
+	#else
+	char * path;
+	printf("FAIL!");
+	exit(0);
+	#endif //linux
 	
 	size_t lengthName = strlen(name); //5 = .vert
 	size_t lengthPath = strlen(name); //5 = .vert
@@ -268,16 +276,18 @@ void Shader_load(Hedgehog * this, char * name)
 	strcpy(vertFilepath, path);
 	strcat(vertFilepath, name);
 	strcat(vertFilepath, ".vert");
+	printf("vertFilepath %s\n", vertFilepath);
 	vert->source = Text_load(vertFilepath);
 	
 	char fragFilepath[lengthPath+lengthName+1+4]; //5 = .frag
 	strcpy(fragFilepath, path);
 	strcat(fragFilepath, name);
 	strcat(fragFilepath, ".frag");
+	printf("fragFilepath %s\n", fragFilepath);
 	frag->source = Text_load(fragFilepath);
 	
-	printf("vertFilepath %s\n", vertFilepath);
-	printf("fragFilepath %s\n", fragFilepath);
+	
+	
 	
 	//printf("vert %s\n\n", vert->source);
 	//printf("frag %s\n\n", frag->source);
