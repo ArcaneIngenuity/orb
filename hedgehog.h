@@ -432,7 +432,7 @@ Program * Hedgehog_getCurrentProgram(Hedgehog * this);
 
 void Mesh_calculateNormals(Mesh * this);
 
-Texture * Texture_construct();
+Texture * Texture_alloc();
 Texture * Texture_load(const char * filename);
 Texture * Texture_loadFromMemory(const char * filename);
 

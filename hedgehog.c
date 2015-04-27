@@ -189,7 +189,7 @@ void Matrix_setProjectionPerspective(mat4x4 matrix, float near, float far, float
 
 //------------------Texture------------------//
 
-Texture * Texture_construct()
+Texture * Texture_alloc()
 {
 	Texture * texture = malloc(sizeof(Texture));
 	return texture;
@@ -197,7 +197,7 @@ Texture * Texture_construct()
 
 Texture * Texture_load(const char * filename)
 {
-	Texture * texture = Texture_construct();
+	Texture * texture = Texture_alloc();
 	texture->name = (char *) filename;
 	texture->data = stbi_load(filename, &(texture->width), &(texture->height), &(texture->components), 0);
 	
