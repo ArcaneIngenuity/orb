@@ -10,6 +10,8 @@
 #include <stdio.h>
 #include "../src/stb/stb_image_aug.h"
 #include "linmath.h"
+#include "../../curt/list_generic.h"
+#include "../../curt/map_generic.h"
 
 //FIXED CONSTANTS
 #define X 0
@@ -73,9 +75,6 @@
 #ifndef	HH_TRANSFORMS_MAX
 #define HH_TRANSFORMS_MAX 1024
 #endif
-
-#include "../../curt/list_generic.h"
-#include "../../curt/map_generic.h"
 
 typedef struct BMFontInfo
 {

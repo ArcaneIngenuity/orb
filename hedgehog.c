@@ -1,4 +1,6 @@
 #include "Hedgehog.h"
+//#include "../../curt/key.h"
+#include <assert.h>
 
 //TODO see "I/O callbacks" in stbi_image.h for loading images out of a data file
 void GLFW_errorCallback(int error, const char * description)
@@ -611,7 +613,8 @@ Program * Hedgehog_setCurrentProgram(Hedgehog * this, char * name)
 	}
 	else
 	{
-		this->program = (Program *)get(&this->programsByName, name);
+		this->program = (Program *)get(&this->programsByName, pad(name));
+		assert (this->program != NULL);
 		glUseProgram(this->program->id);
 	}
 	return this->program;
