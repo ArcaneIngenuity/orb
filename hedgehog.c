@@ -591,7 +591,7 @@ void Hedgehog_renderOne(Hedgehog * this, Renderable * renderable, const GLfloat 
 }
 
 
-void Hedgehog_create(Hedgehog * this)
+void Hedgehog_initialise(Hedgehog * this)
 {
 	voidPtrMap_create(&this->programsByName,	HH_PROGRAMS_MAX, 	&this->programKeys, 	(void *)&this->programs, NULL);
 	voidPtrMap_create(&this->shadersByName, 	HH_SHADERS_MAX, 	&this->shaderKeys, 		(void *)&this->shaders, NULL);
