@@ -425,7 +425,7 @@ typedef struct Hedgehog
 } Hedgehog;
 const struct Hedgehog hedgehogEmpty;
 
-void Hedgehog_construct(Hedgehog * this);
+void Hedgehog_create(Hedgehog * this);
 Program * Hedgehog_setCurrentProgram(Hedgehog * this, char * name);
 Program * Hedgehog_getCurrentProgram(Hedgehog * this);
 
