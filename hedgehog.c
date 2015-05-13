@@ -211,6 +211,28 @@ Texture * Texture_load(const char * filename)
 	return texture;
 }
 
+void Texture_createRenderDepth(Texture * const texture, uint16_t width, uint16_t height)
+{
+	texture->width = width;
+	texture->height = height;
+	texture->components = R_COMPONENTS;
+	texture->data = malloc(sizeof(unsigned char) * texture->width * texture->height * texture->components);
+	memset(texture->data, 0, sizeof(unsigned char) * texture->width * texture->height * texture->components);
+
+	Texture_setDimensionCount(texture, GL_TEXTURE_2D);
+	Texture_setTexelFormats(texture, GL_DEPTH_COMPONENT24, GL_FLOAT);
+	
+	intMap_put(&texture->intParametersByName, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	intMap_put(&texture->intParametersByName, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	intMap_put(&texture->intParametersByName, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	intMap_put(&texture->intParametersByName, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	intMap_put(&texture->intParametersByName, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+	intMap_put(&texture->intParametersByName, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+	Texture_applyParameters(texture);
+	
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24 , texture->width, texture->height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
+}
+
 /** Returns the OpenGL internally-used constant for a given zero-based texture unit ordinal. */
 GLuint Texture_getTextureUnitConstant(Texture * this)
 {
