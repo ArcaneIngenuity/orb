@@ -1,5 +1,19 @@
 #include "Hedgehog.h"
-//#include "../../curt/key.h"
+
+#define KEYPARTS 8
+
+#define CURT_SOURCE
+#define CURT_KEYPART_BITS (KEYPARTS * 8)
+
+#define CURT_ELEMENT_STRUCT
+#define CURT_ELEMENT_TYPE TextureParameter
+#include "../curt/map.h"
+#undef  CURT_ELEMENT_TYPE
+#undef  CURT_ELEMENT_STRUCT
+
+#undef  CURT_KEYPART_BITS
+#undef  CURT_SOURCE
+
 #include <assert.h>
 
 //TODO see "I/O callbacks" in stbi_image.h for loading images out of a data file
@@ -191,15 +205,17 @@ void Matrix_setProjectionPerspective(mat4x4 matrix, float near, float far, float
 
 //------------------Texture------------------//
 
-Texture * Texture_alloc()
+Texture * Texture_create()
 {
 	Texture * texture = malloc(sizeof(Texture));
+	glGenTextures(1, &texture->id);
+	TextureParameterMap_create(&texture->parametersByName, 16, &texture->parameterKeys, &texture->parameters, (TextureParameter *)&textureParameterEmpty);
 	return texture;
 }
 
 Texture * Texture_load(const char * filename)
 {
-	Texture * texture = Texture_alloc();
+	Texture * texture = Texture_create();
 	texture->name = (char *) filename;
 	texture->data = stbi_load(filename, &(texture->width), &(texture->height), &(texture->components), 0);
 	
@@ -212,6 +228,53 @@ GLuint Texture_getTextureUnitConstant(Texture * this)
 	return this->unit + GL_TEXTURE0;
 }
 
+void Texture_refresh(Texture * this)
+{
+	glActiveTexture(GL_TEXTURE0 + this->unit); //"glActiveTexture specifies which texture unit a texture object is bound to when glBindTexture is called."
+	glBindTexture(GL_TEXTURE_2D, this->id); //binds the texture with id specified, to the 2D target
+	glTexImage2D (GL_TEXTURE_2D, 0, this->arrangedInternal, this->width, this->height, 0, this->arrangedExternal, this->atomTypeExternal, this->data); //uploads specified image data to the 2D target
+	//glTexSubImage2D (GL_TEXTURE_2D, 0, GL_RGBA, this->width, this->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, texture->data); //uploads specified image data to the 2D target
+}
+
+void Texture_setTexelFormats(Texture * this, GLenum arranged, GLenum atomTypeExternal)
+{
+	this->arrangedInternal = this->arrangedExternal = arranged;
+	this->atomTypeExternal = atomTypeExternal;
+}
+
+void Texture_setDimensions(Texture * this, GLenum dimensions)
+{
+	this->dimensions = dimensions;
+}
+
+void Texture_setParameter(Texture * this, GLenum key, GLfloat value, enum TextureParameterType type)
+{
+	//TODO when curt map supports multi-part keys, make sure to specify TextureParameterMap as single-part
+	TextureParameter parameter = {.value = value, .type = type};
+	uint64_t key64 = key;
+	TextureParameterMap_put(&this->parametersByName, key64, parameter);
+}
+
+void Texture_applyParameters(Texture * this)
+{
+	glActiveTexture(GL_TEXTURE0 + this->unit);
+	glBindTexture(GL_TEXTURE_2D, this->id);
+	
+	for (uint8_t p = 0; p < this->parametersByName.count; p++)
+	{
+		GLenum key = this->parametersByName.keys[p];
+		TextureParameter parameter = this->parametersByName.entries[p];
+		
+		if (parameter.type == int_type)
+		{
+			glTexParameteri(this->dimensions,   (GLint) key, parameter.value);
+		}
+		else
+		{
+			glTexParameterf(this->dimensions, (GLfloat) key, parameter.value);
+		}
+	}
+}
 //------------------GLBuffer------------------//
 
 GLuint GLBuffer_create(
@@ -256,19 +319,20 @@ void Shader_load(Hedgehog * this, char * name)
 	Shader * frag;
 	Program * program;
 	
+	if (strlen(name) > KEYPARTS * 1- 1)
+	{
+		printf("[Shader_load] Length of shader name must be less than or equal to 8 * KEYPARTS - 1.");
+		exit(0);
+	}
 	vert = malloc(sizeof(Shader));
 	frag = malloc(sizeof(Shader));
 	vert->type = GL_VERTEX_SHADER;
 	frag->type = GL_FRAGMENT_SHADER;
 	
-	#if __linux__
-	char * path = "./shaders/";
-	#elif _WIN32
+	#if _WIN32
 	char * path = ".\\shaders\\";
-	#else
-	char * path;
-	printf("FAIL!");
-	exit(0);
+	#else //all other supported OS?
+	char * path = "./shaders/";
 	#endif //linux
 	
 	size_t lengthName = strlen(name); //5 = .vert
@@ -288,9 +352,6 @@ void Shader_load(Hedgehog * this, char * name)
 	printf("fragFilepath %s\n", fragFilepath);
 	frag->source = Text_load(fragFilepath);
 	
-	
-	
-	
 	//printf("vert %s\n\n", vert->source);
 	//printf("frag %s\n\n", frag->source);
 	
@@ -299,33 +360,27 @@ void Shader_load(Hedgehog * this, char * name)
 	
 	int final = lengthName < 8 ? lengthName : 8 - 1;
 	
-	char vertKey[8+1];
+	char vertKey[8 + 1] = {0};
 	strncpy(vertKey, name, 8);
 	vertKey[final] = 'v'; //set last character to distinguish. TODO should be either first null or last character.
-	vertKey[final+1] = '\0';
 	printf("v=%s\n", vertKey);
 	//TODO check whether key exists
-	put(&this->shadersByName, vertKey, vert); //diffusev
+	put(&this->shadersByName, *(uint64_t *) vertKey, vert); //diffusev
 	
-	char fragKey[8+1];
+	char fragKey[8 + 1] = {0};
 	strncpy(fragKey, name, 8);
 	fragKey[final] = 'f'; //set last character to distinguish. TODO should be either first null or last character.
-	fragKey[final+1] = '\0';
 	
 	printf("f=%s\n", fragKey);
 	//TODO check whether key exists
-	put(&this->shadersByName, fragKey, frag); //diffusef
+	put(&this->shadersByName, *(uint64_t *) fragKey, frag); //diffusef
 	
 	program = malloc(sizeof(Program));
 	Program_construct(program, vert->id, frag->id);
 	program->topology = GL_TRIANGLES;
+	
 	//TODO check whether key exists
-	char progKey[8+1];
-	strncpy(progKey, name, 8);
-	progKey[8] = '\0';
-	printf("p=%s\n", progKey);
-	put(&this->programsByName, progKey, program);
-
+	put(&this->programsByName, *(uint64_t *) pad(name), program);
 }
 
 void Shader_construct(Shader * this)//, const char* shader_str, GLenum shader_type)
@@ -606,6 +661,7 @@ void Hedgehog_initialise(Hedgehog * this)
 
 Program * Hedgehog_setCurrentProgram(Hedgehog * this, char * name)
 {
+	//printf("name=%s\n", name);
 	if (name == NULL)
 	{
 		this->program = NULL;
@@ -613,7 +669,7 @@ Program * Hedgehog_setCurrentProgram(Hedgehog * this, char * name)
 	}
 	else
 	{
-		this->program = (Program *)get(&this->programsByName, pad(name));
+		this->program = (Program *)get(&this->programsByName, *(uint64_t *) pad(name));
 		assert (this->program != NULL);
 		glUseProgram(this->program->id);
 	}

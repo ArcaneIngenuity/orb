@@ -52,6 +52,10 @@
 #define HH_TEXTURES_MAX 128
 #endif
 
+#ifndef	HH_TEXTURE_PARAMETERS_MAX
+#define HH_TEXTURE_PARAMETERS_MAX 16
+#endif
+
 #ifndef	HH_MATERIALS_MAX
 #define HH_MATERIALS_MAX 64
 #endif
@@ -196,6 +200,32 @@ typedef struct Uniform
 	bool isTexture; //some special calls for textures: tex and sampler. TODO actually, this comes from reading the type
 } Uniform;
 
+enum TextureParameterType 
+{ 
+  int_type, 
+  float_type 
+}; 
+
+typedef struct TextureParameter
+{
+	//GLenum name;
+	GLint value; //cast from float where appropriate, see glTexParameteri vs glTexParameterf
+	enum TextureParameterType type;
+} TextureParameter;
+const struct TextureParameter textureParameterEmpty;
+
+#define CURT_HEADER
+#define CURT_KEYPART_BITS 64
+
+#define CURT_ELEMENT_STRUCT
+#define CURT_ELEMENT_TYPE TextureParameter
+#include "../curt/map.h"
+#undef  CURT_ELEMENT_TYPE
+#undef  CURT_ELEMENT_STRUCT
+
+#undef  CURT_KEYPART_BITS
+#undef  CURT_HEADER
+
 typedef struct Texture
 {
 	char * name; //or as key?
@@ -220,6 +250,18 @@ typedef struct Texture
 	
 	/** Did texels get modified / need upload? */
 	bool changed;
+	
+	//atom="type", arrangedExternal="format", arrangedInternal="internalFormat" all in glTexImage2D()
+	GLenum atomTypeExternal;
+	GLenum arrangedExternal; //32 bit unsigned = same as GLuint
+	GLint  arrangedInternal; //32 bit unsigned = same as GLenum
+	
+	
+	GLenum dimensions; //glTexImage2D & glBindTexture "target"
+	
+	TextureParameterMap parametersByName;
+	TextureParameter parameters[HH_TEXTURE_PARAMETERS_MAX];
+	uint64_t parameterKeys[HH_TEXTURE_PARAMETERS_MAX];
 } Texture;
 
 typedef struct Face
@@ -359,7 +401,7 @@ typedef struct RenderPath
 typedef struct Material
 {
 	Program program;
-	Texture texture;
+	Texture * texture;
 	//Map uniforms; //for referencing uniforms by name
 	//Map attributes; //ref attribs by name
 	
@@ -398,16 +440,16 @@ typedef struct Hedgehog
 	
 	//until we create merged map and list that contain not only pointers to arrays but also the arrays themselves... use these as backing arrays
 	Shader   shaders[HH_SHADERS_MAX];
-	Texture  textures[HH_TEXTURES_MAX];
-	Texture  renderTextures[HH_RENDERTEXTURES_MAX];
+	Texture * textures[HH_TEXTURES_MAX];
+	Texture * renderTextures[HH_RENDERTEXTURES_MAX];
 	Material materials[HH_MATERIALS_MAX];
 	Program  programs[HH_PROGRAMS_MAX];
 	
-	Key shaderKeys[HH_SHADERS_MAX];
-	Key textureKeys[HH_TEXTURES_MAX];
-	Key rendertextureKeys[HH_RENDERTEXTURES_MAX];
-	Key materialKeys[HH_MATERIALS_MAX];
-	Key programKeys[HH_PROGRAMS_MAX];
+	uint64_t shaderKeys[HH_SHADERS_MAX];
+	uint64_t textureKeys[HH_TEXTURES_MAX];
+	uint64_t rendertextureKeys[HH_RENDERTEXTURES_MAX];
+	uint64_t materialKeys[HH_MATERIALS_MAX];
+	uint64_t programKeys[HH_PROGRAMS_MAX];
 	//TODO - these lists but not generic / pointer - int lists! then remove same fields from Renderables.
 	//List changedMesh; //indices of Renderables that changed vertex data
 	//List changedMaterials; //indices of Renderables that changed uniforms
@@ -431,11 +473,16 @@ Program * Hedgehog_getCurrentProgram(Hedgehog * this);
 
 void Mesh_calculateNormals(Mesh * this);
 
-Texture * Texture_alloc();
+Texture * Texture_create();
 Texture * Texture_load(const char * filename);
 Texture * Texture_loadFromMemory(const char * filename);
 
 GLenum Texture_getTextureUnitConstant(Texture * this);
+
+void Texture_refresh(Texture * this);
+void Texture_setTexelFormats(Texture * this, GLenum arranged, GLenum atomTypeExternal); //set both internal and external format
+void Texture_setDimensions(Texture * this, GLenum dimensions);
+
 int Texture_free(Texture * texture);
 
 void * Texture_read2(int x, int y, void * texel);
