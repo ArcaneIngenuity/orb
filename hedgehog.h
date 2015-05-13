@@ -12,6 +12,8 @@
 #include "linmath.h"
 #include "../../curt/list_generic.h"
 #include "../../curt/map_generic.h"
+#include "../../curt/intMap.h"
+#include "../../curt/floatMap.h"
 
 //FIXED CONSTANTS
 #define X 0
@@ -200,32 +202,6 @@ typedef struct Uniform
 	bool isTexture; //some special calls for textures: tex and sampler. TODO actually, this comes from reading the type
 } Uniform;
 
-enum TextureParameterType 
-{ 
-  int_type, 
-  float_type 
-}; 
-
-typedef struct TextureParameter
-{
-	//GLenum name;
-	GLint value; //cast from float where appropriate, see glTexParameteri vs glTexParameterf
-	enum TextureParameterType type;
-} TextureParameter;
-const struct TextureParameter textureParameterEmpty;
-
-#define CURT_HEADER
-#define CURT_KEYPART_BITS 64
-
-#define CURT_ELEMENT_STRUCT
-#define CURT_ELEMENT_TYPE TextureParameter
-#include "../curt/map.h"
-#undef  CURT_ELEMENT_TYPE
-#undef  CURT_ELEMENT_STRUCT
-
-#undef  CURT_KEYPART_BITS
-#undef  CURT_HEADER
-
 typedef struct Texture
 {
 	char * name; //or as key?
@@ -256,12 +232,14 @@ typedef struct Texture
 	GLenum arrangedExternal; //32 bit unsigned = same as GLuint
 	GLint  arrangedInternal; //32 bit unsigned = same as GLenum
 	
-	
 	GLenum dimensions; //glTexImage2D & glBindTexture "target"
 	
-	TextureParameterMap parametersByName;
-	TextureParameter parameters[HH_TEXTURE_PARAMETERS_MAX];
-	uint64_t parameterKeys[HH_TEXTURE_PARAMETERS_MAX];
+	floatMap floatParametersByName;
+	intMap intParametersByName;
+	int 		intParameterValues[HH_TEXTURE_PARAMETERS_MAX];
+	float 		floatParameterValues[HH_TEXTURE_PARAMETERS_MAX];
+	uint64_t 	intParameterKeys[HH_TEXTURE_PARAMETERS_MAX];
+	uint64_t 	floatParameterKeys[HH_TEXTURE_PARAMETERS_MAX];
 } Texture;
 
 typedef struct Face
@@ -481,7 +459,7 @@ GLenum Texture_getTextureUnitConstant(Texture * this);
 
 void Texture_refresh(Texture * this);
 void Texture_setTexelFormats(Texture * this, GLenum arranged, GLenum atomTypeExternal); //set both internal and external format
-void Texture_setDimensions(Texture * this, GLenum dimensions);
+void Texture_setDimensionCount(Texture * this, GLenum dimensions);
 
 int Texture_free(Texture * texture);
 

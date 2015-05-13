@@ -1,18 +1,6 @@
 #include "Hedgehog.h"
 
-#define KEYPARTS 8
-
-#define CURT_SOURCE
-#define CURT_KEYPART_BITS (KEYPARTS * 8)
-
-#define CURT_ELEMENT_STRUCT
-#define CURT_ELEMENT_TYPE TextureParameter
-#include "../curt/map.h"
-#undef  CURT_ELEMENT_TYPE
-#undef  CURT_ELEMENT_STRUCT
-
-#undef  CURT_KEYPART_BITS
-#undef  CURT_SOURCE
+#define KEYPARTS 1
 
 #include <assert.h>
 
@@ -209,7 +197,8 @@ Texture * Texture_create()
 {
 	Texture * texture = malloc(sizeof(Texture));
 	glGenTextures(1, &texture->id);
-	TextureParameterMap_create(&texture->parametersByName, 16, &texture->parameterKeys, &texture->parameters, (TextureParameter *)&textureParameterEmpty);
+	intMap_create  (&texture->intParametersByName, 		16, &texture->intParameterKeys,   &texture->intParameterValues,   -1);
+	floatMap_create(&texture->floatParametersByName, 	16, &texture->floatParameterKeys, &texture->floatParameterValues, -1.f);
 	return texture;
 }
 
@@ -242,38 +231,34 @@ void Texture_setTexelFormats(Texture * this, GLenum arranged, GLenum atomTypeExt
 	this->atomTypeExternal = atomTypeExternal;
 }
 
-void Texture_setDimensions(Texture * this, GLenum dimensions)
+void Texture_setDimensionCount(Texture * this, GLenum dimensions)
 {
 	this->dimensions = dimensions;
 }
-
+/*
 void Texture_setParameter(Texture * this, GLenum key, GLfloat value, enum TextureParameterType type)
 {
 	//TODO when curt map supports multi-part keys, make sure to specify TextureParameterMap as single-part
 	TextureParameter parameter = {.value = value, .type = type};
 	uint64_t key64 = key;
 	TextureParameterMap_put(&this->parametersByName, key64, parameter);
+	printf("param value = %i\n", value);
 }
+*/
 
 void Texture_applyParameters(Texture * this)
 {
 	glActiveTexture(GL_TEXTURE0 + this->unit);
 	glBindTexture(GL_TEXTURE_2D, this->id);
 	
-	for (uint8_t p = 0; p < this->parametersByName.count; p++)
+	for (uint8_t p = 0; p < this->intParametersByName.count; p++)
 	{
-		GLenum key = this->parametersByName.keys[p];
-		TextureParameter parameter = this->parametersByName.entries[p];
-		
-		if (parameter.type == int_type)
-		{
-			glTexParameteri(this->dimensions,   (GLint) key, parameter.value);
-		}
-		else
-		{
-			glTexParameterf(this->dimensions, (GLfloat) key, parameter.value);
-		}
+		GLenum key = this->intParametersByName.keys[p];
+		GLint value = this->intParametersByName.entries[p];
+		glTexParameteri(this->dimensions, key, value);
 	}
+	
+	//TODO loop over float params
 }
 //------------------GLBuffer------------------//
 
@@ -319,9 +304,9 @@ void Shader_load(Hedgehog * this, char * name)
 	Shader * frag;
 	Program * program;
 	
-	if (strlen(name) > KEYPARTS * 1- 1)
+	if (strlen(name) > KEYPARTS * 8 - 1)
 	{
-		printf("[Shader_load] Length of shader name must be less than or equal to 8 * KEYPARTS - 1.");
+		printf("[Shader_load] Length of shader name must be less than or equal to KEYPARTS * 8 - 1.");
 		exit(0);
 	}
 	vert = malloc(sizeof(Shader));
