@@ -216,8 +216,8 @@ void Texture_createRenderDepth(Texture * const texture, uint16_t width, uint16_t
 	texture->width = width;
 	texture->height = height;
 	texture->components = R_COMPONENTS;
-	texture->data = malloc(sizeof(unsigned char) * texture->width * texture->height * texture->components);
-	memset(texture->data, 0, sizeof(unsigned char) * texture->width * texture->height * texture->components);
+	//texture->data = malloc(sizeof(unsigned char) * texture->width * texture->height * texture->components);
+	//memset(texture->data, 0, sizeof(unsigned char) * texture->width * texture->height * texture->components);
 
 	Texture_setDimensionCount(texture, GL_TEXTURE_2D);
 	Texture_setTexelFormats(texture, GL_DEPTH_COMPONENT24, GL_FLOAT);
@@ -237,6 +237,13 @@ void Texture_createRenderDepth(Texture * const texture, uint16_t width, uint16_t
 GLuint Texture_getTextureUnitConstant(Texture * this)
 {
 	return this->unit + GL_TEXTURE0;
+}
+
+void Texture_fresh(Texture * this)
+{
+	glActiveTexture(GL_TEXTURE0 + this->unit); //"glActiveTexture specifies which texture unit a texture object is bound to when glBindTexture is called."
+	glBindTexture(GL_TEXTURE_2D, this->id); //binds the texture with id specified, to the 2D target
+	glTexImage2D (GL_TEXTURE_2D, 0, this->arrangedInternal, this->width, this->height, 0, this->arrangedExternal, this->atomTypeExternal, 0);
 }
 
 void Texture_refresh(Texture * this)

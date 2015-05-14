@@ -457,6 +457,7 @@ Texture * Texture_loadFromMemory(const char * filename);
 
 GLenum Texture_getTextureUnitConstant(Texture * this);
 void Texture_createRenderDepth(Texture * const this, uint16_t width, uint16_t height);
+void Texture_fresh(Texture * this);
 void Texture_refresh(Texture * this);
 void Texture_setTexelFormats(Texture * this, GLenum arranged, GLenum atomTypeExternal); //set both internal and external format
 void Texture_setDimensionCount(Texture * this, GLenum dimensions);
