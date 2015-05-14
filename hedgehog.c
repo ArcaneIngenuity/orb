@@ -216,9 +216,7 @@ void Texture_createRenderDepth(Texture * const texture, uint16_t width, uint16_t
 	texture->width = width;
 	texture->height = height;
 	texture->components = R_COMPONENTS;
-	//texture->data = malloc(sizeof(unsigned char) * texture->width * texture->height * texture->components);
-	//memset(texture->data, 0, sizeof(unsigned char) * texture->width * texture->height * texture->components);
-
+	
 	Texture_setDimensionCount(texture, GL_TEXTURE_2D);
 	Texture_setTexelFormats(texture, GL_DEPTH_COMPONENT24, GL_FLOAT);
 	
@@ -264,16 +262,6 @@ void Texture_setDimensionCount(Texture * this, GLenum dimensions)
 {
 	this->dimensions = dimensions;
 }
-/*
-void Texture_setParameter(Texture * this, GLenum key, GLfloat value, enum TextureParameterType type)
-{
-	//TODO when curt map supports multi-part keys, make sure to specify TextureParameterMap as single-part
-	TextureParameter parameter = {.value = value, .type = type};
-	uint64_t key64 = key;
-	TextureParameterMap_put(&this->parametersByName, key64, parameter);
-	printf("param value = %i\n", value);
-}
-*/
 
 void Texture_applyParameters(Texture * this)
 {
