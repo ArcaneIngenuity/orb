@@ -19,11 +19,6 @@
 #define X 0
 #define Y 1
 #define Z 2
-
-#define R_COMPONENTS 1
-#define RG_COMPONENTS 2
-#define RGB_COMPONENTS 3
-#define RGBA_COMPONENTS 4
 #define POSITION_COMPONENTS 3
 #define TEXCOORD_COMPONENTS 2
 #define VERTICES_PER_TRIANGLE 3

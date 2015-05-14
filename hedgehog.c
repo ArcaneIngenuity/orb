@@ -211,24 +211,25 @@ Texture * Texture_load(const char * filename)
 	return texture;
 }
 
-void Texture_createRenderDepth(Texture * const texture, uint16_t width, uint16_t height)
+void Texture_createRenderDepth(Texture * const this, uint16_t width, uint16_t height)
 {
-	texture->width = width;
-	texture->height = height;
-	texture->components = R_COMPONENTS;
+	this->width = width;
+	this->height = height;
 	
-	Texture_setDimensionCount(texture, GL_TEXTURE_2D);
-	Texture_setTexelFormats(texture, GL_DEPTH_COMPONENT24, GL_FLOAT);
+	Texture_setDimensionCount(this, GL_TEXTURE_2D);
+	Texture_setTexelFormats(this, GL_DEPTH_COMPONENT24, GL_FLOAT);
 	
-	intMap_put(&texture->intParametersByName, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	intMap_put(&texture->intParametersByName, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	intMap_put(&texture->intParametersByName, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	intMap_put(&texture->intParametersByName, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	intMap_put(&texture->intParametersByName, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
-	intMap_put(&texture->intParametersByName, GL_TEXTURE_COMPARE_MODE, GL_NONE);
-	Texture_applyParameters(texture);
+	intMap_put(&this->intParametersByName, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	intMap_put(&this->intParametersByName, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	intMap_put(&this->intParametersByName, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	intMap_put(&this->intParametersByName, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	intMap_put(&this->intParametersByName, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+	intMap_put(&this->intParametersByName, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+	Texture_applyParameters(this);
 	
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24 , texture->width, texture->height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
+	glActiveTexture(GL_TEXTURE0 + this->unit); //"which texture unit a texture object is bound to when glBindTexture is called."
+	glBindTexture(GL_TEXTURE_2D, this->id); //binds the texture with id specified, to the 2D target
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24 , this->width, this->height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
 }
 
 /** Returns the OpenGL internally-used constant for a given zero-based texture unit ordinal. */
@@ -239,7 +240,7 @@ GLuint Texture_getTextureUnitConstant(Texture * this)
 
 void Texture_fresh(Texture * this)
 {
-	glActiveTexture(GL_TEXTURE0 + this->unit); //"glActiveTexture specifies which texture unit a texture object is bound to when glBindTexture is called."
+	glActiveTexture(GL_TEXTURE0 + this->unit); //"which texture unit a texture object is bound to when glBindTexture is called."
 	glBindTexture(GL_TEXTURE_2D, this->id); //binds the texture with id specified, to the 2D target
 	glTexImage2D (GL_TEXTURE_2D, 0, this->arrangedInternal, this->width, this->height, 0, this->arrangedExternal, this->atomTypeExternal, 0);
 }
@@ -256,6 +257,23 @@ void Texture_setTexelFormats(Texture * this, GLenum arranged, GLenum atomTypeExt
 {
 	this->arrangedInternal = this->arrangedExternal = arranged;
 	this->atomTypeExternal = atomTypeExternal;
+	switch (arranged)
+	{
+		//TODO (see glTexImage2D) GL_DEPTH_STENCIL
+		case GL_DEPTH_COMPONENT:  	this->components = 1; break;
+		case GL_DEPTH_COMPONENT16:  this->components = 1; break;
+		case GL_DEPTH_COMPONENT24:  this->components = 1; break;
+		case GL_DEPTH_COMPONENT32F: this->components = 1; break;
+		case GL_RED:  				this->components = 1; break;
+		case GL_RG:   				this->components = 2; break;
+		case GL_RGB: 
+		case GL_BGR:  				this->components = 3; break;
+		case GL_RGBA:
+		case GL_BGRA: 				this->components = 4; break;
+		default:
+			printf("Error: hedgehog can accept only GL_RED, GL_RG, GL_RGB, GL_BGR, GL_RGBA or GL_BGRA.\n");
+			exit(0);
+	}
 }
 
 void Texture_setDimensionCount(Texture * this, GLenum dimensions)
