@@ -211,7 +211,7 @@ Texture * Texture_load(const char * filename)
 	return texture;
 }
 
-void Texture_createRenderDepth(Texture * const this, uint16_t width, uint16_t height)
+void RenderTexture_createDepth(Texture * const this, uint16_t width, uint16_t height)
 {
 	this->width = width;
 	this->height = height;
@@ -230,6 +230,27 @@ void Texture_createRenderDepth(Texture * const this, uint16_t width, uint16_t he
 	glActiveTexture(GL_TEXTURE0 + this->unit); //"which texture unit a texture object is bound to when glBindTexture is called."
 	glBindTexture(GL_TEXTURE_2D, this->id); //binds the texture with id specified, to the 2D target
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24 , this->width, this->height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
+}
+
+void RenderTexture_createColor(Texture * this, GLuint i, uint16_t width, uint16_t height, GLenum format)
+{
+	this->unit = i;
+	this->width = width;
+	this->height = height;
+	
+	Texture_setDimensionCount(this, GL_TEXTURE_2D);
+	Texture_setTexelFormats(this, format, GL_UNSIGNED_BYTE);
+	
+	intMap_put(&this->intParametersByName, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	intMap_put(&this->intParametersByName, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	intMap_put(&this->intParametersByName, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	intMap_put(&this->intParametersByName, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	Texture_applyParameters(this);
+	
+	this->data = malloc(sizeof(unsigned char) * this->width * this->height * this->components);
+	memset(this->data, 0, sizeof(unsigned char) * this->width * this->height * this->components);
+	
+	Texture_refresh(this); //fresh()?
 }
 
 /** Returns the OpenGL internally-used constant for a given zero-based texture unit ordinal. */
