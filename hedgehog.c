@@ -205,14 +205,15 @@ Texture * Texture_create()
 Texture * Texture_load(const char * filename)
 {
 	Texture * texture = Texture_create();
-	texture->name = (char *) filename;
+	//texture->name = (char *) filename;
 	texture->data = stbi_load(filename, &(texture->width), &(texture->height), &(texture->components), 0);
 	
 	return texture;
 }
 
-void RenderTexture_createDepth(Texture * const this, uint16_t width, uint16_t height)
+void RenderTexture_createDepth(Texture * const this, GLuint i, uint16_t width, uint16_t height)
 {
+	this->unit = i;
 	this->width = width;
 	this->height = height;
 	
@@ -232,7 +233,7 @@ void RenderTexture_createDepth(Texture * const this, uint16_t width, uint16_t he
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24 , this->width, this->height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
 }
 
-void RenderTexture_createColor(Texture * this, GLuint i, uint16_t width, uint16_t height, GLenum format)
+void RenderTexture_createColor(Texture * const this, GLuint i, uint16_t width, uint16_t height, GLenum format)
 {
 	this->unit = i;
 	this->width = width;
@@ -251,6 +252,15 @@ void RenderTexture_createColor(Texture * this, GLuint i, uint16_t width, uint16_
 	memset(this->data, 0, sizeof(unsigned char) * this->width * this->height * this->components);
 	
 	Texture_refresh(this); //fresh()?
+}
+
+//prepares the RenderTexture to be rendered from.
+void Texture_prepare(Texture * this, Program * program)
+{
+	glActiveTexture(GL_TEXTURE0 + this->unit); //"glActiveTexture specifies which texture unit a texture object is bound to when glBindTexture is called."
+	glBindTexture(GL_TEXTURE_2D, this->id); //ensure the correct texture is bound to the texture unit that the shader will use (?)
+	GLint uniformTexture = glGetUniformLocation(program->id, this->name);
+	glUniform1i(uniformTexture, this->unit); //let shader's sampler bind to appropriate texture unit
 }
 
 /** Returns the OpenGL internally-used constant for a given zero-based texture unit ordinal. */

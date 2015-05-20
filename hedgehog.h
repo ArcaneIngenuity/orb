@@ -199,7 +199,7 @@ typedef struct Uniform
 
 typedef struct Texture
 {
-	char * name; //or as key?
+	char name[32]; //or as key?
     
     /** The byte buffer representing the decoded image data. */
 	unsigned char * data;
@@ -453,6 +453,7 @@ Texture * Texture_loadFromMemory(const char * filename);
 GLenum Texture_getTextureUnitConstant(Texture * this);
 void Texture_fresh(Texture * this);
 void Texture_refresh(Texture * this);
+void Texture_prepare(Texture * this, Program * program);
 void Texture_setTexelFormats(Texture * this, GLenum arranged, GLenum atomTypeExternal); //set both internal and external format
 void Texture_setDimensionCount(Texture * this, GLenum dimensions);
 
@@ -463,8 +464,8 @@ void Texture_write2(int x, int y, void * texel);
 void * Texture_read3(int x, int y, int z);
 void Texture_write3(int x, int y, int z);
 
-void RenderTexture_createDepth(Texture * const this, uint16_t width, uint16_t height);
-void RenderTexture_createColor(Texture * this, GLuint i, uint16_t width, uint16_t height, GLenum format);
+void RenderTexture_createDepth(Texture * const this, GLuint i, uint16_t width, uint16_t height);
+void RenderTexture_createColor(Texture * const this, GLuint i, uint16_t width, uint16_t height, GLenum format);
 
 GLuint GLBuffer_create(
     GLenum target,
