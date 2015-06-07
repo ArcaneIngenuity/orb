@@ -73,10 +73,6 @@
 #define HH_ATTRIBUTES_MAX 8
 #endif
 
-#ifndef	HH_TRANSFORMS_MAX
-#define HH_TRANSFORMS_MAX 1024
-#endif
-
 typedef struct BMFontInfo
 {
 	char * face;

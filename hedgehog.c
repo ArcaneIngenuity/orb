@@ -735,7 +735,7 @@ void Hedgehog_initialise(Hedgehog * this)
 	
 	//reintroduce if we bring transform list back into hedgehog.
 	//Renderable * renderable = &this->renderable;
-	//for (int i = 0; i < HH_TRANSFORMS_MAX; i++)
+	//for (int i = 0; i < transformsCount; i++)
 	//	mat4x4_identity(renderable->matrix[i]);
 }
 
