@@ -161,6 +161,35 @@ void Transform_update(Transform* this)
 
 }
 */
+
+void Transform_translate(mat4x4 * matPos, vec3 * position, vec3 delta)
+{
+	mat4x4 matTemp;
+	mat4x4_identity(&matTemp);
+	*position[X] += delta[X];
+	*position[Y] += delta[Y];
+	*position[Z] += delta[Z];
+	mat4x4_translate(*matPos, *position[X], *position[Y], *position[Z]);
+}
+
+void Transform_rotate(mat4x4 * matRot, vec3 * rotation, vec3 delta)
+{
+	mat4x4 matTemp;
+	mat4x4_identity(&matTemp);
+	*rotation[X] += delta[X];
+	*rotation[Y] += delta[Y];
+	*rotation[Z] += delta[Z];
+	mat4x4_identity(matTemp);
+	mat4x4_rotate_Y(*matRot, matTemp, *rotation[Y]); mat4x4_dup(matTemp, *matRot);
+	mat4x4_rotate_X(*matRot, matTemp, *rotation[X]);
+}
+
+//don't call until we have done all translations AND rotations
+void Transform_finalise(mat4x4 * matTrans, mat4x4 * matPos, mat4x4 * matRot)
+{
+	mat4x4_mul(*matTrans, *matPos, *matRot);
+}
+
 void Camera_lookAt()
 {
 	//lookingAt;

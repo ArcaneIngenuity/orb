@@ -464,6 +464,10 @@ void Texture_write2(int x, int y, void * texel);
 void * Texture_read3(int x, int y, int z);
 void Texture_write3(int x, int y, int z);
 
+void Transform_finalise(mat4x4 * matTrans, mat4x4 * matPos, mat4x4 * matRot);
+void Transform_rotate(mat4x4 * matRot, vec3 * rotation, vec3 delta);
+void Transform_translate(mat4x4 * matPos, vec3 * position, vec3 delta);
+
 void RenderTexture_createDepth(Texture * const this, GLuint i, uint16_t width, uint16_t height);
 void RenderTexture_createColor(Texture * const this, GLuint i, uint16_t width, uint16_t height, GLenum format);
 
@@ -482,14 +486,11 @@ void Hedgehog_clear();
 void Hedgehog_renderSet(Program * program, RenderableSet * renderableSet, const GLfloat * matVP);
 void Hedgehog_renderOne(Hedgehog * this, Renderable * renderable, const GLfloat * matM, const GLfloat * matVP);
 void Hedgehog_createFullscreenQuad(Hedgehog * this, GLuint positionVertexAttributeIndex, GLuint texcoordVertexAttributeIndex);
-
-//void Matrix_setProjectionPerspective(mat4x4 matrix, float near, float far, float top, float right);
+float Hedgehog_smoothstep(float t);
 
 char* Text_load(char* filename);
 
 void GLFW_errorCallback(int error, const char * description);
 bool GLTool_isExtensionSupported(const char * extension); //redundant, see GLFW
-
-float Hedgehog_smoothstep(float t);
 
 #endif //HEDGEHOG_H
