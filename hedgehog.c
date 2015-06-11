@@ -184,6 +184,21 @@ void Transform_rotate(mat4x4 * matRot, vec3 * rotation, vec3 delta)
 	mat4x4_rotate_X(*matRot, matTemp, *rotation[X]);
 }
 
+//TODO kill in favour of same in Transform
+void Transform_updateRotationMatrixYX(vec3 rotation, mat4x4 * matRot)
+{
+	mat4x4 m;
+	mat4x4_identity(m);
+	mat4x4_rotate_Y(*matRot, m, rotation[Y]); mat4x4_dup(m, *matRot);
+	mat4x4_rotate_X(*matRot, m, rotation[X]);
+}
+
+//TODO kill in favour of same in Transform
+void Transform_updatePositionMatrix(vec3 position, mat4x4 * matPos)
+{
+	mat4x4_translate(*matPos, position[X], position[Y], position[Z]);
+}
+
 //don't call until we have done all translations AND rotations
 void Transform_finalise(mat4x4 * matTrans, mat4x4 * matPos, mat4x4 * matRot)
 {
