@@ -199,7 +199,7 @@ typedef struct Texture
 	char name[32]; //or as key?
     
     /** The byte buffer representing the decoded image data. */
-	unsigned char * data;
+	uint8_t * data;
     
     /** Texture width. */
     GLsizei width;
