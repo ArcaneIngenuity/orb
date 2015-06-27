@@ -16,9 +16,9 @@
 #include "../../curt/floatMap.h"
 
 //FIXED CONSTANTS
-#define X 0
-#define Y 1
-#define Z 2
+#define XX 0
+#define YY 1
+#define ZZ 2
 #define POSITION_COMPONENTS 3
 #define TEXCOORD_COMPONENTS 2
 #define VERTICES_PER_TRIANGLE 3

@@ -166,22 +166,22 @@ void Transform_translate(mat4x4 * matPos, vec3 * position, vec3 delta)
 {
 	mat4x4 matTemp;
 	mat4x4_identity(&matTemp);
-	*position[X] += delta[X];
-	*position[Y] += delta[Y];
-	*position[Z] += delta[Z];
-	mat4x4_translate(*matPos, *position[X], *position[Y], *position[Z]);
+	*position[XX] += delta[XX];
+	*position[YY] += delta[YY];
+	*position[ZZ] += delta[ZZ];
+	mat4x4_translate(*matPos, *position[XX], *position[YY], *position[ZZ]);
 }
 
 void Transform_rotate(mat4x4 * matRot, vec3 * rotation, vec3 delta)
 {
 	mat4x4 matTemp;
 	mat4x4_identity(&matTemp);
-	*rotation[X] += delta[X];
-	*rotation[Y] += delta[Y];
-	*rotation[Z] += delta[Z];
+	*rotation[XX] += delta[XX];
+	*rotation[YY] += delta[YY];
+	*rotation[ZZ] += delta[ZZ];
 	mat4x4_identity(matTemp);
-	mat4x4_rotate_Y(*matRot, matTemp, *rotation[Y]); mat4x4_dup(matTemp, *matRot);
-	mat4x4_rotate_X(*matRot, matTemp, *rotation[X]);
+	mat4x4_rotate_Y(*matRot, matTemp, *rotation[YY]); mat4x4_dup(matTemp, *matRot);
+	mat4x4_rotate_X(*matRot, matTemp, *rotation[XX]);
 }
 
 //TODO kill in favour of same in Transform
@@ -189,14 +189,14 @@ void Transform_updateRotationMatrixYX(vec3 rotation, mat4x4 * matRot)
 {
 	mat4x4 m;
 	mat4x4_identity(m);
-	mat4x4_rotate_Y(*matRot, m, rotation[Y]); mat4x4_dup(m, *matRot);
-	mat4x4_rotate_X(*matRot, m, rotation[X]);
+	mat4x4_rotate_Y(*matRot, m, rotation[YY]); mat4x4_dup(m, *matRot);
+	mat4x4_rotate_X(*matRot, m, rotation[XX]);
 }
 
 //TODO kill in favour of same in Transform
 void Transform_updatePositionMatrix(vec3 position, mat4x4 * matPos)
 {
-	mat4x4_translate(*matPos, position[X], position[Y], position[Z]);
+	mat4x4_translate(*matPos, position[XX], position[YY], position[ZZ]);
 }
 
 //don't call until we have done all translations AND rotations
