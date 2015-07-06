@@ -1,4 +1,4 @@
-#include "Hedgehog.h"
+#include "hedgehog.h"
 
 #define KEYPARTS 1
 

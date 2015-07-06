@@ -8,12 +8,12 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "../src/stb/stb_image_aug.h"
+#include "stb_image_aug.h"
 #include "linmath.h"
-#include "../../curt/list_generic.h"
-#include "../../curt/map_generic.h"
-#include "../../curt/intMap.h"
-#include "../../curt/floatMap.h"
+#include "list_generic.h"
+#include "map_generic.h"
+#include "intMap.h"
+#include "floatMap.h"
 
 //FIXED CONSTANTS
 #define XX 0
