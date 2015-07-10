@@ -261,13 +261,15 @@ typedef struct Mesh
 	bool changed;
 } Mesh;
 
-//Renderable is a combination (typically unique) of some Mesh (vertex data) and some Material (shader + uniforms).
+//Renderable is a unique combination of some Mesh (vertex data) and some Material (shader + uniforms).
+//It is optional for grouping these related render-time aspects together. It is best used where efficiency is not of the essence, e.g. UI (where efficiency is important, rather use multiple arrays with same index into each). 
 //Materials are either treated explicitly or simply as the input interface + matching renderable information for a given ProgramPath
 typedef struct Renderable
 {
 	//occasional upload i.e. not performance-critical, so these objects can be pointers to structs.
 	Mesh * mesh;
 	Texture * textures[HH_TEXTURES_RENDERABLE_MAX]; 
+	mat4x4 * matrix;
 	//TODO Material (with Texture)
 	//Material materials[];
 	//A Material consists of:
@@ -280,7 +282,9 @@ const struct Renderable renderableEmpty;
 //TODO make it use a particular Mesh, Material (with Texture) etc.
 typedef struct RenderableSet
 {
-	Renderable * renderable;
+	//Renderable * renderable;
+	Mesh * mesh;
+	Texture * textures[HH_TEXTURES_RENDERABLE_MAX];
 
 	//we always need a contiguous buffer. So to keep things fast, client app *should*
 	//memcpy out a contiguous block from a super-array: this means pre-sorting.
@@ -404,22 +408,25 @@ typedef struct Hedgehog
 	Map shadersByName;
 	Map texturesByName;
 	Map materialsByName;
+	Map meshesByName;
 	//Map renderPathsByName;
 	
 	Map renderTexturesByName;
 	
 	//until we create merged map and list that contain not only pointers to arrays but also the arrays themselves... use these as backing arrays
-	Shader   shaders[HH_SHADERS_MAX];
-	Texture * textures[HH_TEXTURES_MAX];
-	Texture * renderTextures[HH_RENDERTEXTURES_MAX];
-	Material materials[HH_MATERIALS_MAX];
-	Program  programs[HH_PROGRAMS_MAX];
+	Shader   	shaders[HH_SHADERS_MAX];
+	Texture * 	textures[HH_TEXTURES_MAX];
+	Texture * 	renderTextures[HH_RENDERTEXTURES_MAX];
+	Material 	materials[HH_MATERIALS_MAX];
+	Program  	programs[HH_PROGRAMS_MAX];
+	Mesh *		meshes[HH_MESHES_MAX];
 	
 	uint64_t shaderKeys[HH_SHADERS_MAX];
 	uint64_t textureKeys[HH_TEXTURES_MAX];
 	uint64_t rendertextureKeys[HH_RENDERTEXTURES_MAX];
 	uint64_t materialKeys[HH_MATERIALS_MAX];
 	uint64_t programKeys[HH_PROGRAMS_MAX];
+	uint64_t meshKeys[HH_MESHES_MAX];
 	//TODO - these lists but not generic / pointer - int lists! then remove same fields from Renderables.
 	//List changedMesh; //indices of Renderables that changed vertex data
 	//List changedMaterials; //indices of Renderables that changed uniforms
@@ -482,7 +489,12 @@ void Program_construct(Program * this, GLuint vertex_shader, GLuint fragment_sha
 void Hedgehog_clear();
 void Hedgehog_renderSet(Program * program, RenderableSet * renderableSet, const GLfloat * matVP);
 void Hedgehog_renderOne(Hedgehog * this, Renderable * renderable, const GLfloat * matM, const GLfloat * matVP);
+void Hedgehog_renderOneUI(Hedgehog * this, Renderable * renderable, const GLfloat * matM);
 void Hedgehog_createFullscreenQuad(Hedgehog * this, GLuint positionVertexAttributeIndex, GLuint texcoordVertexAttributeIndex);
+void Hedgehog_createScreenQuad(Mesh * mesh, GLuint positionVertexAttributeIndex, GLuint texcoordVertexAttributeIndex,
+	int w, int h,
+	int rcx, int rcy
+);
 float Hedgehog_smoothstep(float t);
 
 char* Text_load(char* filename);

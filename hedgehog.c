@@ -683,6 +683,74 @@ void Hedgehog_createFullscreenQuad(Hedgehog * this, GLuint positionVertexAttribu
 	//unbind
 	glBindVertexArray(0);
 }
+
+void Hedgehog_createScreenQuad(Mesh * mesh, GLuint positionVertexAttributeIndex, GLuint texcoordVertexAttributeIndex,
+	int w, int h,
+	int rcx, int rcy
+)
+{
+	mesh->topology = GL_TRIANGLES;
+	mesh->indexCount = 6;
+	mesh->vertexCount = 4;
+	mesh->index = malloc(sizeof(GLushort) * mesh->indexCount);
+	mesh->attribute[positionVertexAttributeIndex].vertex = malloc(sizeof(GLfloat) * mesh->vertexCount * TEXCOORD_COMPONENTS);
+	mesh->attribute[texcoordVertexAttributeIndex].vertex = malloc(sizeof(GLfloat) * mesh->vertexCount * TEXCOORD_COMPONENTS);
+	
+	Attribute * position = &mesh->attribute[positionVertexAttributeIndex];
+	Attribute * texcoord = &mesh->attribute[texcoordVertexAttributeIndex];
+
+	//create vertex attributes using static initialisers, then copy these into the Mesh
+	GLushort _index[6] = {
+		0, 1, 2,
+		2, 3, 0
+	};
+	
+	float wabs = (float)w/1024;
+	float habs = (float)h/768;
+	
+	GLfloat _position[8] = {
+		-wabs, -habs,
+		+wabs, -habs,
+		+wabs, +habs,
+		-wabs, +habs
+	};
+	
+	GLfloat _texcoord[8] = {
+		//y-inverted due to texture space flip
+		0.0, 0.0,
+		1.0, 0.0,
+		1.0, 1.0,
+		0.0, 1.0
+	};
+
+	memcpy(mesh->index, _index, sizeof(_index));
+	memcpy(position->vertex, _position, sizeof(_position));
+	memcpy(texcoord->vertex, _texcoord, sizeof(_texcoord));
+	
+	printf("index %d %d\n", sizeof(_index), mesh->indexCount * 2);
+	printf("pos   %d %d\n", sizeof(_position), mesh->vertexCount * 4);
+	printf("texco %d %d\n", sizeof(_texcoord), mesh->vertexCount * 4);
+	
+	glGenVertexArrays(1, &(mesh->vao)); //VAO frees us from having to call glGetAttribLocation & glVertexAttribPointer on each modify op
+	glBindVertexArray(mesh->vao);
+	
+	//positions
+	glGenBuffers(1, &position->id);
+	glBindBuffer(GL_ARRAY_BUFFER, position->id);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * mesh->vertexCount * TEXCOORD_COMPONENTS, position->vertex, GL_DYNAMIC_DRAW);
+	glVertexAttribPointer(positionVertexAttributeIndex, TEXCOORD_COMPONENTS, GL_FLOAT, GL_FALSE, 0, 0); //provide data / layout info; "take buffer that is bound at the time called and associates that buffer with the current VAO"
+	glEnableVertexAttribArray(positionVertexAttributeIndex); //enable attribute for use
+	
+	//texcoords
+	glGenBuffers(1, &texcoord->id);
+	glBindBuffer(GL_ARRAY_BUFFER, texcoord->id);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * mesh->vertexCount * TEXCOORD_COMPONENTS, texcoord->vertex, GL_DYNAMIC_DRAW);
+	glVertexAttribPointer(texcoordVertexAttributeIndex, TEXCOORD_COMPONENTS, GL_FLOAT, GL_FALSE, 0, 0); //provide data / layout info; "take buffer that is bound at the time called and associates that buffer with the current VAO"
+	glEnableVertexAttribArray(texcoordVertexAttributeIndex); //enable attribute for use
+	
+	//unbind
+	glBindVertexArray(0);
+}
 /*
 void Hedgehog_renderSet(Program * program, RenderableSet * renderableSet, const GLfloat * matVP)
 {
@@ -740,6 +808,25 @@ void Hedgehog_renderOne(Hedgehog * this, Renderable * renderable, const GLfloat 
 	glBindVertexArray(0);
 }
 
+void Hedgehog_renderOneUI(Hedgehog * this, Renderable * renderable, const GLfloat * matM)
+{
+	Mesh * mesh = renderable->mesh;
+
+	glBindVertexArray(mesh->vao);
+	
+	//prep uniforms...
+	//...model matrix
+	GLint mLoc = glGetUniformLocation(this->program->id, "m");
+	glUniformMatrix4fv(mLoc, 1, GL_FALSE, (GLfloat *)matM);
+	
+	if (mesh->index == NULL)
+		glDrawArrays(mesh->topology, 0, mesh->vertexCount);
+	else
+		glDrawElements(mesh->topology, mesh->indexCount, GL_UNSIGNED_SHORT, mesh->index);
+	
+	glBindVertexArray(0);
+}
+
 
 void Hedgehog_initialise(Hedgehog * this)
 {
@@ -747,6 +834,7 @@ void Hedgehog_initialise(Hedgehog * this)
 	voidPtrMap_create(&this->shadersByName, 	HH_SHADERS_MAX, 	&this->shaderKeys, 		(void *)&this->shaders, NULL);
 	voidPtrMap_create(&this->texturesByName, 	HH_TEXTURES_MAX, 	&this->textureKeys, 	(void *)&this->textures, NULL);
 	voidPtrMap_create(&this->materialsByName, 	HH_MATERIALS_MAX, 	&this->materialKeys, 	(void *)&this->materials, NULL);
+	voidPtrMap_create(&this->meshesByName, 		HH_MESHES_MAX, 		&this->meshKeys,	 	(void *)&this->meshes, NULL);
 	
 	//reintroduce if we bring transform list back into hedgehog.
 	//Renderable * renderable = &this->renderable;
