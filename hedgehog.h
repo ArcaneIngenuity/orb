@@ -15,6 +15,14 @@
 #include "intMap.h"
 #include "floatMap.h"
 
+#define GL_BGR 0x80E0
+#define GL_BGRA 0x80E1
+#define GL_RG 0x8227
+#define GL_RED 0x1903
+//#define GL_LINE 0x1B01
+//#define GL_FILL 0x1B02
+#define GL_MAX_COLOR_ATTACHMENTS 0x8CDF
+
 //FIXED CONSTANTS
 #define XX 0
 #define YY 1
@@ -266,9 +274,12 @@ typedef struct Mesh
 //Materials are either treated explicitly or simply as the input interface + matching renderable information for a given ProgramPath
 typedef struct Renderable
 {
+	//char * id;
+	
 	//occasional upload i.e. not performance-critical, so these objects can be pointers to structs.
 	Mesh * mesh;
 	Texture * textures[HH_TEXTURES_RENDERABLE_MAX]; 
+	//Texture * texture; 
 	mat4x4 * matrix;
 	//TODO Material (with Texture)
 	//Material materials[];
