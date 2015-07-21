@@ -4,6 +4,7 @@
 
 #include <assert.h>
 
+
 //TODO see "I/O callbacks" in stbi_image.h for loading images out of a data file
 void GLFW_errorCallback(int error, const char * description)
 {
@@ -262,19 +263,18 @@ void RenderTexture_createDepth(Texture * const this, GLuint i, uint16_t width, u
 	this->height = height;
 	
 	Texture_setDimensionCount(this, GL_TEXTURE_2D);
-	Texture_setTexelFormats(this, GL_DEPTH_COMPONENT24, GL_FLOAT);
+	Texture_setTexelFormats(this, GL_DEPTH_COMPONENT16, GL_FLOAT);
 	
 	intMap_put(&this->intParametersByName, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	intMap_put(&this->intParametersByName, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	intMap_put(&this->intParametersByName, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	intMap_put(&this->intParametersByName, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	intMap_put(&this->intParametersByName, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
-	intMap_put(&this->intParametersByName, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+
 	Texture_applyParameters(this);
 	
 	glActiveTexture(GL_TEXTURE0 + this->unit); //"which texture unit a texture object is bound to when glBindTexture is called."
 	glBindTexture(GL_TEXTURE_2D, this->id); //binds the texture with id specified, to the 2D target
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24 , this->width, this->height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT16 , this->width, this->height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
 }
 
 void RenderTexture_createColor(Texture * const this, GLuint i, uint16_t width, uint16_t height, GLenum format)
@@ -337,8 +337,8 @@ void Texture_setTexelFormats(Texture * this, GLenum arranged, GLenum atomTypeExt
 		//TODO (see glTexImage2D) GL_DEPTH_STENCIL
 		case GL_DEPTH_COMPONENT:  	this->components = 1; break;
 		case GL_DEPTH_COMPONENT16:  this->components = 1; break;
-		case GL_DEPTH_COMPONENT24:  this->components = 1; break;
-		case GL_DEPTH_COMPONENT32F: this->components = 1; break;
+		//case GL_DEPTH_COMPONENT24:  this->components = 1; break;
+		//case GL_DEPTH_COMPONENT32F: this->components = 1; break;
 		case GL_RED:  				this->components = 1; break;
 		case GL_RG:   				this->components = 2; break;
 		case GL_RGB: 
@@ -353,21 +353,33 @@ void Texture_setTexelFormats(Texture * this, GLenum arranged, GLenum atomTypeExt
 
 void Texture_setDimensionCount(Texture * this, GLenum dimensions)
 {
+	printf("set dimensiosn to %d\n", dimensions);
 	this->dimensions = dimensions;
 }
 
 void Texture_applyParameters(Texture * this)
 {
+	printf("unit %u\n",this->unit);
 	glActiveTexture(GL_TEXTURE0 + this->unit);
+	printf("e0 %s\n",glGetError());
 	glBindTexture(GL_TEXTURE_2D, this->id);
-	
+	printf("e1 %s\n",glGetError());
+	printf("b.2\n");
 	for (uint8_t p = 0; p < this->intParametersByName.count; p++)
 	{
 		GLenum key = this->intParametersByName.keys[p];
 		GLint value = this->intParametersByName.entries[p];
+		printf("GL_TEXTURE_2D %i\n", GL_TEXTURE_2D);
+		printf("GL_TEXTURE_MIN_FILTER GL_NEAREST %u %i\n", GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		printf("GL_TEXTURE_MAG_FILTER GL_NEAREST %u %i\n", GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		printf("GL_TEXTURE_WRAP_S 	  GL_REPEAT  %u %i\n", GL_TEXTURE_WRAP_S, GL_REPEAT);
+		printf("GL_TEXTURE_WRAP_T 	  GL_REPEAT  %u %i\n", GL_TEXTURE_WRAP_T, GL_REPEAT);
+		printf("ber %u %u %i\n", this->dimensions, key, value);
+		printf("glTexParameteri == NULL? %u\n", glTexParameteri == NULL);
 		glTexParameteri(this->dimensions, key, value);
+		//printf("berrror %s\n",glGetError());
 	}
-	
+	printf("b.3\n");
 	//TODO loop over float params
 }
 //------------------GLBuffer------------------//
@@ -384,27 +396,6 @@ GLuint GLBuffer_create(
     glBufferData(target, size, data, usage);
 	printf("buffer id %i\n", buffer);
     return buffer;
-}
-
-
-//--------------Program-------------------//
-
-bool linkProgramSuccess(int program)
-{
-	int status;
-	glGetProgramiv(program, GL_LINK_STATUS, &status);
-	
-	if (!status)
-	{
-		GLint infoLogLength;
-		glGetProgramiv(program,GL_INFO_LOG_LENGTH,&infoLogLength);
-		GLchar infoLog[infoLogLength + 1];
-		//printf("info log length:%i\n", infoLogLength);
-		glGetProgramInfoLog(program, infoLogLength + 1, NULL, infoLog);
-		printf("glLinkProgram() failed: %s\n", infoLog);
-	}
-	printf("status %i\n", status);
-	return status == GL_TRUE;
 }
 
 //------------------Shader------------------//
@@ -449,10 +440,8 @@ void Shader_load(Hedgehog * this, char * name)
 	
 	//printf("vert %s\n\n", vert->source);
 	//printf("frag %s\n\n", frag->source);
-	
 	Shader_construct(vert);
 	Shader_construct(frag);
-	
 	int final = lengthName < 8 ? lengthName : 8 - 1;
 	
 	char vertKey[8 + 1] = {0};
@@ -465,7 +454,6 @@ void Shader_load(Hedgehog * this, char * name)
 	char fragKey[8 + 1] = {0};
 	strncpy(fragKey, name, 8);
 	fragKey[final] = 'f'; //set last character to distinguish. TODO should be either first null or last character.
-	
 	printf("f=%s\n", fragKey);
 	//TODO check whether key exists
 	put(&this->shadersByName, *(uint64_t *) fragKey, frag); //diffusef
@@ -486,29 +474,54 @@ void Shader_construct(Shader * this)//, const char* shader_str, GLenum shader_ty
 	glShaderSource(id, 1, &this->source, NULL);
 	//TODO check for errors
 	glCompileShader(id);
-	
+
 	// Check the result of the compilation
-	GLint result;
-	glGetShaderiv(id, GL_COMPILE_STATUS, &result);
-	//printf("result %i", result);
-	if(!result)
+	GLint compiled;
+	glGetShaderiv(id, GL_COMPILE_STATUS, &compiled);
+
+	if(!compiled)
 	{
+		
 		GLint infoLogLength;
 		glGetShaderiv(id, GL_INFO_LOG_LENGTH, &infoLogLength);
-		
-		GLchar infoLog[infoLogLength + 1];
-		//printf("info log length:%i\n", infoLogLength);
-		glGetShaderInfoLog(id, infoLogLength + 1, NULL, infoLog);
-		printf("glCompileShader() failed: %s\n%s\n", infoLog, this->source);
-		
-		//TODO encapsulate the below in a exitOnFatalError() that can be used anywhere.
-		//TODO set up error codes for untimely exit.
-		glfwTerminate();
-		exit(-1);
+		printf("glCompileShader() failed:\n");
+		if(infoLogLength > 1)
+		{
+			//GLchar infoLog[sizeof(char) * infoLogLength + 1];
+			char* infoLog = malloc(sizeof(char) * infoLogLength);
+			glGetShaderInfoLog(id, infoLogLength, NULL, infoLog);
+			printf("error: %s\n", infoLog);
+			printf("source: \n%s\n", this->source);
+	
+			//TODO encapsulate the below in a exitOnFatalError() that can be used anywhere.
+			//TODO set up error codes for untimely exit.
+			glfwTerminate();
+			exit(-1);
+			
+			glDeleteShader(id);
+			
+			free(infoLog);
+		}
+		else
+		{
+			printf("<no GL info log available>\n");
+		}
 	}
 	else
 	{
 		printf("glCompileShader() success.\n");
+		GLint infoLogLength;
+		glGetShaderiv(id, GL_INFO_LOG_LENGTH, &infoLogLength);
+		if(infoLogLength > 1)
+		{
+			GLchar infoLog[sizeof(char) * infoLogLength + 1];
+			glGetShaderInfoLog(id, infoLogLength + 1, NULL, infoLog);
+			printf("%s\n", infoLog, this->source);
+		}
+		else
+		{
+			printf("<no GL info log available>\n");
+		}
 	}
 }
 /*
@@ -578,30 +591,76 @@ void Program_construct(Program * this, GLuint vertex_shader, GLuint fragment_sha
 	glAttachShader(id, fragment_shader);
 	printf("gl error %i\n", glGetError());
 	
+	glBindAttribLocation(id, 0, "position");
+	glBindAttribLocation(id, 1, "texcoord");
+	
 	// Link program and check success
 	glLinkProgram(id);
-	if (!linkProgramSuccess(id))
+	
+	GLint linked;
+	glGetProgramiv(id, GL_LINK_STATUS, &linked);
+	
+	if (!linked)
 	{
+		printf("glLinkProgram() failed:\n");
+		
 		GLint infoLogLength;
 		glGetProgramiv(id, GL_INFO_LOG_LENGTH, &infoLogLength);
 		
-		GLchar* infoLog[infoLogLength + 1];
-		glGetProgramInfoLog(id, infoLogLength + 1, NULL, *infoLog);
-		printf("glLinkProgram() failed: %s\n", infoLog);
-		printf("gl error %i\n", glGetError());
-		//glfwTerminate();
-		//exit(-1);
-		
-		//TODO do these atexit
-		//Delete shaders; won't take effect unless they are detached first.
-		glDetachShader(id, vertex_shader);
-		glDetachShader(id, fragment_shader);
-		glDeleteShader(vertex_shader);
-		glDeleteShader(fragment_shader);
+		if (infoLogLength > 1)
+		{
+			printf("infoLogLength=%i\n", infoLogLength);
+			//GLchar infoLog[sizeof(char) * infoLogLength + 1];
+			char* infoLog = malloc(sizeof(char) * infoLogLength);
+			glGetProgramInfoLog(id, infoLogLength, NULL, infoLog);
+			printf("%s\n", infoLog);
+			
+			glfwTerminate();
+			exit(-1);
+			
+			//TODO do these atexit
+			//Delete shaders; won't take effect unless they are detached first.
+			glDetachShader(id, vertex_shader);
+			glDetachShader(id, fragment_shader);
+			
+			if (vertex_shader)
+				glDeleteShader(vertex_shader);
+			if (fragment_shader)
+				glDeleteShader(fragment_shader);
+			
+			glDeleteProgram(id);
+			
+			free(infoLog);
+		}
+		else
+		{
+			printf("<no GL info log available>\n");
+		}
 	}
 	else
 		printf("glLinkProgram() success.\n");
 }
+/*
+bool linkProgramSuccess(int program)
+{
+	int status;
+	
+	
+	if (!status)
+	{
+		GLint infoLogLength;
+		glGetProgramiv(program,GL_INFO_LOG_LENGTH,&infoLogLength);
+		GLchar infoLog[infoLogLength + 1];
+		//printf("info log length:%i\n", infoLogLength);
+		glGetProgramInfoLog(program, infoLogLength + 1, NULL, infoLog);
+		printf("glLinkProgram() failed: %s\n", infoLog);
+	}
+	printf("status %i %i %i\n", status, GL_TRUE, GL_FALSE);
+	return status == GL_TRUE;
+}
+*/
+//--------------Hedgehog-------------------//
+
 
 void Hedgehog_clear()
 {
@@ -672,7 +731,7 @@ void Hedgehog_createFullscreenQuad(Hedgehog * this, GLuint positionVertexAttribu
 	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * mesh->vertexCount * TEXCOORD_COMPONENTS, position->vertex, GL_DYNAMIC_DRAW);
 	glVertexAttribPointer(positionVertexAttributeIndex, TEXCOORD_COMPONENTS, GL_FLOAT, GL_FALSE, 0, 0); //provide data / layout info; "take buffer that is bound at the time called and associates that buffer with the current VAO"
 	glEnableVertexAttribArray(positionVertexAttributeIndex); //enable attribute for use
-	
+
 	//texcoords
 	glGenBuffers(1, &texcoord->id);
 	glBindBuffer(GL_ARRAY_BUFFER, texcoord->id);
@@ -733,14 +792,14 @@ void Hedgehog_createScreenQuad(Mesh * mesh, GLuint positionVertexAttributeIndex,
 	
 	glGenVertexArrays(1, &(mesh->vao)); //VAO frees us from having to call glGetAttribLocation & glVertexAttribPointer on each modify op
 	glBindVertexArray(mesh->vao);
-	
+	printf("tex1");
 	//positions
 	glGenBuffers(1, &position->id);
 	glBindBuffer(GL_ARRAY_BUFFER, position->id);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * mesh->vertexCount * TEXCOORD_COMPONENTS, position->vertex, GL_DYNAMIC_DRAW);
 	glVertexAttribPointer(positionVertexAttributeIndex, TEXCOORD_COMPONENTS, GL_FLOAT, GL_FALSE, 0, 0); //provide data / layout info; "take buffer that is bound at the time called and associates that buffer with the current VAO"
 	glEnableVertexAttribArray(positionVertexAttributeIndex); //enable attribute for use
-	
+	printf("tex2");
 	//texcoords
 	glGenBuffers(1, &texcoord->id);
 	glBindBuffer(GL_ARRAY_BUFFER, texcoord->id);
@@ -750,6 +809,7 @@ void Hedgehog_createScreenQuad(Mesh * mesh, GLuint positionVertexAttributeIndex,
 	
 	//unbind
 	glBindVertexArray(0);
+	printf("tex3");
 }
 /*
 void Hedgehog_renderSet(Program * program, RenderableSet * renderableSet, const GLfloat * matVP)
@@ -830,6 +890,16 @@ void Hedgehog_renderOneUI(Hedgehog * this, Renderable * renderable, const GLfloa
 
 void Hedgehog_initialise(Hedgehog * this)
 {
+	printf("Hedgehog initialising...\n");
+	//printf("glTexParameteri == NULL? %u\n", glTexParameteri == NULL);
+	/*
+	if(!epoxy_has_gl_extension("GL_OES_standard_derivatives"))
+	{
+		printf("Missing extension: GLEW_OES_standard_derivatives.\n");
+		glfwTerminate();
+		exit(EXIT_FAILURE);
+	}
+*/
 	voidPtrMap_create(&this->programsByName,	HH_PROGRAMS_MAX, 	&this->programKeys, 	(void *)&this->programs, NULL);
 	voidPtrMap_create(&this->shadersByName, 	HH_SHADERS_MAX, 	&this->shaderKeys, 		(void *)&this->shaders, NULL);
 	voidPtrMap_create(&this->texturesByName, 	HH_TEXTURES_MAX, 	&this->textureKeys, 	(void *)&this->textures, NULL);
@@ -840,6 +910,8 @@ void Hedgehog_initialise(Hedgehog * this)
 	//Renderable * renderable = &this->renderable;
 	//for (int i = 0; i < transformsCount; i++)
 	//	mat4x4_identity(renderable->matrix[i]);
+
+	printf("Hedgehog initialised.\n");
 }
 
 Program * Hedgehog_setCurrentProgram(Hedgehog * this, char * name)
@@ -865,7 +937,7 @@ Program * Hedgehog_getCurrentProgram(Hedgehog * this)
 }
 	
 //------------------TOOLS------------------//
-
+/*
 bool isExtensionSupported(const char * extension)
 {
     if ( glGetStringi != NULL ) // Use the post-3.0 core profile method for querying extensions.
@@ -888,7 +960,7 @@ bool isExtensionSupported(const char * extension)
      
 	return false;
 }
-
+*/
 char* Text_load(char* filename)
 {
 	//should be portable - http://stackoverflow.com/questions/14002954/c-programming-how-to-read-the-whole-file-contents-into-a-buffer
