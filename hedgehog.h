@@ -10,10 +10,10 @@
 #include <stdio.h>
 #include "stb_image_aug.h"
 #include "linmath.h"
-#include "list_generic.h"
-#include "map_generic.h"
-#include "intMap.h"
-#include "floatMap.h"
+#include "../cup/list_generic.h"
+#include "../cup/map_generic.h"
+#include "../cup/intMap.h"
+#include "../cup/floatMap.h"
 
 #define GL_BGR 0x80E0
 #define GL_BGRA 0x80E1
