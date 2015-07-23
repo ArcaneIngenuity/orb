@@ -1,5 +1,5 @@
-#ifndef HEDGEHOG_H
-#define HEDGEHOG_H
+#ifndef ORB_H
+#define ORB_H
 
 #ifdef _WIN32
 	//define something for Windows (32-bit and 64-bit, this part is common)
@@ -62,12 +62,16 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "stb_image_aug.h"
+//#include "stb_image_aug.h"
+#define STB_IMAGE_STATIC 1
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+#undef STB_IMAGE_IMPLEMENTATION
 #include "linmath.h"
-#include "../cup/list_generic.h"
-#include "../cup/map_generic.h"
-#include "../cup/intMap.h"
-#include "../cup/floatMap.h"
+#include "../pod/list_generic.h"
+#include "../pod/map_generic.h"
+#include "../pod/intMap.h"
+#include "../pod/floatMap.h"
 
 #define GL_BGR 0x80E0
 #define GL_BGRA 0x80E1
@@ -467,7 +471,7 @@ typedef struct Color
 	float a;
 } Color;
 
-typedef struct Hedgehog
+typedef struct Orb
 {	
 	Map programsByName;
 	Map shadersByName;
@@ -506,12 +510,12 @@ typedef struct Hedgehog
 	//TODO incorporate as separate RTT renderables array?
 	Renderable fullscreenQuad;
 	mat4x4 fullscreenQuadMatrix;
-} Hedgehog;
-const struct Hedgehog hedgehogEmpty;
+} Orb;
+const struct Orb orbEmpty;
 
-void Hedgehog_initialise(Hedgehog * this);
-Program * Hedgehog_setCurrentProgram(Hedgehog * this, char * name);
-Program * Hedgehog_getCurrentProgram(Hedgehog * this);
+void Orb_initialise(Orb * this);
+Program * Orb_setCurrentProgram(Orb * this, char * name);
+Program * Orb_getCurrentProgram(Orb * this);
 
 void Mesh_calculateNormals(Mesh * this);
 
@@ -547,24 +551,24 @@ GLuint GLBuffer_create(
 	GLenum usage
 );
 
-void Shader_load(Hedgehog * this, char * name);
+void Shader_load(Orb * this, char * name);
 void Shader_construct(Shader * this);
 void Program_construct(Program * this, GLuint vertex_shader, GLuint fragment_shader); //we pass in a reference to a position in an already-defined array. This lets us keep our structures local.
 
-void Hedgehog_clear();
-void Hedgehog_renderSet(Program * program, RenderableSet * renderableSet, const GLfloat * matVP);
-void Hedgehog_renderOne(Hedgehog * this, Renderable * renderable, const GLfloat * matM, const GLfloat * matVP);
-void Hedgehog_renderOneUI(Hedgehog * this, Renderable * renderable, const GLfloat * matM);
-void Hedgehog_createFullscreenQuad(Hedgehog * this, GLuint positionVertexAttributeIndex, GLuint texcoordVertexAttributeIndex);
-void Hedgehog_createScreenQuad(Mesh * mesh, GLuint positionVertexAttributeIndex, GLuint texcoordVertexAttributeIndex,
+void Orb_clear();
+void Orb_renderSet(Program * program, RenderableSet * renderableSet, const GLfloat * matVP);
+void Orb_renderOne(Orb * this, Renderable * renderable, const GLfloat * matM, const GLfloat * matVP);
+void Orb_renderOneUI(Orb * this, Renderable * renderable, const GLfloat * matM);
+void Orb_createFullscreenQuad(Orb * this, GLuint positionVertexAttributeIndex, GLuint texcoordVertexAttributeIndex);
+void Orb_createScreenQuad(Mesh * mesh, GLuint positionVertexAttributeIndex, GLuint texcoordVertexAttributeIndex,
 	int w, int h,
 	int rcx, int rcy
 );
-float Hedgehog_smoothstep(float t);
+float Orb_smoothstep(float t);
 
 char* Text_load(char* filename);
 
 void GLFW_errorCallback(int error, const char * description);
 bool GLTool_isExtensionSupported(const char * extension); //redundant, see GLFW
 
-#endif //HEDGEHOG_H
+#endif //ORB_H

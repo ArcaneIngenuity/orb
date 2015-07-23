@@ -1,4 +1,4 @@
-#include "hedgehog.h"
+#include "orb.h"
 
 #define KEYPARTS 1
 
@@ -346,7 +346,7 @@ void Texture_setTexelFormats(Texture * this, GLenum arranged, GLenum atomTypeExt
 		case GL_RGBA:
 		case GL_BGRA: 				this->components = 4; break;
 		default:
-			printf("Error: hedgehog can accept only GL_RED, GL_RG, GL_RGB, GL_BGR, GL_RGBA or GL_BGRA.\n");
+			printf("Error: can accept only GL_RED, GL_RG, GL_RGB, GL_BGR, GL_RGBA or GL_BGRA.\n");
 			exit(0);
 	}
 }
@@ -399,7 +399,7 @@ GLuint GLBuffer_create(
 }
 
 //------------------Shader------------------//
-void Shader_load(Hedgehog * this, char * name)
+void Shader_load(Orb * this, char * name)
 {
 	Shader * vert;
 	Shader * frag;
@@ -659,25 +659,25 @@ bool linkProgramSuccess(int program)
 	return status == GL_TRUE;
 }
 */
-//--------------Hedgehog-------------------//
+//--------------Orb-------------------//
 
 
-void Hedgehog_clear()
+void Orb_clear()
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
-void Hedgehog_clearColor()
+void Orb_clearColor()
 {
 	 glClear(GL_COLOR_BUFFER_BIT);
 }
 
-void Hedgehog_clearDepth()
+void Orb_clearDepth()
 {
 	 glClear(GL_DEPTH_BUFFER_BIT);
 }
 
-void Hedgehog_createFullscreenQuad(Hedgehog * this, GLuint positionVertexAttributeIndex, GLuint texcoordVertexAttributeIndex)
+void Orb_createFullscreenQuad(Orb * this, GLuint positionVertexAttributeIndex, GLuint texcoordVertexAttributeIndex)
 {
 	mat4x4_identity(this->fullscreenQuadMatrix);
 	
@@ -743,7 +743,7 @@ void Hedgehog_createFullscreenQuad(Hedgehog * this, GLuint positionVertexAttribu
 	glBindVertexArray(0);
 }
 
-void Hedgehog_createScreenQuad(Mesh * mesh, GLuint positionVertexAttributeIndex, GLuint texcoordVertexAttributeIndex,
+void Orb_createScreenQuad(Mesh * mesh, GLuint positionVertexAttributeIndex, GLuint texcoordVertexAttributeIndex,
 	int w, int h,
 	int rcx, int rcy
 )
@@ -812,7 +812,7 @@ void Hedgehog_createScreenQuad(Mesh * mesh, GLuint positionVertexAttributeIndex,
 	printf("tex3");
 }
 /*
-void Hedgehog_renderSet(Program * program, RenderableSet * renderableSet, const GLfloat * matVP)
+void Orb_renderSet(Program * program, RenderableSet * renderableSet, const GLfloat * matVP)
 {
 	Mesh * mesh = renderableSet->mesh;
 
@@ -846,7 +846,7 @@ void Hedgehog_renderSet(Program * program, RenderableSet * renderableSet, const 
 */
 //TODO should pass Mesh instead of RenderableSet, though in same arg position.
 //TODO instead of matM, a void * arg pointing to wherever all the uniforms for this object lie. same for attributes?
-void Hedgehog_renderOne(Hedgehog * this, Renderable * renderable, const GLfloat * matM, const GLfloat * matVP)
+void Orb_renderOne(Orb * this, Renderable * renderable, const GLfloat * matM, const GLfloat * matVP)
 {
 	Mesh * mesh = renderable->mesh;
 
@@ -868,7 +868,7 @@ void Hedgehog_renderOne(Hedgehog * this, Renderable * renderable, const GLfloat 
 	glBindVertexArray(0);
 }
 
-void Hedgehog_renderOneUI(Hedgehog * this, Renderable * renderable, const GLfloat * matM)
+void Orb_renderOneUI(Orb * this, Renderable * renderable, const GLfloat * matM)
 {
 	Mesh * mesh = renderable->mesh;
 
@@ -888,9 +888,9 @@ void Hedgehog_renderOneUI(Hedgehog * this, Renderable * renderable, const GLfloa
 }
 
 
-void Hedgehog_initialise(Hedgehog * this)
+void Orb_initialise(Orb * this)
 {
-	printf("Hedgehog initialising...\n");
+	printf("Orb initialising...\n");
 	//printf("glTexParameteri == NULL? %u\n", glTexParameteri == NULL);
 	/*
 	if(!epoxy_has_gl_extension("GL_OES_standard_derivatives"))
@@ -906,15 +906,15 @@ void Hedgehog_initialise(Hedgehog * this)
 	voidPtrMap_create(&this->materialsByName, 	HH_MATERIALS_MAX, 	&this->materialKeys, 	(void *)&this->materials, NULL);
 	voidPtrMap_create(&this->meshesByName, 		HH_MESHES_MAX, 		&this->meshKeys,	 	(void *)&this->meshes, NULL);
 	
-	//reintroduce if we bring transform list back into hedgehog.
+	//reintroduce if we bring transform list back into this library.
 	//Renderable * renderable = &this->renderable;
 	//for (int i = 0; i < transformsCount; i++)
 	//	mat4x4_identity(renderable->matrix[i]);
 
-	printf("Hedgehog initialised.\n");
+	printf("Orb initialised.\n");
 }
 
-Program * Hedgehog_setCurrentProgram(Hedgehog * this, char * name)
+Program * Orb_setCurrentProgram(Orb * this, char * name)
 {
 	//printf("name=%s\n", name);
 	if (name == NULL)
@@ -931,7 +931,7 @@ Program * Hedgehog_setCurrentProgram(Hedgehog * this, char * name)
 	return this->program;
 }
 
-Program * Hedgehog_getCurrentProgram(Hedgehog * this)
+Program * Orb_getCurrentProgram(Orb * this)
 {
 	return this->program;
 }
@@ -997,7 +997,7 @@ char* Text_load(char* filename)
 	return str;
 }
 
-float Hedgehog_smoothstep(float t)
+float Orb_smoothstep(float t)
 {
 	return 3 * t * t - 2 * t * t * t;
 }
