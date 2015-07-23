@@ -1,9 +1,63 @@
 #ifndef HEDGEHOG_H
 #define HEDGEHOG_H
 
-#define GLEW_STATIC
-#include "GL/glew.h"
-#include "GL/glfw3.h"
+#ifdef _WIN32
+	//define something for Windows (32-bit and 64-bit, this part is common)
+	#define WIN32_LEAN_AND_MEAN
+	#include <windows.h>
+	#define GLEW_STATIC
+	#include "glew/glew.h"
+	#include "glfw/glfw3.h"
+	#ifdef _WIN64
+		//define something for Windows (64-bit only)
+	#endif
+#elif __APPLE__
+	#include "TargetConditionals.h"
+	#if TARGET_OS_IPHONE
+		#if TARGET_IPHONE_SIMULATOR
+		#else //actual device
+		#endif
+		// iOS Simulator
+	#elif TARGET_OS_MAC
+		// Other kinds of Mac OS
+	#else
+		// Unsupported platform
+	#endif
+#elif __ANDROID__
+	#include <jni.h>
+	#include <errno.h>
+	#include <math.h>
+
+	#include <EGL/egl.h>
+	#include <GLES/gl.h>
+
+	#include <android/sensor.h>
+	#include <android/log.h>
+	#include <android/android_native_app_glue.h>
+
+	#include <android/api-level.h>
+	
+	//TODO API level checks via __ANDROID_API__
+	// 1.0 	1
+	// 1.1 	2
+	// 1.5 	3
+	// 1.6 	4
+	// 2.0 	5
+	// 2.0.1 	6
+	// 2.1 	7
+	// 2.2 	8
+	// 2.3 	9
+	// 2.3.3 	10
+	// 3.0 	11
+#elif __linux
+	// linux
+#elif __unix // all unices not caught above
+	// Unix
+#elif __posix
+	// POSIX
+#endif
+
+
 #include <stdbool.h>
 #include <string.h>
 #include <stdlib.h>
