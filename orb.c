@@ -399,7 +399,7 @@ GLuint GLBuffer_create(
 }
 
 //------------------Shader------------------//
-void Shader_load(Orb * this, char * name)
+void Shader_load(Render * this, char * name)
 {
 	Shader * vert;
 	Shader * frag;
@@ -659,25 +659,25 @@ bool linkProgramSuccess(int program)
 	return status == GL_TRUE;
 }
 */
-//--------------Orb-------------------//
+//--------------Render-------------------//
 
 
-void Orb_clear()
+void Render_clear()
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
-void Orb_clearColor()
+void Render_clearColor()
 {
 	 glClear(GL_COLOR_BUFFER_BIT);
 }
 
-void Orb_clearDepth()
+void Render_clearDepth()
 {
 	 glClear(GL_DEPTH_BUFFER_BIT);
 }
 
-void Orb_createFullscreenQuad(Orb * this, GLuint positionVertexAttributeIndex, GLuint texcoordVertexAttributeIndex)
+void Render_createFullscreenQuad(Render * this, GLuint positionVertexAttributeIndex, GLuint texcoordVertexAttributeIndex)
 {
 	mat4x4_identity(this->fullscreenQuadMatrix);
 	
@@ -743,7 +743,7 @@ void Orb_createFullscreenQuad(Orb * this, GLuint positionVertexAttributeIndex, G
 	glBindVertexArray(0);
 }
 
-void Orb_createScreenQuad(Mesh * mesh, GLuint positionVertexAttributeIndex, GLuint texcoordVertexAttributeIndex,
+void Render_createScreenQuad(Mesh * mesh, GLuint positionVertexAttributeIndex, GLuint texcoordVertexAttributeIndex,
 	int w, int h,
 	int rcx, int rcy
 )
@@ -812,7 +812,7 @@ void Orb_createScreenQuad(Mesh * mesh, GLuint positionVertexAttributeIndex, GLui
 	printf("tex3");
 }
 /*
-void Orb_renderSet(Program * program, RenderableSet * renderableSet, const GLfloat * matVP)
+void Render_many(Program * program, RenderableSet * renderableSet, const GLfloat * matVP)
 {
 	Mesh * mesh = renderableSet->mesh;
 
@@ -846,7 +846,7 @@ void Orb_renderSet(Program * program, RenderableSet * renderableSet, const GLflo
 */
 //TODO should pass Mesh instead of RenderableSet, though in same arg position.
 //TODO instead of matM, a void * arg pointing to wherever all the uniforms for this object lie. same for attributes?
-void Orb_renderOne(Orb * this, Renderable * renderable, const GLfloat * matM, const GLfloat * matVP)
+void Render_one(Render * this, Renderable * renderable, const GLfloat * matM, const GLfloat * matVP)
 {
 	Mesh * mesh = renderable->mesh;
 
@@ -868,7 +868,7 @@ void Orb_renderOne(Orb * this, Renderable * renderable, const GLfloat * matM, co
 	glBindVertexArray(0);
 }
 
-void Orb_renderOneUI(Orb * this, Renderable * renderable, const GLfloat * matM)
+void Render_oneUI(Render * this, Renderable * renderable, const GLfloat * matM)
 {
 	Mesh * mesh = renderable->mesh;
 
@@ -888,9 +888,9 @@ void Orb_renderOneUI(Orb * this, Renderable * renderable, const GLfloat * matM)
 }
 
 
-void Orb_initialise(Orb * this)
+void Render_initialise(Render * this)
 {
-	printf("Orb initialising...\n");
+	printf("Render initialising...\n");
 	//printf("glTexParameteri == NULL? %u\n", glTexParameteri == NULL);
 	/*
 	if(!epoxy_has_gl_extension("GL_OES_standard_derivatives"))
@@ -911,10 +911,10 @@ void Orb_initialise(Orb * this)
 	//for (int i = 0; i < transformsCount; i++)
 	//	mat4x4_identity(renderable->matrix[i]);
 
-	printf("Orb initialised.\n");
+	printf("Render initialised.\n");
 }
 
-Program * Orb_setCurrentProgram(Orb * this, char * name)
+Program * Render_setCurrentProgram(Render * this, char * name)
 {
 	//printf("name=%s\n", name);
 	if (name == NULL)
@@ -931,7 +931,7 @@ Program * Orb_setCurrentProgram(Orb * this, char * name)
 	return this->program;
 }
 
-Program * Orb_getCurrentProgram(Orb * this)
+Program * Render_getCurrentProgram(Render * this)
 {
 	return this->program;
 }
@@ -997,7 +997,7 @@ char* Text_load(char* filename)
 	return str;
 }
 
-float Orb_smoothstep(float t)
+float Render_smoothstep(float t)
 {
 	return 3 * t * t - 2 * t * t * t;
 }

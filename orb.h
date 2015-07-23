@@ -471,7 +471,7 @@ typedef struct Color
 	float a;
 } Color;
 
-typedef struct Orb
+typedef struct Render
 {	
 	Map programsByName;
 	Map shadersByName;
@@ -510,12 +510,12 @@ typedef struct Orb
 	//TODO incorporate as separate RTT renderables array?
 	Renderable fullscreenQuad;
 	mat4x4 fullscreenQuadMatrix;
-} Orb;
-const struct Orb orbEmpty;
+} Render;
+const struct Render orbEmpty;
 
-void Orb_initialise(Orb * this);
-Program * Orb_setCurrentProgram(Orb * this, char * name);
-Program * Orb_getCurrentProgram(Orb * this);
+void Render_initialise(Render * this);
+Program * Render_setCurrentProgram(Render * this, char * name);
+Program * Render_getCurrentProgram(Render * this);
 
 void Mesh_calculateNormals(Mesh * this);
 
@@ -551,20 +551,20 @@ GLuint GLBuffer_create(
 	GLenum usage
 );
 
-void Shader_load(Orb * this, char * name);
+void Shader_load(Render * this, char * name);
 void Shader_construct(Shader * this);
 void Program_construct(Program * this, GLuint vertex_shader, GLuint fragment_shader); //we pass in a reference to a position in an already-defined array. This lets us keep our structures local.
 
-void Orb_clear();
-void Orb_renderSet(Program * program, RenderableSet * renderableSet, const GLfloat * matVP);
-void Orb_renderOne(Orb * this, Renderable * renderable, const GLfloat * matM, const GLfloat * matVP);
-void Orb_renderOneUI(Orb * this, Renderable * renderable, const GLfloat * matM);
-void Orb_createFullscreenQuad(Orb * this, GLuint positionVertexAttributeIndex, GLuint texcoordVertexAttributeIndex);
-void Orb_createScreenQuad(Mesh * mesh, GLuint positionVertexAttributeIndex, GLuint texcoordVertexAttributeIndex,
+void Render_clear();
+void Render_many(Program * program, RenderableSet * renderableSet, const GLfloat * matVP);
+void Render_one(Render * this, Renderable * renderable, const GLfloat * matM, const GLfloat * matVP);
+void Render_oneUI(Render * this, Renderable * renderable, const GLfloat * matM);
+void Render_createFullscreenQuad(Render * this, GLuint positionVertexAttributeIndex, GLuint texcoordVertexAttributeIndex);
+void Render_createScreenQuad(Mesh * mesh, GLuint positionVertexAttributeIndex, GLuint texcoordVertexAttributeIndex,
 	int w, int h,
 	int rcx, int rcy
 );
-float Orb_smoothstep(float t);
+float Render_smoothstep(float t);
 
 char* Text_load(char* filename);
 
