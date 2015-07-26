@@ -5,6 +5,17 @@
 #include <assert.h>
 
 
+PFNGLGENVERTEXARRAYSOESPROC GenVertexArraysOES;
+PFNGLBINDVERTEXARRAYOESPROC BindVertexArrayOES;
+PFNGLDELETEVERTEXARRAYSOESPROC DeleteVertexArraysOES;
+PFNGLISVERTEXARRAYOESPROC IsVertexArrayOES;
+/*
+GL_APICALL void GL_APIENTRY GenVertexArraysOES;
+GL_APICALL void GL_APIENTRY BindVertexArrayOES;
+GL_APICALL void GL_APIENTRY DeleteVertexArraysOES;
+GL_APICALL GLboolean GL_APIENTRY IsVertexArrayOES;
+*/
+
 //TODO see "I/O callbacks" in stbi_image.h for loading images out of a data file
 void GLFW_errorCallback(int error, const char * description)
 {
@@ -495,7 +506,9 @@ void Shader_construct(Shader * this)//, const char* shader_str, GLenum shader_ty
 	
 			//TODO encapsulate the below in a exitOnFatalError() that can be used anywhere.
 			//TODO set up error codes for untimely exit.
+			#ifdef DESKTOP
 			glfwTerminate();
+			#endif//DESKTOP
 			exit(-1);
 			
 			glDeleteShader(id);
@@ -615,7 +628,9 @@ void Program_construct(Program * this, GLuint vertex_shader, GLuint fragment_sha
 			glGetProgramInfoLog(id, infoLogLength, NULL, infoLog);
 			printf("%s\n", infoLog);
 			
+			#ifdef DESKTOP
 			glfwTerminate();
+			#endif//DESKTOP
 			exit(-1);
 			
 			//TODO do these atexit
@@ -900,6 +915,46 @@ void Render_initialise(Render * this)
 		exit(EXIT_FAILURE);
 	}
 */
+
+/*
+glGenVertexArraysOES = (PFNGLGENVERTEXARRAYSOESPROC)eglGetProcAddress ( "glGenVertexArraysOES" );
+glBindVertexArrayOES = (PFNGLBINDVERTEXARRAYOESPROC)eglGetProcAddress ( "glBindVertexArrayOES" );
+glDeleteVertexArraysOES = (PFNGLDELETEVERTEXARRAYSOESPROC)eglGetProcAddress ( "glDeleteVertexArraysOES" );
+glIsVertexArrayOES = (PFNGLISVERTEXARRAYOESPROC)eglGetProcAddress ( "glIsVertexArrayOES" );
+	*/
+	/*
+	glGenVertexArraysOES = eglGetProcAddress ( "glGenVertexArraysOES" );
+glBindVertexArrayOES = (GL_APICALL void GL_APIENTRY)eglGetProcAddress ( "glBindVertexArrayOES" );
+glDeleteVertexArraysOES = (GL_APICALL void GL_APIENTRY)eglGetProcAddress ( "glDeleteVertexArraysOES" );
+glIsVertexArrayOES = (GL_APICALL GLboolean GL_APIENTRY)eglGetProcAddress ( "glIsVertexArrayOES" );
+	*/
+	
+	
+	
+	void * libhandle = dlopen("libGLESv2.so", RTLD_LAZY);
+
+BindVertexArrayOES = (PFNGLBINDVERTEXARRAYOESPROC) dlsym(libhandle,
+                                                         "glBindVertexArrayOES");
+DeleteVertexArraysOES = (PFNGLDELETEVERTEXARRAYSOESPROC) dlsym(libhandle,
+                                                               "glDeleteVertexArraysOES");
+GenVertexArraysOES = (PFNGLGENVERTEXARRAYSOESPROC)dlsym(libhandle,
+                                                        "glGenVertexArraysOES");
+IsVertexArrayOES = (PFNGLISVERTEXARRAYOESPROC)dlsym(libhandle,
+                                                    "glIsVertexArrayOES");
+	/*
+
+	PFNGLGENVERTEXARRAYSOESPROC glGenVertexArraysOES;
+	PFNGLBINDVERTEXARRAYOESPROC glBindVertexArrayOES;
+	PFNGLDELETEVERTEXARRAYSOESPROC glDeleteVertexArraysOES;
+	PFNGLISVERTEXARRAYOESPROC glIsVertexArrayOES;
+	*/
+	/*
+	glGenVertexArraysOES = (GL_APICALL void GL_APIENTRY)eglGetProcAddress ( "glGenVertexArraysOES" );
+	glBindVertexArrayOES = (GL_APICALL void GL_APIENTRY)eglGetProcAddress ( "glBindVertexArrayOES" );
+	glDeleteVertexArraysOES = (GL_APICALL void GL_APIENTRY)eglGetProcAddress ( "glDeleteVertexArraysOES" );
+	glIsVertexArrayOES = (GL_APICALL GLboolean GL_APIENTRY)eglGetProcAddress ( "glIsVertexArrayOES" );
+*/
+
 	voidPtrMap_create(&this->programsByName,	HH_PROGRAMS_MAX, 	&this->programKeys, 	(void *)&this->programs, NULL);
 	voidPtrMap_create(&this->shadersByName, 	HH_SHADERS_MAX, 	&this->shaderKeys, 		(void *)&this->shaders, NULL);
 	voidPtrMap_create(&this->texturesByName, 	HH_TEXTURES_MAX, 	&this->textureKeys, 	(void *)&this->textures, NULL);

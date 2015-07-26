@@ -3,6 +3,7 @@
 
 #ifdef _WIN32
 	//define something for Windows (32-bit and 64-bit, this part is common)
+	#define DESKTOP 1
 	#define WIN32_LEAN_AND_MEAN
 	#include <windows.h>
 	#define GLEW_STATIC
@@ -19,7 +20,8 @@
 		#endif
 		// iOS Simulator
 	#elif TARGET_OS_MAC
-		// Other kinds of Mac OS
+		// Mac OS
+		#define DESKTOP 1
 	#else
 		// Unsupported platform
 	#endif
@@ -28,14 +30,40 @@
 	#include <errno.h>
 	#include <math.h>
 
+	#include <dlfcn.h> //for dynamic linking of extensions	
+	
 	#include <EGL/egl.h>
-	#include <GLES/gl.h>
+	
+	#define GL_GLEXT_PROTOTYPES 1
+	//#include <GLES/glext.h>
+	#include <GLES2/gl2ext.h>
+	
+	
+	
+	//#include <GLES/gl.h> //for e.g. GL_PERSPECTIVE_CORRECTION_HINT
+	#include <GLES2/gl2.h>
 
+
+
+	
+
+/*
+glGenVertexArraysOES = (GL_APICALL void GL_APIENTRY)eglGetProcAddress ( "glGenVertexArraysOES" );
+glBindVertexArrayOES = (GL_APICALL void GL_APIENTRY)eglGetProcAddress ( "glBindVertexArrayOES" );
+glDeleteVertexArraysOES = (GL_APICALL void GL_APIENTRY)eglGetProcAddress ( "glDeleteVertexArraysOES" );
+glIsVertexArrayOES = (GL_APICALL GLboolean GL_APIENTRY)eglGetProcAddress ( "glIsVertexArrayOES" );
+*/
+	#define glGenVertexArrays GenVertexArraysOES
+	#define glBindVertexArray BindVertexArrayOES
+	
 	#include <android/sensor.h>
 	#include <android/log.h>
 	#include <android/android_native_app_glue.h>
 
 	#include <android/api-level.h>
+	
+	#define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, "native-activity", __VA_ARGS__))
+	#define LOGW(...) ((void)__android_log_print(ANDROID_LOG_WARN, "native-activity", __VA_ARGS__))
 	
 	//TODO API level checks via __ANDROID_API__
 	// 1.0 	1
@@ -50,6 +78,7 @@
 	// 2.3.3 	10
 	// 3.0 	11
 #elif __linux
+	#define DESKTOP 1 //not certain about this, but should be true...?
 	// linux
 #elif __unix // all unices not caught above
 	// Unix
@@ -79,7 +108,7 @@
 #define GL_RED 0x1903
 //#define GL_LINE 0x1B01
 //#define GL_FILL 0x1B02
-#define GL_MAX_COLOR_ATTACHMENTS 0x8CDF
+//#define GL_MAX_COLOR_ATTACHMENTS 0x8CDF
 
 //FIXED CONSTANTS
 #define XX 0
