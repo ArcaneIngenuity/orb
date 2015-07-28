@@ -1,14 +1,24 @@
-#ifndef ORB_H
-#define ORB_H
+#ifndef COM_ARCANEINGENUITY_ORB_H
+#define COM_ARCANEINGENUITY_ORB_H
+
+#include <assert.h>
+#include <stdbool.h>
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
+
+#include "log/log.h"
+#include "linmath.h"
+#include "../pod/list_generic.h"
+#include "../pod/map_generic.h"
+#include "../pod/intMap.h"
+#include "../pod/floatMap.h"
 
 #ifdef _WIN32
 	//define something for Windows (32-bit and 64-bit, this part is common)
 	#define DESKTOP 1
 	#define WIN32_LEAN_AND_MEAN
 	#include <windows.h>
-	#define GLEW_STATIC
-	#include "glew/glew.h"
-	#include "glfw/glfw3.h"
 	#ifdef _WIN64
 		//define something for Windows (64-bit only)
 	#endif
@@ -37,34 +47,17 @@
 	#define GL_GLEXT_PROTOTYPES 1
 	//#include <GLES/glext.h>
 	#include <GLES2/gl2ext.h>
-	
-	
-	
 	//#include <GLES/gl.h> //for e.g. GL_PERSPECTIVE_CORRECTION_HINT
 	#include <GLES2/gl2.h>
 
-
-
-	
-
-/*
-glGenVertexArraysOES = (GL_APICALL void GL_APIENTRY)eglGetProcAddress ( "glGenVertexArraysOES" );
-glBindVertexArrayOES = (GL_APICALL void GL_APIENTRY)eglGetProcAddress ( "glBindVertexArrayOES" );
-glDeleteVertexArraysOES = (GL_APICALL void GL_APIENTRY)eglGetProcAddress ( "glDeleteVertexArraysOES" );
-glIsVertexArrayOES = (GL_APICALL GLboolean GL_APIENTRY)eglGetProcAddress ( "glIsVertexArrayOES" );
-*/
 	#define glGenVertexArrays GenVertexArraysOES
 	#define glBindVertexArray BindVertexArrayOES
 	
 	#include <android/sensor.h>
-	#include <android/log.h>
-	#include <android/android_native_app_glue.h>
+	//#include <android/log.h>
+	#include <android_native_app_glue.h>
 
 	#include <android/api-level.h>
-	
-	#define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, "native-activity", __VA_ARGS__))
-	#define LOGW(...) ((void)__android_log_print(ANDROID_LOG_WARN, "native-activity", __VA_ARGS__))
-	
 	//TODO API level checks via __ANDROID_API__
 	// 1.0 	1
 	// 1.1 	2
@@ -77,6 +70,10 @@ glIsVertexArrayOES = (GL_APICALL GLboolean GL_APIENTRY)eglGetProcAddress ( "glIs
 	// 2.3 	9
 	// 2.3.3 	10
 	// 3.0 	11
+	
+	//"polyfills"
+	#define log2(value) (log(value) / log(2))
+	
 #elif __linux
 	#define DESKTOP 1 //not certain about this, but should be true...?
 	// linux
@@ -86,21 +83,18 @@ glIsVertexArrayOES = (GL_APICALL GLboolean GL_APIENTRY)eglGetProcAddress ( "glIs
 	// POSIX
 #endif
 
-
-#include <stdbool.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
-//#include "stb_image_aug.h"
-#define STB_IMAGE_STATIC 1
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
-#undef STB_IMAGE_IMPLEMENTATION
-#include "linmath.h"
-#include "../pod/list_generic.h"
-#include "../pod/map_generic.h"
-#include "../pod/intMap.h"
-#include "../pod/floatMap.h"
+#ifdef DESKTOP
+	//#include "stb_image_aug.h"
+	#define STB_IMAGE_STATIC 1
+	#define STB_IMAGE_IMPLEMENTATION
+	#include "stb_image.h"
+	#undef STB_IMAGE_IMPLEMENTATION
+	
+	#define GLEW_STATIC
+	#include "glew/glew.h"
+	#include "glfw/glfw3.h"
+	
+#endif//DESKTOP
 
 #define GL_BGR 0x80E0
 #define GL_BGRA 0x80E1
@@ -168,6 +162,16 @@ glIsVertexArrayOES = (GL_APICALL GLboolean GL_APIENTRY)eglGetProcAddress ( "glIs
 #ifndef	HH_ATTRIBUTES_MAX
 #define HH_ATTRIBUTES_MAX 8
 #endif
+
+
+typedef struct Window
+{
+	#ifdef DESKTOP
+	GLFWwindow * window;
+	#else //DEV, ANDROID
+	
+	#endif //DESKTOP
+} Window;
 
 typedef struct BMFontInfo
 {
@@ -580,7 +584,7 @@ GLuint GLBuffer_create(
 	GLenum usage
 );
 
-void Shader_load(Render * this, char * name);
+void Shader_load(Render * this, const char * path, const char * name);
 void Shader_construct(Shader * this);
 void Program_construct(Program * this, GLuint vertex_shader, GLuint fragment_shader); //we pass in a reference to a position in an already-defined array. This lets us keep our structures local.
 
@@ -600,4 +604,4 @@ char* Text_load(char* filename);
 void GLFW_errorCallback(int error, const char * description);
 bool GLTool_isExtensionSupported(const char * extension); //redundant, see GLFW
 
-#endif //ORB_H
+#endif //COM_ARCANEINGENUITY_ORB_H

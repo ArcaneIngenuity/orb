@@ -2,25 +2,18 @@
 
 #define KEYPARTS 1
 
-#include <assert.h>
-
-
-PFNGLGENVERTEXARRAYSOESPROC GenVertexArraysOES;
-PFNGLBINDVERTEXARRAYOESPROC BindVertexArrayOES;
-PFNGLDELETEVERTEXARRAYSOESPROC DeleteVertexArraysOES;
-PFNGLISVERTEXARRAYOESPROC IsVertexArrayOES;
-/*
-GL_APICALL void GL_APIENTRY GenVertexArraysOES;
-GL_APICALL void GL_APIENTRY BindVertexArrayOES;
-GL_APICALL void GL_APIENTRY DeleteVertexArraysOES;
-GL_APICALL GLboolean GL_APIENTRY IsVertexArrayOES;
-*/
+//OpenGL ES extensions...
+PFNGLGENVERTEXARRAYSOESPROC glGenVertexArrays;
+PFNGLBINDVERTEXARRAYOESPROC glBindVertexArray;
+PFNGLDELETEVERTEXARRAYSOESPROC glDeleteVertexArrays;
+PFNGLISVERTEXARRAYOESPROC glIsVertexArray;
+//...OpenGL ES extensions.
 
 //TODO see "I/O callbacks" in stbi_image.h for loading images out of a data file
 void GLFW_errorCallback(int error, const char * description)
 {
     //fputs(description, stderr);
-	printf ("GLFW ERROR: code %i msg: %s\n", error, description);
+	LOGI ("GLFW ERROR: code %i msg: %s\n", error, description);
 }
 
 void Mesh_calculateNormals(Mesh * this)
@@ -262,8 +255,9 @@ Texture * Texture_load(const char * filename)
 {
 	Texture * texture = Texture_create();
 	//texture->name = (char *) filename;
+	#ifdef DESKTOP
 	texture->data = stbi_load(filename, &(texture->width), &(texture->height), &(texture->components), 0);
-	
+	#endif//DESKTOP
 	return texture;
 }
 
@@ -357,40 +351,40 @@ void Texture_setTexelFormats(Texture * this, GLenum arranged, GLenum atomTypeExt
 		case GL_RGBA:
 		case GL_BGRA: 				this->components = 4; break;
 		default:
-			printf("Error: can accept only GL_RED, GL_RG, GL_RGB, GL_BGR, GL_RGBA or GL_BGRA.\n");
+			LOGI("Error: can accept only GL_RED, GL_RG, GL_RGB, GL_BGR, GL_RGBA or GL_BGRA.\n");
 			exit(0);
 	}
 }
 
 void Texture_setDimensionCount(Texture * this, GLenum dimensions)
 {
-	printf("set dimensiosn to %d\n", dimensions);
+	LOGI("set dimensiosn to %d\n", dimensions);
 	this->dimensions = dimensions;
 }
 
 void Texture_applyParameters(Texture * this)
 {
-	printf("unit %u\n",this->unit);
+	LOGI("unit %u\n",this->unit);
 	glActiveTexture(GL_TEXTURE0 + this->unit);
-	printf("e0 %s\n",glGetError());
+	LOGI("e0 %s\n",glGetError());
 	glBindTexture(GL_TEXTURE_2D, this->id);
-	printf("e1 %s\n",glGetError());
-	printf("b.2\n");
+	LOGI("e1 %s\n",glGetError());
+	LOGI("b.2\n");
 	for (uint8_t p = 0; p < this->intParametersByName.count; p++)
 	{
 		GLenum key = this->intParametersByName.keys[p];
 		GLint value = this->intParametersByName.entries[p];
-		printf("GL_TEXTURE_2D %i\n", GL_TEXTURE_2D);
-		printf("GL_TEXTURE_MIN_FILTER GL_NEAREST %u %i\n", GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		printf("GL_TEXTURE_MAG_FILTER GL_NEAREST %u %i\n", GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		printf("GL_TEXTURE_WRAP_S 	  GL_REPEAT  %u %i\n", GL_TEXTURE_WRAP_S, GL_REPEAT);
-		printf("GL_TEXTURE_WRAP_T 	  GL_REPEAT  %u %i\n", GL_TEXTURE_WRAP_T, GL_REPEAT);
-		printf("ber %u %u %i\n", this->dimensions, key, value);
-		printf("glTexParameteri == NULL? %u\n", glTexParameteri == NULL);
+		LOGI("GL_TEXTURE_2D %i\n", GL_TEXTURE_2D);
+		LOGI("GL_TEXTURE_MIN_FILTER GL_NEAREST %u %i\n", GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		LOGI("GL_TEXTURE_MAG_FILTER GL_NEAREST %u %i\n", GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		LOGI("GL_TEXTURE_WRAP_S 	  GL_REPEAT  %u %i\n", GL_TEXTURE_WRAP_S, GL_REPEAT);
+		LOGI("GL_TEXTURE_WRAP_T 	  GL_REPEAT  %u %i\n", GL_TEXTURE_WRAP_T, GL_REPEAT);
+		LOGI("ber %u %u %i\n", this->dimensions, key, value);
+		LOGI("glTexParameteri == NULL? %u\n", glTexParameteri == NULL);
 		glTexParameteri(this->dimensions, key, value);
-		//printf("berrror %s\n",glGetError());
+		//LOGI("berrror %s\n",glGetError());
 	}
-	printf("b.3\n");
+	LOGI("b.3\n");
 	//TODO loop over float params
 }
 //------------------GLBuffer------------------//
@@ -405,20 +399,20 @@ GLuint GLBuffer_create(
     glGenBuffers(1, &buffer);
     glBindBuffer(target, buffer);
     glBufferData(target, size, data, usage);
-	printf("buffer id %i\n", buffer);
+	LOGI("buffer id %i\n", buffer);
     return buffer;
 }
 
 //------------------Shader------------------//
-void Shader_load(Render * this, char * name)
+void Shader_load(Render * this, const char * path, const char * name)
 {
 	Shader * vert;
 	Shader * frag;
 	Program * program;
-	
+	LOGI("this NULL?=%d", this==NULL);
 	if (strlen(name) > KEYPARTS * 8 - 1)
 	{
-		printf("[Shader_load] Length of shader name must be less than or equal to KEYPARTS * 8 - 1.");
+		LOGI("[Shader_load] Length of shader name must be less than or equal to KEYPARTS * 8 - 1.");
 		exit(0);
 	}
 	vert = malloc(sizeof(Shader));
@@ -426,53 +420,47 @@ void Shader_load(Render * this, char * name)
 	vert->type = GL_VERTEX_SHADER;
 	frag->type = GL_FRAGMENT_SHADER;
 	
-	#if _WIN32
-	char * path = ".\\shaders\\";
-	#else //all other supported OS?
-	char * path = "./shaders/";
-	#endif //linux
+	size_t lengthName = strlen(name); 
+	size_t lengthPath = strlen(path);
 	
-	size_t lengthName = strlen(name); //5 = .vert
-	size_t lengthPath = strlen(name); //5 = .vert
-	//printf("l=%d\n", lengthName);
-	char vertFilepath[lengthPath+lengthName+1+4];
+	char vertFilepath[lengthPath+lengthName+1+4]; //5 = .vert
 	strcpy(vertFilepath, path);
 	strcat(vertFilepath, name);
 	strcat(vertFilepath, ".vert");
-	printf("vertFilepath %s\n", vertFilepath);
+	LOGI("vertFilepath %s\n", vertFilepath);
 	vert->source = Text_load(vertFilepath);
+	LOGI("vert %s\n\n", vert->source);
+	Shader_construct(vert);
 	
 	char fragFilepath[lengthPath+lengthName+1+4]; //5 = .frag
 	strcpy(fragFilepath, path);
 	strcat(fragFilepath, name);
 	strcat(fragFilepath, ".frag");
-	printf("fragFilepath %s\n", fragFilepath);
+	LOGI("fragFilepath %s\n", fragFilepath);
 	frag->source = Text_load(fragFilepath);
-	
-	//printf("vert %s\n\n", vert->source);
-	//printf("frag %s\n\n", frag->source);
-	Shader_construct(vert);
+	LOGI("frag %s\n\n", frag->source);
 	Shader_construct(frag);
+	
 	int final = lengthName < 8 ? lengthName : 8 - 1;
 	
 	char vertKey[8 + 1] = {0};
 	strncpy(vertKey, name, 8);
 	vertKey[final] = 'v'; //set last character to distinguish. TODO should be either first null or last character.
-	printf("v=%s\n", vertKey);
+	LOGI("v=%s\n", vertKey);
 	//TODO check whether key exists
 	put(&this->shadersByName, *(uint64_t *) vertKey, vert); //diffusev
 	
 	char fragKey[8 + 1] = {0};
 	strncpy(fragKey, name, 8);
 	fragKey[final] = 'f'; //set last character to distinguish. TODO should be either first null or last character.
-	printf("f=%s\n", fragKey);
+	LOGI("f=%s\n", fragKey);
 	//TODO check whether key exists
 	put(&this->shadersByName, *(uint64_t *) fragKey, frag); //diffusef
 	
 	program = malloc(sizeof(Program));
 	Program_construct(program, vert->id, frag->id);
 	program->topology = GL_TRIANGLES;
-	
+	LOGI("program %d", program);
 	//TODO check whether key exists
 	put(&this->programsByName, *(uint64_t *) pad(name), program);
 }
@@ -495,14 +483,14 @@ void Shader_construct(Shader * this)//, const char* shader_str, GLenum shader_ty
 		
 		GLint infoLogLength;
 		glGetShaderiv(id, GL_INFO_LOG_LENGTH, &infoLogLength);
-		printf("glCompileShader() failed:\n");
+		LOGI("glCompileShader() failed:\n");
 		if(infoLogLength > 1)
 		{
 			//GLchar infoLog[sizeof(char) * infoLogLength + 1];
 			char* infoLog = malloc(sizeof(char) * infoLogLength);
 			glGetShaderInfoLog(id, infoLogLength, NULL, infoLog);
-			printf("error: %s\n", infoLog);
-			printf("source: \n%s\n", this->source);
+			LOGI("error: %s\n", infoLog);
+			LOGI("source: \n%s\n", this->source);
 	
 			//TODO encapsulate the below in a exitOnFatalError() that can be used anywhere.
 			//TODO set up error codes for untimely exit.
@@ -517,23 +505,23 @@ void Shader_construct(Shader * this)//, const char* shader_str, GLenum shader_ty
 		}
 		else
 		{
-			printf("<no GL info log available>\n");
+			LOGI("<no GL info log available>\n");
 		}
 	}
 	else
 	{
-		printf("glCompileShader() success.\n");
+		LOGI("glCompileShader() success.\n");
 		GLint infoLogLength;
 		glGetShaderiv(id, GL_INFO_LOG_LENGTH, &infoLogLength);
 		if(infoLogLength > 1)
 		{
 			GLchar infoLog[sizeof(char) * infoLogLength + 1];
 			glGetShaderInfoLog(id, infoLogLength + 1, NULL, infoLog);
-			printf("%s\n", infoLog, this->source);
+			LOGI("%s\n", infoLog, this->source);
 		}
 		else
 		{
-			printf("<no GL info log available>\n");
+			LOGI("<no GL info log available>\n");
 		}
 	}
 }
@@ -602,7 +590,7 @@ void Program_construct(Program * this, GLuint vertex_shader, GLuint fragment_sha
 	// Attach the shaders to the program
 	glAttachShader(id, vertex_shader);
 	glAttachShader(id, fragment_shader);
-	printf("gl error %i\n", glGetError());
+	LOGI("gl error %i\n", glGetError());
 	
 	glBindAttribLocation(id, 0, "position");
 	glBindAttribLocation(id, 1, "texcoord");
@@ -615,18 +603,18 @@ void Program_construct(Program * this, GLuint vertex_shader, GLuint fragment_sha
 	
 	if (!linked)
 	{
-		printf("glLinkProgram() failed:\n");
+		LOGI("glLinkProgram() failed:\n");
 		
 		GLint infoLogLength;
 		glGetProgramiv(id, GL_INFO_LOG_LENGTH, &infoLogLength);
 		
 		if (infoLogLength > 1)
 		{
-			printf("infoLogLength=%i\n", infoLogLength);
+			LOGI("infoLogLength=%i\n", infoLogLength);
 			//GLchar infoLog[sizeof(char) * infoLogLength + 1];
 			char* infoLog = malloc(sizeof(char) * infoLogLength);
 			glGetProgramInfoLog(id, infoLogLength, NULL, infoLog);
-			printf("%s\n", infoLog);
+			LOGI("%s\n", infoLog);
 			
 			#ifdef DESKTOP
 			glfwTerminate();
@@ -649,11 +637,11 @@ void Program_construct(Program * this, GLuint vertex_shader, GLuint fragment_sha
 		}
 		else
 		{
-			printf("<no GL info log available>\n");
+			LOGI("<no GL info log available>\n");
 		}
 	}
 	else
-		printf("glLinkProgram() success.\n");
+		LOGI("glLinkProgram() success.\n");
 }
 /*
 bool linkProgramSuccess(int program)
@@ -666,11 +654,11 @@ bool linkProgramSuccess(int program)
 		GLint infoLogLength;
 		glGetProgramiv(program,GL_INFO_LOG_LENGTH,&infoLogLength);
 		GLchar infoLog[infoLogLength + 1];
-		//printf("info log length:%i\n", infoLogLength);
+		//LOGI("info log length:%i\n", infoLogLength);
 		glGetProgramInfoLog(program, infoLogLength + 1, NULL, infoLog);
-		printf("glLinkProgram() failed: %s\n", infoLog);
+		LOGI("glLinkProgram() failed: %s\n", infoLog);
 	}
-	printf("status %i %i %i\n", status, GL_TRUE, GL_FALSE);
+	LOGI("status %i %i %i\n", status, GL_TRUE, GL_FALSE);
 	return status == GL_TRUE;
 }
 */
@@ -733,9 +721,9 @@ void Render_createFullscreenQuad(Render * this, GLuint positionVertexAttributeIn
 	memcpy(position->vertex, _position, sizeof(_position));
 	memcpy(texcoord->vertex, _texcoord, sizeof(_texcoord));
 	
-	printf("index %d %d\n", sizeof(_index), mesh->indexCount * 2);
-	printf("pos   %d %d\n", sizeof(_position), mesh->vertexCount * 4);
-	printf("texco %d %d\n", sizeof(_texcoord), mesh->vertexCount * 4);
+	LOGI("index %d %d\n", sizeof(_index), mesh->indexCount * 2);
+	LOGI("pos   %d %d\n", sizeof(_position), mesh->vertexCount * 4);
+	LOGI("texco %d %d\n", sizeof(_texcoord), mesh->vertexCount * 4);
 	
 	glGenVertexArrays(1, &(mesh->vao)); //VAO frees us from having to call glGetAttribLocation & glVertexAttribPointer on each modify op
 	glBindVertexArray(mesh->vao);
@@ -753,7 +741,7 @@ void Render_createFullscreenQuad(Render * this, GLuint positionVertexAttributeIn
 	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * mesh->vertexCount * TEXCOORD_COMPONENTS, texcoord->vertex, GL_DYNAMIC_DRAW);
 	glVertexAttribPointer(texcoordVertexAttributeIndex, TEXCOORD_COMPONENTS, GL_FLOAT, GL_FALSE, 0, 0); //provide data / layout info; "take buffer that is bound at the time called and associates that buffer with the current VAO"
 	glEnableVertexAttribArray(texcoordVertexAttributeIndex); //enable attribute for use
-	
+
 	//unbind
 	glBindVertexArray(0);
 }
@@ -801,30 +789,29 @@ void Render_createScreenQuad(Mesh * mesh, GLuint positionVertexAttributeIndex, G
 	memcpy(position->vertex, _position, sizeof(_position));
 	memcpy(texcoord->vertex, _texcoord, sizeof(_texcoord));
 	
-	printf("index %d %d\n", sizeof(_index), mesh->indexCount * 2);
-	printf("pos   %d %d\n", sizeof(_position), mesh->vertexCount * 4);
-	printf("texco %d %d\n", sizeof(_texcoord), mesh->vertexCount * 4);
+	LOGI("0index %d %d\n", sizeof(_index), mesh->indexCount * 2);
+	LOGI("0pos   %d %d\n", sizeof(_position), mesh->vertexCount * 4);
+	LOGI("0texco %d %d\n", sizeof(_texcoord), mesh->vertexCount * 4);
 	
+	//gen & bind
 	glGenVertexArrays(1, &(mesh->vao)); //VAO frees us from having to call glGetAttribLocation & glVertexAttribPointer on each modify op
 	glBindVertexArray(mesh->vao);
-	printf("tex1");
+	
 	//positions
 	glGenBuffers(1, &position->id);
 	glBindBuffer(GL_ARRAY_BUFFER, position->id);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * mesh->vertexCount * TEXCOORD_COMPONENTS, position->vertex, GL_DYNAMIC_DRAW);
 	glVertexAttribPointer(positionVertexAttributeIndex, TEXCOORD_COMPONENTS, GL_FLOAT, GL_FALSE, 0, 0); //provide data / layout info; "take buffer that is bound at the time called and associates that buffer with the current VAO"
 	glEnableVertexAttribArray(positionVertexAttributeIndex); //enable attribute for use
-	printf("tex2");
 	//texcoords
 	glGenBuffers(1, &texcoord->id);
 	glBindBuffer(GL_ARRAY_BUFFER, texcoord->id);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * mesh->vertexCount * TEXCOORD_COMPONENTS, texcoord->vertex, GL_DYNAMIC_DRAW);
 	glVertexAttribPointer(texcoordVertexAttributeIndex, TEXCOORD_COMPONENTS, GL_FLOAT, GL_FALSE, 0, 0); //provide data / layout info; "take buffer that is bound at the time called and associates that buffer with the current VAO"
 	glEnableVertexAttribArray(texcoordVertexAttributeIndex); //enable attribute for use
-	
+
 	//unbind
 	glBindVertexArray(0);
-	printf("tex3");
 }
 /*
 void Render_many(Program * program, RenderableSet * renderableSet, const GLfloat * matVP)
@@ -886,9 +873,12 @@ void Render_one(Render * this, Renderable * renderable, const GLfloat * matM, co
 void Render_oneUI(Render * this, Renderable * renderable, const GLfloat * matM)
 {
 	Mesh * mesh = renderable->mesh;
+	//LOGI("mesh == NULL? %i", mesh==NULL);
+	//LOGI("glBindVertexArray == NULL? %i", glBindVertexArray==NULL);
+	//LOGI("??? %i", mesh->vao);
 
 	glBindVertexArray(mesh->vao);
-	
+
 	//prep uniforms...
 	//...model matrix
 	GLint mLoc = glGetUniformLocation(this->program->id, "m");
@@ -905,73 +895,68 @@ void Render_oneUI(Render * this, Renderable * renderable, const GLfloat * matM)
 
 void Render_initialise(Render * this)
 {
-	printf("Render initialising...\n");
-	//printf("glTexParameteri == NULL? %u\n", glTexParameteri == NULL);
-	/*
-	if(!epoxy_has_gl_extension("GL_OES_standard_derivatives"))
+	LOGI("Render initialising...\n");
+	
+	//#if __ANDROID__
+	char * path = ".\\shaders\\";
+	
+	char * extensions = glGetString(GL_EXTENSIONS);
+	char * vaoExt = "GL_OES_vertex_array_object";
+	
+	if (true)//(strstr(extensions, vaoExt) != NULL)
 	{
-		printf("Missing extension: GLEW_OES_standard_derivatives.\n");
-		glfwTerminate();
-		exit(EXIT_FAILURE);
+		LOGI("GL_OES_vertex_array_object FOUND!");
+		
+		void * libhandle = dlopen("libGLESv2.so", RTLD_LAZY);
+		if (libhandle)
+		{
+			LOGI("libGLESv2 dlopen()ed; retrieving extension.");
+		
+			glBindVertexArray = (PFNGLBINDVERTEXARRAYOESPROC) 		dlsym(libhandle, "glBindVertexArrayOES");
+			glDeleteVertexArrays = (PFNGLDELETEVERTEXARRAYSOESPROC) dlsym(libhandle, "glDeleteVertexArraysOES");
+			glGenVertexArrays = (PFNGLGENVERTEXARRAYSOESPROC)		dlsym(libhandle, "glGenVertexArraysOES");
+			glIsVertexArray = (PFNGLISVERTEXARRAYOESPROC)			dlsym(libhandle, "glIsVertexArrayOES");
+			
+			LOGI("BindVertexArrayOES? %s", glBindVertexArray ? "YES" : "NO");										
+			LOGI("DeleteVertexArraysOES? %s", glDeleteVertexArrays ? "YES" : "NO");										
+			LOGI("GenVertexArraysOES? %s", glGenVertexArrays ? "YES" : "NO");										
+			LOGI("IsVertexArrayOES? %s", glIsVertexArray ? "YES" : "NO");	
+		}
+		else
+		{
+			LOGI("libGLESv2 did not dlopen(); could not retrieve extension.");
+			
+			//TODO quit
+		}
+
 	}
-*/
-
-/*
-glGenVertexArraysOES = (PFNGLGENVERTEXARRAYSOESPROC)eglGetProcAddress ( "glGenVertexArraysOES" );
-glBindVertexArrayOES = (PFNGLBINDVERTEXARRAYOESPROC)eglGetProcAddress ( "glBindVertexArrayOES" );
-glDeleteVertexArraysOES = (PFNGLDELETEVERTEXARRAYSOESPROC)eglGetProcAddress ( "glDeleteVertexArraysOES" );
-glIsVertexArrayOES = (PFNGLISVERTEXARRAYOESPROC)eglGetProcAddress ( "glIsVertexArrayOES" );
-	*/
-	/*
-	glGenVertexArraysOES = eglGetProcAddress ( "glGenVertexArraysOES" );
-glBindVertexArrayOES = (GL_APICALL void GL_APIENTRY)eglGetProcAddress ( "glBindVertexArrayOES" );
-glDeleteVertexArraysOES = (GL_APICALL void GL_APIENTRY)eglGetProcAddress ( "glDeleteVertexArraysOES" );
-glIsVertexArrayOES = (GL_APICALL GLboolean GL_APIENTRY)eglGetProcAddress ( "glIsVertexArrayOES" );
-	*/
+	else
+	{
+		//TODO check all rendering options - GL3, GLES3, GL2, GLES2 without VAOs 
+		
+		LOGI("GL_OES_vertex_array_object MISSING!");
+		
+		//TODO quit
+	}
 	
-	
-	
-	void * libhandle = dlopen("libGLESv2.so", RTLD_LAZY);
-
-BindVertexArrayOES = (PFNGLBINDVERTEXARRAYOESPROC) dlsym(libhandle,
-                                                         "glBindVertexArrayOES");
-DeleteVertexArraysOES = (PFNGLDELETEVERTEXARRAYSOESPROC) dlsym(libhandle,
-                                                               "glDeleteVertexArraysOES");
-GenVertexArraysOES = (PFNGLGENVERTEXARRAYSOESPROC)dlsym(libhandle,
-                                                        "glGenVertexArraysOES");
-IsVertexArrayOES = (PFNGLISVERTEXARRAYOESPROC)dlsym(libhandle,
-                                                    "glIsVertexArrayOES");
-	/*
-
-	PFNGLGENVERTEXARRAYSOESPROC glGenVertexArraysOES;
-	PFNGLBINDVERTEXARRAYOESPROC glBindVertexArrayOES;
-	PFNGLDELETEVERTEXARRAYSOESPROC glDeleteVertexArraysOES;
-	PFNGLISVERTEXARRAYOESPROC glIsVertexArrayOES;
-	*/
-	/*
-	glGenVertexArraysOES = (GL_APICALL void GL_APIENTRY)eglGetProcAddress ( "glGenVertexArraysOES" );
-	glBindVertexArrayOES = (GL_APICALL void GL_APIENTRY)eglGetProcAddress ( "glBindVertexArrayOES" );
-	glDeleteVertexArraysOES = (GL_APICALL void GL_APIENTRY)eglGetProcAddress ( "glDeleteVertexArraysOES" );
-	glIsVertexArrayOES = (GL_APICALL GLboolean GL_APIENTRY)eglGetProcAddress ( "glIsVertexArrayOES" );
-*/
-
+	//initialise collection objects
 	voidPtrMap_create(&this->programsByName,	HH_PROGRAMS_MAX, 	&this->programKeys, 	(void *)&this->programs, NULL);
 	voidPtrMap_create(&this->shadersByName, 	HH_SHADERS_MAX, 	&this->shaderKeys, 		(void *)&this->shaders, NULL);
 	voidPtrMap_create(&this->texturesByName, 	HH_TEXTURES_MAX, 	&this->textureKeys, 	(void *)&this->textures, NULL);
 	voidPtrMap_create(&this->materialsByName, 	HH_MATERIALS_MAX, 	&this->materialKeys, 	(void *)&this->materials, NULL);
 	voidPtrMap_create(&this->meshesByName, 		HH_MESHES_MAX, 		&this->meshKeys,	 	(void *)&this->meshes, NULL);
-	
+	LOGI("map count=%i", this->programsByName.count);
 	//reintroduce if we bring transform list back into this library.
 	//Renderable * renderable = &this->renderable;
 	//for (int i = 0; i < transformsCount; i++)
 	//	mat4x4_identity(renderable->matrix[i]);
 
-	printf("Render initialised.\n");
+	LOGI("Render initialised.\n");
 }
 
 Program * Render_setCurrentProgram(Render * this, char * name)
 {
-	//printf("name=%s\n", name);
+	//LOGI("name=%s\n", name);
 	if (name == NULL)
 	{
 		this->program = NULL;
@@ -1003,7 +988,7 @@ bool isExtensionSupported(const char * extension)
         for( int i = 0; i < numExtensions; ++i )
         {
             extensions[i] = (const char *)glGetStringi( GL_EXTENSIONS, i );
-			//printf("EXT: %s\n", extensions[i]); 
+			//LOGI("EXT: %s\n", extensions[i]); 
 			if (strstr(extensions[i], extension))
 				return true;
         }
@@ -1019,35 +1004,57 @@ bool isExtensionSupported(const char * extension)
 char* Text_load(char* filename)
 {
 	//should be portable - http://stackoverflow.com/questions/14002954/c-programming-how-to-read-the-whole-file-contents-into-a-buffer
-	FILE *file = fopen(filename, "rb"); //open for reading
-	fseek(file, 0, SEEK_END); //seek to end
-	long fileSize = ftell(file); //get current position in stream
-	fseek(file, 0, SEEK_SET); //seek to start
-	printf(filename);
-	printf("? %ld", fileSize);
-
-	char *str = malloc(fileSize + 1); //allocate enough room for file + null terminator (\0)
-
-	if (str != NULL) //if allocation succeeded
-	{
-		printf("fileSize...%ld\n", fileSize);
-		size_t freadResult;
-		freadResult = fread(str, 1, fileSize, file); //read elements as one byte each, into string, from file. 
-		//printf("freadResult...%d\n", freadResult);
-		
-		if (freadResult != fileSize)
-		{
-			fputs ("Reading error", stderr);
-			//exit (3);
+	
+	char * str;
+	
+	
 			
-			str = NULL;
-			return str;
-		}
-		
-		fclose(file);
 
-		str[fileSize] = 0;//'\0'; //last element is null termination.
+	//#ifdef DESKTOP
+	FILE *file = fopen(filename, "rb"); //open for reading
+	if (file)
+	{
+
+		
+		fseek(file, 0, SEEK_END); //seek to end
+		long fileSize = ftell(file); //get current position in stream
+		fseek(file, 0, SEEK_SET); //seek to start
+		LOGI(filename);
+		LOGI("? %ld", fileSize);
+		
+		
+		str = malloc(fileSize + 1); //allocate enough room for file + null terminator (\0)
+
+		if (str != NULL) //if allocation succeeded
+		{
+			
+			LOGI("fileSize...%ld\n", fileSize);
+			size_t freadResult;
+			freadResult = fread(str, 1, fileSize, file); //read elements as one byte each, into string, from file. 
+			//LOGI("freadResult...%d\n", freadResult);
+			
+			if (freadResult != fileSize)
+			{
+				fputs ("Reading error", stderr);
+				//exit (3);
+				
+				str = NULL;
+				return str;
+			}
+			
+			fclose(file);
+
+			str[fileSize] = 0; //'\0';
+		}
 	}
+	else
+		LOGI("File not found: %s", filename);
+	
+	
+	
+	//#elif __ANDROID__
+
+	//#endif //platforms
 	
 	return str;
 }
