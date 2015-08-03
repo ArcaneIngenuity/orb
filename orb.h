@@ -85,11 +85,7 @@
 	// POSIX
 #endif
 
-//#ifdef DESKTOP
-		#define WIN32_LEAN_AND_MEAN
-	#include <windows.h>
-
-	
+#ifdef DESKTOP
 	#define GLEW_STATIC
 	#include "glew/glew.h"
 	#include "glfw/glfw3.h"
@@ -100,7 +96,7 @@
 	#include "stb_image.h"
 	#undef STB_IMAGE_IMPLEMENTATION
 	
-//#endif//DESKTOP
+#endif//DESKTOP
 
 #define GL_BGR 0x80E0
 #define GL_BGRA 0x80E1

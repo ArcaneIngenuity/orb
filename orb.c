@@ -1,7 +1,5 @@
 #include "orb.h"
-	#define GLEW_STATIC
-	#include "glew/glew.h"
-	#include "glfw/glfw3.h"
+
 #define KEYPARTS 1
 
 //OpenGL ES extensions...
@@ -900,7 +898,7 @@ void Render_oneUI(Render * this, Renderable * renderable, const GLfloat * matM)
 void Render_initialise(Render * this)
 {
 	LOGI("Render initialising...\n");
-	//#ifdef DESKTOP
+	#ifdef DESKTOP
 	//WINDOW, CONTEXT & INPUT
 	//glfwSetErrorCallback(GLFW_errorCallback);
 	
@@ -958,7 +956,7 @@ void Render_initialise(Render * this)
 	printf("GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS=%d\n", maxUnits);
 	printf("GL_MAX_COLOR_ATTACHMENTS=%d\n", maxAttachments);
 	
-	//#elif MOBILE
+	#elif MOBILE
 		//TODO EGL context etc. here
 	//TODO Input too?
 	//TODO ...in which case, move extensions to a separate block as first we do context setup, THEN extensions checks
@@ -1002,7 +1000,7 @@ void Render_initialise(Render * this)
 		
 		//TODO quit
 	}
-	//#endif//DESKTOP/MOBILE
+	#endif//DESKTOP/MOBILE
 	
 	//MISCELLANEOUS
 	
