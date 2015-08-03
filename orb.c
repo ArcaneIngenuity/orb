@@ -1,12 +1,16 @@
 #include "orb.h"
-
+	#define GLEW_STATIC
+	#include "glew/glew.h"
+	#include "glfw/glfw3.h"
 #define KEYPARTS 1
 
 //OpenGL ES extensions...
+#if __ANDROID__
 PFNGLGENVERTEXARRAYSOESPROC glGenVertexArrays;
 PFNGLBINDVERTEXARRAYOESPROC glBindVertexArray;
 PFNGLDELETEVERTEXARRAYSOESPROC glDeleteVertexArrays;
 PFNGLISVERTEXARRAYOESPROC glIsVertexArray;
+#endif//__ANDROID__
 //...OpenGL ES extensions.
 
 //TODO see "I/O callbacks" in stbi_image.h for loading images out of a data file
@@ -896,17 +900,77 @@ void Render_oneUI(Render * this, Renderable * renderable, const GLfloat * matM)
 void Render_initialise(Render * this)
 {
 	LOGI("Render initialising...\n");
+	//#ifdef DESKTOP
+	//WINDOW, CONTEXT & INPUT
+	//glfwSetErrorCallback(GLFW_errorCallback);
 	
-	//#if __ANDROID__
-	char * path = ".\\shaders\\";
+	if (!glfwInit())
+		exit(EXIT_FAILURE);
+	else
+		printf("GLFW initialised.\n");
+
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+	glfwWindowHint(GLFW_SAMPLES, 4); //HW AA
+	//glfwWindowHint(GLFW_REFRESH_RATE, 10);
+	
+	window = glfwCreateWindow(1024, 768, "War & Adventure Pre-Alpha", NULL, NULL);
+
+	if (!window)
+	{
+		printf("GLFW could not create window.\n");
+		glfwTerminate();
+		exit(EXIT_FAILURE);
+	}
+
+	glfwMakeContextCurrent(window);
+	printf("OPENGL ERROR %i\n", glGetError());
+	printf("OpenGL ver. %i.%i\n", glfwGetWindowAttrib(window, GLFW_CONTEXT_VERSION_MAJOR), glfwGetWindowAttrib(window, GLFW_CONTEXT_VERSION_MINOR ));
+	
+	glfwSetInputMode(window, GLFW_STICKY_KEYS, 1);
+	glfwSetInputMode(window, GLFW_STICKY_MOUSE_BUTTONS, 1);
+	
+	//set callback for later window resize events
+	//glfwSetWindowSizeCallback(window, onWindowResize);
+	
+	//EXTENSIONS
+	glewExperimental = GL_TRUE; 
+	
+	printf("OPENGL ERROR %i\n", glGetError());
+
+	if (glewInit())
+	{	
+		glfwTerminate();
+		exit(EXIT_FAILURE);
+	}
+	else
+	{
+		printf("GLEW initialised.\n");
+	}
+	printf("OPENGL ERROR %i\n", glGetError());
+	
+	//some debug info on texture capabilities
+	GLint maxSize, maxUnits, maxAttachments;
+	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxSize);
+	glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &maxUnits);
+	glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS, &maxAttachments);
+	printf("GL_MAX_TEXTURE_SIZE=%d\n", maxSize);
+	printf("GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS=%d\n", maxUnits);
+	printf("GL_MAX_COLOR_ATTACHMENTS=%d\n", maxAttachments);
+	
+	//#elif MOBILE
+		//TODO EGL context etc. here
+	//TODO Input too?
+	//TODO ...in which case, move extensions to a separate block as first we do context setup, THEN extensions checks
 	
 	char * extensions = glGetString(GL_EXTENSIONS);
 	char * vaoExt = "GL_OES_vertex_array_object";
+
 	
 	if (true)//(strstr(extensions, vaoExt) != NULL)
 	{
 		LOGI("GL_OES_vertex_array_object FOUND!");
-		
+		#if __ANDROID__
 		void * libhandle = dlopen("libGLESv2.so", RTLD_LAZY);
 		if (libhandle)
 		{
@@ -928,7 +992,7 @@ void Render_initialise(Render * this)
 			
 			//TODO quit
 		}
-
+		#endif//__ANDROID__
 	}
 	else
 	{
@@ -938,6 +1002,9 @@ void Render_initialise(Render * this)
 		
 		//TODO quit
 	}
+	//#endif//DESKTOP/MOBILE
+	
+	//MISCELLANEOUS
 	
 	//initialise collection objects
 	voidPtrMap_create(&this->programsByName,	HH_PROGRAMS_MAX, 	&this->programKeys, 	(void *)&this->programs, NULL);
@@ -946,10 +1013,12 @@ void Render_initialise(Render * this)
 	voidPtrMap_create(&this->materialsByName, 	HH_MATERIALS_MAX, 	&this->materialKeys, 	(void *)&this->materials, NULL);
 	voidPtrMap_create(&this->meshesByName, 		HH_MESHES_MAX, 		&this->meshKeys,	 	(void *)&this->meshes, NULL);
 	LOGI("map count=%i", this->programsByName.count);
+
 	//reintroduce if we bring transform list back into this library.
 	//Renderable * renderable = &this->renderable;
 	//for (int i = 0; i < transformsCount; i++)
 	//	mat4x4_identity(renderable->matrix[i]);
+
 
 	LOGI("Render initialised.\n");
 }

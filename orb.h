@@ -25,6 +25,7 @@
 #elif __APPLE__
 	#include "TargetConditionals.h"
 	#if TARGET_OS_IPHONE
+		#define MOBILE 1
 		#if TARGET_IPHONE_SIMULATOR
 		#else //actual device
 		#endif
@@ -36,6 +37,7 @@
 		// Unsupported platform
 	#endif
 #elif __ANDROID__
+	#define MOBILE 1 //really? you don't know that this implies mobile. maybe we really should avoid these categories.
 	#include <jni.h>
 	#include <errno.h>
 	#include <math.h>
@@ -83,18 +85,22 @@
 	// POSIX
 #endif
 
-#ifdef DESKTOP
+//#ifdef DESKTOP
+		#define WIN32_LEAN_AND_MEAN
+	#include <windows.h>
+
+	
+	#define GLEW_STATIC
+	#include "glew/glew.h"
+	#include "glfw/glfw3.h"
+
 	//#include "stb_image_aug.h"
 	#define STB_IMAGE_STATIC 1
 	#define STB_IMAGE_IMPLEMENTATION
 	#include "stb_image.h"
 	#undef STB_IMAGE_IMPLEMENTATION
 	
-	#define GLEW_STATIC
-	#include "glew/glew.h"
-	#include "glfw/glfw3.h"
-	
-#endif//DESKTOP
+//#endif//DESKTOP
 
 #define GL_BGR 0x80E0
 #define GL_BGRA 0x80E1
@@ -603,5 +609,12 @@ char* Text_load(char* filename);
 
 void GLFW_errorCallback(int error, const char * description);
 bool GLTool_isExtensionSupported(const char * extension); //redundant, see GLFW
+
+//globals
+//TODO merge all into an Orb object? then call e.g. Render_one(orb->render, ...);
+Render render;
+#ifdef DESKTOP
+GLFWwindow * window;
+#endif//DESKTOP
 
 #endif //COM_ARCANEINGENUITY_ORB_H
