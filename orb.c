@@ -2,14 +2,7 @@
 
 #define KEYPARTS 1
 
-//OpenGL ES extensions...
-#if __ANDROID__
-PFNGLGENVERTEXARRAYSOESPROC glGenVertexArrays;
-PFNGLBINDVERTEXARRAYOESPROC glBindVertexArray;
-PFNGLDELETEVERTEXARRAYSOESPROC glDeleteVertexArrays;
-PFNGLISVERTEXARRAYOESPROC glIsVertexArray;
-#endif//__ANDROID__
-//...OpenGL ES extensions.
+
 
 //TODO see "I/O callbacks" in stbi_image.h for loading images out of a data file
 void GLFW_errorCallback(int error, const char * description)

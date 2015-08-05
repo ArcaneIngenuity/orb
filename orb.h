@@ -52,8 +52,8 @@
 	//#include <GLES/gl.h> //for e.g. GL_PERSPECTIVE_CORRECTION_HINT
 	#include <GLES2/gl2.h>
 
-	#define glGenVertexArrays GenVertexArraysOES
-	#define glBindVertexArray BindVertexArrayOES
+	//#define glGenVertexArrays GenVertexArraysOES
+	//#define glBindVertexArray BindVertexArrayOES
 	
 	#include <android/sensor.h>
 	//#include <android/log.h>
@@ -75,6 +75,12 @@
 	
 	//"polyfills"
 	#define log2(value) (log(value) / log(2))
+	
+	//OpenGL ES Extensions
+	PFNGLGENVERTEXARRAYSOESPROC glGenVertexArrays;
+	PFNGLBINDVERTEXARRAYOESPROC glBindVertexArray;
+	PFNGLDELETEVERTEXARRAYSOESPROC glDeleteVertexArrays;
+	PFNGLISVERTEXARRAYOESPROC glIsVertexArray;
 	
 #elif __linux
 	#define DESKTOP 1 //not certain about this, but should be true...?
