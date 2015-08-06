@@ -37,6 +37,31 @@
 		// Unsupported platform
 	#endif
 #elif __ANDROID__
+	#define MAIN void android_main(struct android_app* state)
+	#define LOOP(instructions)\
+	while (1)\
+	{\
+		int ident;\
+		int events;\
+		struct android_poll_source* source;\
+		while ((ident=ALooper_pollAll(0, NULL, &events,(void**)&source)) >= 0)\
+		{\
+			if (source != NULL)\
+			{\
+				source->process(state, source);\
+			}\
+			if (state->destroyRequested != 0)\
+			{\
+				terminate_display(&engine);\
+				exit(0);\
+			}\
+		}\
+		draw_frame(&engine);\
+	}
+	//unlike return, exit(0) forces release of resources in e.g. an OpenGL app, see comment by W.Boeke here:
+	//http://www.ikerhurtado.com/android-ndk-native-activity-app-glue-lib-lifecycle-threads
+	
+	
 	#define MOBILE 1 //really? you don't know that this implies mobile. maybe we really should avoid these categories.
 	#include <jni.h>
 	#include <errno.h>
@@ -92,6 +117,20 @@
 #endif
 
 #ifdef DESKTOP
+	#define MAIN int main(int argc, char *argv[])
+	#define LOOP(instructions)\
+	double t1, t2 = 0;\
+	while (!glfwWindowShouldClose(window))\
+	{\
+		glfwPollEvents();\
+		t2 = t1;\
+		t1 = glfwGetTime();\
+		deltaSec = t1 - t2;\
+		printf("deltaSec %.10f\n", deltaSec);\
+		instructions\
+		glfwSwapBuffers(window);\
+	}
+	
 	#define GLEW_STATIC
 	#include "glew/glew.h"
 	#include "glfw/glfw3.h"
@@ -177,9 +216,12 @@ typedef struct Window
 	#ifdef DESKTOP
 	GLFWwindow * window;
 	#else //DEV, ANDROID
-	
+		#ifdef __ANDROID__
+	ANativeWindow * window;
+		#endif //__ANDROID__
 	#endif //DESKTOP
 } Window;
+//TODO set up other functions to wrap the different window types' provision of information e.g. resolution
 
 typedef struct BMFontInfo
 {
