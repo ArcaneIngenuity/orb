@@ -106,7 +106,20 @@
 	PFNGLBINDVERTEXARRAYOESPROC glBindVertexArray;
 	PFNGLDELETEVERTEXARRAYSOESPROC glDeleteVertexArrays;
 	PFNGLISVERTEXARRAYOESPROC glIsVertexArray;
-	
+
+	struct engine {
+		struct android_app* app;
+
+		EGLDisplay display;
+		EGLSurface surface;
+		EGLContext context;
+		int32_t width;
+		int32_t height;
+
+		int32_t touchX;
+		int32_t touchY;
+	};
+
 #elif __linux
 	#define DESKTOP 1 //not certain about this, but should be true...?
 	// linux
@@ -660,5 +673,9 @@ Render render;
 #ifdef DESKTOP
 GLFWwindow * window;
 #endif//DESKTOP
+#ifdef __ANDROID__
+struct engine engine;
+struct android_app * androidApp;
+#endif//__ANDROID__
 
 #endif //COM_ARCANEINGENUITY_ORB_H

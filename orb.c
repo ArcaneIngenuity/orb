@@ -887,7 +887,7 @@ void Render_oneUI(Render * this, Renderable * renderable, const GLfloat * matM)
 	glBindVertexArray(0);
 }
 
-
+//TODO rename Orb_initialise()
 void Render_initialise(Render * this)
 {
 	LOGI("Render initialising...\n");
@@ -950,18 +950,88 @@ void Render_initialise(Render * this)
 	printf("GL_MAX_COLOR_ATTACHMENTS=%d\n", maxAttachments);
 	
 	#elif MOBILE
-		//TODO EGL context etc. here
-	//TODO Input too?
-	//TODO ...in which case, move extensions to a separate block as first we do context setup, THEN extensions checks
+	#if __ANDROID__
 	
+	//TODO Input too?
+	
+	ANativeActivity* activity = engine.app->activity;
+    JNIEnv* env = activity->env;
+
+	// Setup OpenGL ES 2
+	// http://stackoverflow.com/questions/11478957/how-do-i-create-an-opengl-es-2-context-in-a-native-activity
+
+	const EGLint attribs[] = {
+			EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT, //important
+			EGL_BLUE_SIZE, 8,
+			EGL_GREEN_SIZE, 8,
+			EGL_RED_SIZE, 8,
+			EGL_NONE
+	};
+
+	EGLint attribList[] =
+	{
+			EGL_CONTEXT_CLIENT_VERSION, 2,
+			EGL_NONE
+	};
+
+	EGLint w, h, dummy, format;
+	EGLint numConfigs;
+	EGLConfig config;
+	EGLSurface surface;
+	EGLContext context;
+
+	EGLDisplay display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+
+	eglInitialize(display, 0, 0);
+
+	/* Here, the application chooses the configuration it desires. In this
+	 * sample, we have a very simplified selection process, where we pick
+	 * the first EGLConfig that matches our criteria */
+	eglChooseConfig(display, attribs, &config, 1, &numConfigs);
+
+	/* EGL_NATIVE_VISUAL_ID is an attribute of the EGLConfig that is
+	 * guaranteed to be accepted by ANativeWindow_setBuffersGeometry().
+	 * As soon as we picked a EGLConfig, we can safely reconfigure the
+	 * ANativeWindow buffers to match, using EGL_NATIVE_VISUAL_ID. */
+	eglGetConfigAttrib(display, config, EGL_NATIVE_VISUAL_ID, &format);
+
+	ANativeWindow_setBuffersGeometry(engine.app->window, 0, 0, format);
+
+	surface = eglCreateWindowSurface(display, config, engine.app->window, NULL);
+
+	context = eglCreateContext(display, config, NULL, attribList);
+
+	if (eglMakeCurrent(display, surface, surface, context) == EGL_FALSE) {
+		LOGW("Unable to eglMakeCurrent");
+		return -1;
+	}
+	else
+		LOGI("Success eglMakeCurrent");
+
+	// Grab the width and height of the surface
+	eglQuerySurface(display, surface, EGL_WIDTH, &w);
+	eglQuerySurface(display, surface, EGL_HEIGHT, &h);
+
+	engine.display = display;
+	engine.context = context;
+	engine.surface = surface;
+	engine.width = w;
+	engine.height = h;
+
+	// Initialize GL state.
+	//glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_FASTEST);
+	glEnable(GL_CULL_FACE);
+	glDisable(GL_DEPTH_TEST);
+	glViewport(0, 0, w, h);
+	
+	//EXTENSIONS
 	char * extensions = glGetString(GL_EXTENSIONS);
 	char * vaoExt = "GL_OES_vertex_array_object";
-
 	
-	if (true)//(strstr(extensions, vaoExt) != NULL)
+	if (strstr(extensions, vaoExt) != NULL)
 	{
 		LOGI("GL_OES_vertex_array_object FOUND!");
-		#if __ANDROID__
+		
 		void * libhandle = dlopen("libGLESv2.so", RTLD_LAZY);
 		if (libhandle)
 		{
@@ -983,7 +1053,7 @@ void Render_initialise(Render * this)
 			
 			//TODO quit
 		}
-		#endif//__ANDROID__
+		
 	}
 	else
 	{
@@ -993,11 +1063,15 @@ void Render_initialise(Render * this)
 		
 		//TODO quit
 	}
+	
+	#endif//__ANDROID__
 	#endif//DESKTOP/MOBILE
 	
 	//MISCELLANEOUS
 	
 	//initialise collection objects
+	//TODO "this" should be "orb" instance
+	//TODO rename HH_ constants to ORB_
 	voidPtrMap_create(&this->programsByName,	HH_PROGRAMS_MAX, 	&this->programKeys, 	(void *)&this->programs, NULL);
 	voidPtrMap_create(&this->shadersByName, 	HH_SHADERS_MAX, 	&this->shaderKeys, 		(void *)&this->shaders, NULL);
 	voidPtrMap_create(&this->texturesByName, 	HH_TEXTURES_MAX, 	&this->textureKeys, 	(void *)&this->textures, NULL);
