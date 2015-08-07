@@ -38,29 +38,6 @@
 	#endif
 #elif __ANDROID__
 	#define MAIN void android_main(struct android_app* state)
-	#define LOOP(instructions)\
-	while (1)\
-	{\
-		int ident;\
-		int events;\
-		struct android_poll_source* source;\
-		while ((ident=ALooper_pollAll(0, NULL, &events,(void**)&source)) >= 0)\
-		{\
-			if (source != NULL)\
-			{\
-				source->process(state, source);\
-			}\
-			if (state->destroyRequested != 0)\
-			{\
-				terminate_display(&engine);\
-				exit(0);\
-			}\
-		}\
-		draw_frame(&engine);\
-	}
-	//unlike return, exit(0) forces release of resources in e.g. an OpenGL app, see comment by W.Boeke here:
-	//http://www.ikerhurtado.com/android-ndk-native-activity-app-glue-lib-lifecycle-threads
-	
 	
 	#define MOBILE 1 //really? you don't know that this implies mobile. maybe we really should avoid these categories.
 	#include <jni.h>
@@ -107,18 +84,7 @@
 	PFNGLDELETEVERTEXARRAYSOESPROC glDeleteVertexArrays;
 	PFNGLISVERTEXARRAYOESPROC glIsVertexArray;
 
-	struct engine {
-		struct android_app* app;
 
-		EGLDisplay display;
-		EGLSurface surface;
-		EGLContext context;
-		int32_t width;
-		int32_t height;
-
-		int32_t touchX;
-		int32_t touchY;
-	};
 
 #elif __linux
 	#define DESKTOP 1 //not certain about this, but should be true...?
@@ -131,18 +97,6 @@
 
 #ifdef DESKTOP
 	#define MAIN int main(int argc, char *argv[])
-	#define LOOP(instructions)\
-	double t1, t2 = 0;\
-	while (!glfwWindowShouldClose(window))\
-	{\
-		glfwPollEvents();\
-		t2 = t1;\
-		t1 = glfwGetTime();\
-		deltaSec = t1 - t2;\
-		printf("deltaSec %.10f\n", deltaSec);\
-		instructions\
-		glfwSwapBuffers(window);\
-	}
 	
 	#define GLEW_STATIC
 	#include "glew/glew.h"
@@ -567,7 +521,7 @@ typedef struct Color
 	float a;
 } Color;
 
-typedef struct Render
+typedef struct Engine
 {	
 	Map programsByName;
 	Map shadersByName;
@@ -606,12 +560,27 @@ typedef struct Render
 	//TODO incorporate as separate RTT renderables array?
 	Renderable fullscreenQuad;
 	mat4x4 fullscreenQuadMatrix;
-} Render;
-const struct Render orbEmpty;
+	
+	#ifdef __ANDROID__
+	struct android_app* app;
 
-void Render_initialise(Render * this);
-Program * Render_setCurrentProgram(Render * this, char * name);
-Program * Render_getCurrentProgram(Render * this);
+	EGLDisplay display;
+	EGLSurface surface;
+	EGLContext context;
+	#endif//__ANDROID__
+	
+	//TODO remove this extraneous Android stuff?
+	int32_t width;
+	int32_t height;
+	int32_t touchX;
+	int32_t touchY;
+	
+} Engine;
+const struct Engine engineEmpty;
+
+void Engine_initialise(Engine * this);
+Program * Engine_setCurrentProgram(Engine * this, char * name);
+Program * Engine_getCurrentProgram(Engine * this);
 
 void Mesh_calculateNormals(Mesh * this);
 
@@ -647,34 +616,42 @@ GLuint GLBuffer_create(
 	GLenum usage
 );
 
-void Shader_load(Render * this, const char * path, const char * name);
+void Shader_load(Engine * this, const char * path, const char * name);
 void Shader_construct(Shader * this);
 void Program_construct(Program * this, GLuint vertex_shader, GLuint fragment_shader); //we pass in a reference to a position in an already-defined array. This lets us keep our structures local.
 
-void Render_clear();
-void Render_many(Program * program, RenderableSet * renderableSet, const GLfloat * matVP);
-void Render_one(Render * this, Renderable * renderable, const GLfloat * matM, const GLfloat * matVP);
-void Render_oneUI(Render * this, Renderable * renderable, const GLfloat * matM);
-void Render_createFullscreenQuad(Render * this, GLuint positionVertexAttributeIndex, GLuint texcoordVertexAttributeIndex);
-void Render_createScreenQuad(Mesh * mesh, GLuint positionVertexAttributeIndex, GLuint texcoordVertexAttributeIndex,
+void Engine_clear();
+void Engine_many(Program * program, RenderableSet * renderableSet, const GLfloat * matVP);
+void Engine_one(Engine * this, Renderable * renderable, const GLfloat * matM, const GLfloat * matVP);
+void Engine_oneUI(Engine * this, Renderable * renderable, const GLfloat * matM);
+void Engine_createFullscreenQuad(Engine * this, GLuint positionVertexAttributeIndex, GLuint texcoordVertexAttributeIndex);
+void Engine_createScreenQuad(Mesh * mesh, GLuint positionVertexAttributeIndex, GLuint texcoordVertexAttributeIndex,
 	int w, int h,
 	int rcx, int rcy
 );
-float Render_smoothstep(float t);
+float Engine_smoothstep(float t);
 
 char* Text_load(char* filename);
 
 void GLFW_errorCallback(int error, const char * description);
 bool GLTool_isExtensionSupported(const char * extension); //redundant, see GLFW
 
+
+void Loop_initialise(struct Engine * engine);
+void Loop_run(struct Engine * engine, void (* func)(void *), void * arg);
+void Window_terminate(struct Engine* engine);
+//#ifdef __ANDROID__
+void Android_frame(struct Engine* engine);
+//#endif//__ANDROID__
+
 //globals
-//TODO merge all into an Orb object? then call e.g. Render_one(orb->render, ...);
-Render render;
+//TODO merge all into an Orb object? then call e.g. Engine_one(orb->render, ...);
+float deltaSec;
+struct Engine engine;
 #ifdef DESKTOP
 GLFWwindow * window;
 #endif//DESKTOP
 #ifdef __ANDROID__
-struct engine engine;
 struct android_app * androidApp;
 #endif//__ANDROID__
 

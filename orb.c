@@ -3,13 +3,92 @@
 #define KEYPARTS 1
 
 
+void Window_terminate(struct Engine* engine)
+{
+	#ifdef DESKTOP
+	glfwTerminate();//free()s any windows
+	#elif MOBILE
+	#ifdef __ANDROID__
+	if (engine->display != EGL_NO_DISPLAY)
+	{
+		eglMakeCurrent(engine->display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+		
+		if (engine->context != EGL_NO_CONTEXT)
+			eglDestroyContext(engine->display, engine->context);
+		if (engine->surface != EGL_NO_SURFACE)
+			eglDestroySurface(engine->display, engine->surface);
+		
+		eglTerminate(engine->display);
+	}
+	engine->display = EGL_NO_DISPLAY;
+	engine->context = EGL_NO_CONTEXT;
+	engine->surface = EGL_NO_SURFACE;
+	#endif//__ANDROID__
+	#endif//DESKTOP/MOBILE
+}
 
+void Loop_run(struct Engine * engine, void (* func)(void *), void * arg)
+{
+	#ifdef DESKTOP
+	double t1, t2 = 0;
+	while (!glfwWindowShouldClose(window))
+	{
+		glfwPollEvents();
+		t2 = t1;
+		t1 = glfwGetTime();
+		deltaSec = t1 - t2;\
+		printf("deltaSec %.10f\n", deltaSec);
+
+		func(arg); //this is where we run custom render & logic
+		
+		glfwSwapBuffers(window);
+	}
+	#elif MOBILE
+	#ifdef __ANDROID__
+	while (1)
+	{
+		int ident;
+		int events;
+		struct android_poll_source* source;
+		struct android_app * state = engine->app;
+		while ((ident=ALooper_pollAll(0, NULL, &events,(void**)&source)) >= 0)
+		{
+			if (source != NULL)
+			{
+				source->process(state, source);
+			}
+			if (state->destroyRequested != 0)
+			{
+				Window_terminate(engine);
+				exit(EXIT_FAILURE);
+			}
+		}
+		Android_frame(engine);
+	}
+	#endif//__ANDROID__
+	#endif//DESKTOP
+	
+	return;
+}
+
+#ifdef __ANDROID__
+void Android_frame(struct Engine* engine)
+{
+	if (!engine->display) return;
+
+	func(arg); //this is where we run custom render & logic
+	
+	eglSwapBuffers(engine->display, engine->surface);
+}
+#endif//__ANDROID__
+#ifdef DESKTOP
 //TODO see "I/O callbacks" in stbi_image.h for loading images out of a data file
 void GLFW_errorCallback(int error, const char * description)
 {
     //fputs(description, stderr);
 	LOGI ("GLFW ERROR: code %i msg: %s\n", error, description);
 }
+#endif//DESKTOP
 
 void Mesh_calculateNormals(Mesh * this)
 {
@@ -399,7 +478,7 @@ GLuint GLBuffer_create(
 }
 
 //------------------Shader------------------//
-void Shader_load(Render * this, const char * path, const char * name)
+void Shader_load(Engine * this, const char * path, const char * name)
 {
 	Shader * vert;
 	Shader * frag;
@@ -660,22 +739,22 @@ bool linkProgramSuccess(int program)
 //--------------Render-------------------//
 
 
-void Render_clear()
+void Engine_clear()
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
-void Render_clearColor()
+void Engine_clearColor()
 {
 	 glClear(GL_COLOR_BUFFER_BIT);
 }
 
-void Render_clearDepth()
+void Engine_clearDepth()
 {
 	 glClear(GL_DEPTH_BUFFER_BIT);
 }
 
-void Render_createFullscreenQuad(Render * this, GLuint positionVertexAttributeIndex, GLuint texcoordVertexAttributeIndex)
+void Engine_createFullscreenQuad(Engine * this, GLuint positionVertexAttributeIndex, GLuint texcoordVertexAttributeIndex)
 {
 	mat4x4_identity(this->fullscreenQuadMatrix);
 	
@@ -741,7 +820,7 @@ void Render_createFullscreenQuad(Render * this, GLuint positionVertexAttributeIn
 	glBindVertexArray(0);
 }
 
-void Render_createScreenQuad(Mesh * mesh, GLuint positionVertexAttributeIndex, GLuint texcoordVertexAttributeIndex,
+void Engine_createScreenQuad(Mesh * mesh, GLuint positionVertexAttributeIndex, GLuint texcoordVertexAttributeIndex,
 	int w, int h,
 	int rcx, int rcy
 )
@@ -809,7 +888,7 @@ void Render_createScreenQuad(Mesh * mesh, GLuint positionVertexAttributeIndex, G
 	glBindVertexArray(0);
 }
 /*
-void Render_many(Program * program, RenderableSet * renderableSet, const GLfloat * matVP)
+void Engine_many(Program * program, RenderableSet * renderableSet, const GLfloat * matVP)
 {
 	Mesh * mesh = renderableSet->mesh;
 
@@ -843,7 +922,7 @@ void Render_many(Program * program, RenderableSet * renderableSet, const GLfloat
 */
 //TODO should pass Mesh instead of RenderableSet, though in same arg position.
 //TODO instead of matM, a void * arg pointing to wherever all the uniforms for this object lie. same for attributes?
-void Render_one(Render * this, Renderable * renderable, const GLfloat * matM, const GLfloat * matVP)
+void Engine_one(Engine * this, Renderable * renderable, const GLfloat * matM, const GLfloat * matVP)
 {
 	Mesh * mesh = renderable->mesh;
 
@@ -865,7 +944,7 @@ void Render_one(Render * this, Renderable * renderable, const GLfloat * matM, co
 	glBindVertexArray(0);
 }
 
-void Render_oneUI(Render * this, Renderable * renderable, const GLfloat * matM)
+void Engine_oneUI(Engine * this, Renderable * renderable, const GLfloat * matM)
 {
 	Mesh * mesh = renderable->mesh;
 	//LOGI("mesh == NULL? %i", mesh==NULL);
@@ -888,7 +967,7 @@ void Render_oneUI(Render * this, Renderable * renderable, const GLfloat * matM)
 }
 
 //TODO rename Orb_initialise()
-void Render_initialise(Render * this)
+void Engine_initialise(Engine * this)
 {
 	LOGI("Render initialising...\n");
 	#ifdef DESKTOP
@@ -931,8 +1010,8 @@ void Render_initialise(Render * this)
 
 	if (glewInit())
 	{	
-		glfwTerminate();
-		exit(EXIT_FAILURE);
+		//glfwTerminate();
+		exit(EXIT_FAILURE); //atexit should have everything else killed
 	}
 	else
 	{
@@ -1088,7 +1167,19 @@ void Render_initialise(Render * this)
 	LOGI("Render initialised.\n");
 }
 
-Program * Render_setCurrentProgram(Render * this, char * name)
+void Engine_dispose(Engine * this)
+{
+	#ifdef DESKTOP
+	//glfwTerminate();//free()s any windows
+	#elif MOBILE
+	#if __ANDROID__
+	
+	
+	#endif//__ANDROID__
+	#endif//DESKTOP/MOBILE
+}
+
+Program * Engine_setCurrentProgram(Engine * this, char * name)
 {
 	//LOGI("name=%s\n", name);
 	if (name == NULL)
@@ -1105,10 +1196,11 @@ Program * Render_setCurrentProgram(Render * this, char * name)
 	return this->program;
 }
 
-Program * Render_getCurrentProgram(Render * this)
+Program * Engine_getCurrentProgram(Engine * this)
 {
 	return this->program;
 }
+
 	
 //------------------TOOLS------------------//
 /*
@@ -1193,7 +1285,7 @@ char* Text_load(char* filename)
 	return str;
 }
 
-float Render_smoothstep(float t)
+float Engine_smoothstep(float t)
 {
 	return 3 * t * t - 2 * t * t * t;
 }
