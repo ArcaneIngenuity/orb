@@ -84,8 +84,6 @@
 	PFNGLDELETEVERTEXARRAYSOESPROC glDeleteVertexArrays;
 	PFNGLISVERTEXARRAYOESPROC glIsVertexArray;
 
-
-
 #elif __linux
 	#define DESKTOP 1 //not certain about this, but should be true...?
 	// linux
@@ -560,20 +558,23 @@ typedef struct Engine
 	//TODO incorporate as separate RTT renderables array?
 	Renderable fullscreenQuad;
 	mat4x4 fullscreenQuadMatrix;
-	
-	#ifdef __ANDROID__
-	struct android_app* app;
 
+	#ifdef __ANDROID__	
+	struct android_app* app;
 	EGLDisplay display;
 	EGLSurface surface;
 	EGLContext context;
 	#endif//__ANDROID__
 	
-	//TODO remove this extraneous Android stuff?
 	int32_t width;
 	int32_t height;
 	int32_t touchX;
 	int32_t touchY;
+	
+	void (*userInitialiseFunc)();
+	
+	void (*userUpdateFunc)(void *);
+	void * userUpdateArg;
 	
 } Engine;
 const struct Engine engineEmpty;
@@ -636,23 +637,15 @@ char* Text_load(char* filename);
 void GLFW_errorCallback(int error, const char * description);
 bool GLTool_isExtensionSupported(const char * extension); //redundant, see GLFW
 
-
-void Loop_initialise(struct Engine * engine);
-void Loop_run(struct Engine * engine, void (* func)(void *), void * arg);
-void Window_terminate(struct Engine* engine);
-//#ifdef __ANDROID__
-void Android_frame(struct Engine* engine);
-//#endif//__ANDROID__
+void Android_onAppCmd(struct android_app* app, int32_t cmd);
 
 //globals
-//TODO merge all into an Orb object? then call e.g. Engine_one(orb->render, ...);
-float deltaSec;
-struct Engine engine;
+//TODO merge all into an Orb object? then call e.g. Engine_one(orb->engine, ...);
+Engine engine;
 #ifdef DESKTOP
 GLFWwindow * window;
 #endif//DESKTOP
 #ifdef __ANDROID__
-struct android_app * androidApp;
 #endif//__ANDROID__
 
 #endif //COM_ARCANEINGENUITY_ORB_H

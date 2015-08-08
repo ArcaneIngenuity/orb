@@ -2,22 +2,21 @@
 
 #define KEYPARTS 1
 
-
-void Window_terminate(struct Engine* engine)
+void Window_terminate(Engine * engine)
 {
 	#ifdef DESKTOP
 	glfwTerminate();//free()s any windows
+	window = NULL; //JIC
 	#elif MOBILE
 	#ifdef __ANDROID__
-	if (engine->display != EGL_NO_DISPLAY)
-	{
+	if (engine->display != EGL_NO_DISPLAY) {
 		eglMakeCurrent(engine->display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
-		
-		if (engine->context != EGL_NO_CONTEXT)
+		if (engine->context != EGL_NO_CONTEXT) {
 			eglDestroyContext(engine->display, engine->context);
-		if (engine->surface != EGL_NO_SURFACE)
+		}
+		if (engine->surface != EGL_NO_SURFACE) {
 			eglDestroySurface(engine->display, engine->surface);
-		
+		}
 		eglTerminate(engine->display);
 	}
 	engine->display = EGL_NO_DISPLAY;
@@ -27,19 +26,20 @@ void Window_terminate(struct Engine* engine)
 	#endif//DESKTOP/MOBILE
 }
 
-void Loop_run(struct Engine * engine, void (* func)(void *), void * arg)
+void Loop_run(Engine * engine)
 {
 	#ifdef DESKTOP
-	double t1, t2 = 0;
+	double t1, t2 = 0;\
 	while (!glfwWindowShouldClose(window))
 	{
 		glfwPollEvents();
-		t2 = t1;
+		t2 = t1;\
 		t1 = glfwGetTime();
-		deltaSec = t1 - t2;\
-		printf("deltaSec %.10f\n", deltaSec);
+		//deltaSec = t1 - t2;
+		//printf("deltaSec %.10f\n", deltaSec);
 
-		func(arg); //this is where we run custom render & logic
+		//TODO
+		engine->userUpdateFunc(engine->userUpdateArg);
 		
 		glfwSwapBuffers(window);
 	}
@@ -50,7 +50,7 @@ void Loop_run(struct Engine * engine, void (* func)(void *), void * arg)
 		int ident;
 		int events;
 		struct android_poll_source* source;
-		struct android_app * state = engine->app;
+		struct android_app* state = engine->app;
 		while ((ident=ALooper_pollAll(0, NULL, &events,(void**)&source)) >= 0)
 		{
 			if (source != NULL)
@@ -60,25 +60,56 @@ void Loop_run(struct Engine * engine, void (* func)(void *), void * arg)
 			if (state->destroyRequested != 0)
 			{
 				Window_terminate(engine);
-				exit(EXIT_FAILURE);
+				exit(0);
 			}
 		}
+		//TODO if accumulated sufficient time
 		Android_frame(engine);
 	}
 	#endif//__ANDROID__
-	#endif//DESKTOP
-	
-	return;
+	#endif//DESKTOP/MOBILE
 }
 
 #ifdef __ANDROID__
-void Android_frame(struct Engine* engine)
+void Android_frame(Engine * engine)
 {
-	if (!engine->display) return;
-
-	func(arg); //this is where we run custom render & logic
+	// No display.
+	if (engine->display == NULL) return;
+	
+	engine->userUpdateFunc(engine->userUpdateArg);
 	
 	eglSwapBuffers(engine->display, engine->surface);
+}
+
+/**
+ * Process the next main command.
+ */
+void Android_onAppCmd(struct android_app* app, int32_t cmd)
+{
+	Engine * engine = (struct engine*)app->userData;
+	switch (cmd)
+	{
+	case APP_CMD_SAVE_STATE:
+		break;
+	case APP_CMD_INIT_WINDOW:
+		// The window is being shown, get it ready.
+		if (engine->app->window != NULL)
+		{
+			Engine_initialise(engine);
+
+			engine->userInitialiseFunc(); //TODO - call from within Engine_initialise()?
+			
+			Android_frame(engine);
+		}
+		break;
+	case APP_CMD_TERM_WINDOW:
+		// The window is being hidden or closed, clean it up.
+		Window_terminate(engine);
+		break;
+	case APP_CMD_LOST_FOCUS:
+		Android_frame(engine);
+		break;
+	}
 }
 #endif//__ANDROID__
 #ifdef DESKTOP
@@ -969,7 +1000,7 @@ void Engine_oneUI(Engine * this, Renderable * renderable, const GLfloat * matM)
 //TODO rename Orb_initialise()
 void Engine_initialise(Engine * this)
 {
-	LOGI("Render initialising...\n");
+	LOGI("Engine initialising...\n");
 	#ifdef DESKTOP
 	//WINDOW, CONTEXT & INPUT
 	//glfwSetErrorCallback(GLFW_errorCallback);
@@ -1010,8 +1041,8 @@ void Engine_initialise(Engine * this)
 
 	if (glewInit())
 	{	
-		//glfwTerminate();
-		exit(EXIT_FAILURE); //atexit should have everything else killed
+		glfwTerminate();
+		exit(EXIT_FAILURE);
 	}
 	else
 	{
@@ -1033,7 +1064,7 @@ void Engine_initialise(Engine * this)
 	
 	//TODO Input too?
 	
-	ANativeActivity* activity = engine.app->activity;
+	ANativeActivity* activity = this->app->activity;
     JNIEnv* env = activity->env;
 
 	// Setup OpenGL ES 2
@@ -1074,9 +1105,9 @@ void Engine_initialise(Engine * this)
 	 * ANativeWindow buffers to match, using EGL_NATIVE_VISUAL_ID. */
 	eglGetConfigAttrib(display, config, EGL_NATIVE_VISUAL_ID, &format);
 
-	ANativeWindow_setBuffersGeometry(engine.app->window, 0, 0, format);
+	ANativeWindow_setBuffersGeometry(this->app->window, 0, 0, format);
 
-	surface = eglCreateWindowSurface(display, config, engine.app->window, NULL);
+	surface = eglCreateWindowSurface(display, config, this->app->window, NULL);
 
 	context = eglCreateContext(display, config, NULL, attribList);
 
@@ -1091,11 +1122,11 @@ void Engine_initialise(Engine * this)
 	eglQuerySurface(display, surface, EGL_WIDTH, &w);
 	eglQuerySurface(display, surface, EGL_HEIGHT, &h);
 
-	engine.display = display;
-	engine.context = context;
-	engine.surface = surface;
-	engine.width = w;
-	engine.height = h;
+	this->display = display;
+	this->context = context;
+	this->surface = surface;
+	this->width = w;
+	this->height = h;
 
 	// Initialize GL state.
 	//glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_FASTEST);
@@ -1163,20 +1194,16 @@ void Engine_initialise(Engine * this)
 	//for (int i = 0; i < transformsCount; i++)
 	//	mat4x4_identity(renderable->matrix[i]);
 
-
-	LOGI("Render initialised.\n");
+	LOGI("Engine initialised.\n");
 }
 
-void Engine_dispose(Engine * this)
+void Engine_dispose(Engine * engine)
 {
+	//TODO free engine collections.
+	
 	#ifdef DESKTOP
-	//glfwTerminate();//free()s any windows
-	#elif MOBILE
-	#if __ANDROID__
-	
-	
-	#endif//__ANDROID__
-	#endif//DESKTOP/MOBILE
+	Window_terminate(&engine);
+	#endif//DESKTOP
 }
 
 Program * Engine_setCurrentProgram(Engine * this, char * name)
@@ -1200,7 +1227,6 @@ Program * Engine_getCurrentProgram(Engine * this)
 {
 	return this->program;
 }
-
 	
 //------------------TOOLS------------------//
 /*
