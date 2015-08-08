@@ -26,6 +26,23 @@ void Window_terminate(Engine * engine)
 	#endif//DESKTOP/MOBILE
 }
 
+void Loop_initialise(Engine * engine)
+{
+	#ifdef __ANDROID__
+	//app_dummy();
+	struct android_app * app = engine->app;
+	app->userData = engine;
+	app->onAppCmd = Android_onAppCmd;
+	//app->onInputEvent = engine->onInputEvent;
+	
+	//fsDir = app->activity->internalDataPath;
+	#endif//__ANDROID__
+	#ifdef DESKTOP
+	Engine_initialise(engine); 
+	engine->userInitialiseFunc(); //!!! For now, Ctrl_init must go after Engine_initialise(), because it still relies on glfw for input AND glReadPixels
+	#endif//DESKTOP
+}
+
 void Loop_run(Engine * engine)
 {
 	#ifdef DESKTOP

@@ -37,7 +37,13 @@
 		// Unsupported platform
 	#endif
 #elif __ANDROID__
-	#define MAIN void android_main(struct android_app* state)
+	#include <android/sensor.h>
+	//#include <android/log.h>
+	#include <android_native_app_glue.h>
+
+	#include <android/api-level.h>
+	
+	#define MAIN void android_main(struct android_app* app)
 	
 	#define MOBILE 1 //really? you don't know that this implies mobile. maybe we really should avoid these categories.
 	#include <jni.h>
@@ -57,11 +63,7 @@
 	//#define glGenVertexArrays GenVertexArraysOES
 	//#define glBindVertexArray BindVertexArrayOES
 	
-	#include <android/sensor.h>
-	//#include <android/log.h>
-	#include <android_native_app_glue.h>
 
-	#include <android/api-level.h>
 	//TODO API level checks via __ANDROID_API__
 	// 1.0 	1
 	// 1.1 	2
