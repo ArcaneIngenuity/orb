@@ -2,6 +2,49 @@
 
 #define KEYPARTS 1
 
+/*
+void DeviceChannel_shift(DeviceChannel * this)
+{
+	int length = this->historyLength;
+	
+	//TODO one loop would work here if the two arrays were known to be of equal length... could this be made an option?
+	
+	//set all later values by shifting forward
+	int states = this->states;
+	for (int i = 0; i < states.length - 1; i++)
+	{
+		DeviceChannel_shiftState(this, i, i+1);
+	}
+	
+	//set all later values by shifting forward
+	var deltas = this.deltas;
+	for (int i = 0; i < deltas.length - 1; i++)
+	{
+		DeviceChannel_shiftDelta(this, i, i+1);
+	}
+	
+}
+*/
+void DeviceChannel_setCurrentDelta(DeviceChannel * this)
+{
+	this->delta[CURRENT] = this->state[CURRENT] - this->state[PREVIOUS];
+}
+
+void DeviceChannel_setPreviousDelta(DeviceChannel * this)
+{
+	this->delta[PREVIOUS] = this->delta[CURRENT];
+}
+
+void DeviceChannel_setCurrentState(DeviceChannel * this)
+{
+	this->state[CURRENT] = this->state[PREVIOUS] + this->delta[CURRENT];
+}
+
+void DeviceChannel_setPreviousState(DeviceChannel * this)
+{
+	this->state[PREVIOUS] = this->state[CURRENT];
+}
+
 void Window_terminate(Engine * engine)
 {
 	#ifdef DESKTOP
@@ -26,6 +69,24 @@ void Window_terminate(Engine * engine)
 	#endif//DESKTOP/MOBILE
 }
 
+void Loop_processInputs(Engine * engine)
+{
+	#ifdef DESKTOP //glfw!
+	//relative to mouse start point: For FPS
+	double p[2];
+	glfwGetCursorPos(window, &p[XX], &p[YY]);
+	
+	Device * device = (Device *) get(&engine->devicesByName, *(uint64_t *) pad("Cursor"));
+	for (int i = 0; i < 2; i++)
+	{
+		DeviceChannel * channel = &device->channels[i];
+		channel->state[CURRENT] = p[i];
+		DeviceChannel_setCurrentDelta(channel);
+		DeviceChannel_setPreviousState(channel);
+	}
+	#endif//DESKTOP
+}
+
 void Loop_initialise(Engine * engine)
 {
 	#ifdef __ANDROID__
@@ -33,9 +94,8 @@ void Loop_initialise(Engine * engine)
 	struct android_app * app = engine->app;
 	app->userData = engine;
 	app->onAppCmd = Android_onAppCmd;
-	//app->onInputEvent = engine->onInputEvent;
-	
-	//fsDir = app->activity->internalDataPath;
+	app->onInputEvent = Android_onInputEvent;
+
 	#endif//__ANDROID__
 	#ifdef DESKTOP
 	Engine_initialise(engine); 
@@ -50,6 +110,9 @@ void Loop_run(Engine * engine)
 	while (!glfwWindowShouldClose(window))
 	{
 		glfwPollEvents();
+		
+		Loop_processInputs(engine);
+		
 		t2 = t1;\
 		t1 = glfwGetTime();
 		//deltaSec = t1 - t2;
@@ -88,6 +151,30 @@ void Loop_run(Engine * engine)
 }
 
 #ifdef __ANDROID__
+int32_t Android_onInputEvent(struct android_app* app, AInputEvent* event)
+{
+	if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_MOTION)
+	{
+		float p[2];
+		p[XX] = AMotionEvent_getX(event, 0);
+		p[YY] = AMotionEvent_getY(event, 0);
+	
+		Engine * engine = (Engine *)app->userData;
+		Device * device = (Device *) get(&engine->devicesByName, *(uint64_t *) pad("Cursor"));
+		for (int i = 0; i < 2; i++)
+		{
+			DeviceChannel * channel = &device->channels[i];
+			channel->state[CURRENT] = p[i];
+			DeviceChannel_setCurrentDelta(channel);
+			DeviceChannel_setPreviousState(channel);
+		}
+
+		LOGI("x %f\ty %f\n",p[XX], p[YY]);
+		return 1;
+	}
+	return 0;
+}
+
 void Android_frame(Engine * engine)
 {
 	// No display.
@@ -1014,7 +1101,6 @@ void Engine_oneUI(Engine * this, Renderable * renderable, const GLfloat * matM)
 	glBindVertexArray(0);
 }
 
-//TODO rename Orb_initialise()
 void Engine_initialise(Engine * this)
 {
 	LOGI("Engine initialising...\n");
@@ -1078,9 +1164,7 @@ void Engine_initialise(Engine * this)
 	
 	#elif MOBILE
 	#if __ANDROID__
-	
-	//TODO Input too?
-	
+
 	ANativeActivity* activity = this->app->activity;
     JNIEnv* env = activity->env;
 
@@ -1204,6 +1288,7 @@ void Engine_initialise(Engine * this)
 	voidPtrMap_create(&this->texturesByName, 	HH_TEXTURES_MAX, 	&this->textureKeys, 	(void *)&this->textures, NULL);
 	voidPtrMap_create(&this->materialsByName, 	HH_MATERIALS_MAX, 	&this->materialKeys, 	(void *)&this->materials, NULL);
 	voidPtrMap_create(&this->meshesByName, 		HH_MESHES_MAX, 		&this->meshKeys,	 	(void *)&this->meshes, NULL);
+	voidPtrMap_create(&this->devicesByName, 	2, 					&this->deviceKeys,	 	(void *)&this->devices, NULL);
 	LOGI("map count=%i", this->programsByName.count);
 
 	//reintroduce if we bring transform list back into this library.

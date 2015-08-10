@@ -119,6 +119,8 @@
 //#define GL_MAX_COLOR_ATTACHMENTS 0x8CDF
 
 //FIXED CONSTANTS
+#define CURRENT 0
+#define PREVIOUS 1
 #define XX 0
 #define YY 1
 #define ZZ 2
@@ -176,7 +178,6 @@
 #ifndef	HH_ATTRIBUTES_MAX
 #define HH_ATTRIBUTES_MAX 8
 #endif
-
 
 typedef struct Window
 {
@@ -521,8 +522,28 @@ typedef struct Color
 	float a;
 } Color;
 
+
+
+
+typedef struct DeviceChannel
+{
+	//2 states & 2 deltas is enough to calculate the other (state for delta or delta for state)
+	float state[2];
+	float delta[2];
+	//bool blocked;
+	//int historyLength;
+} DeviceChannel;
+
+typedef struct Device
+{
+	DeviceChannel channels[4];
+	
+} Device;
+
 typedef struct Engine
-{	
+{
+	
+	
 	Map programsByName;
 	Map shadersByName;
 	Map texturesByName;
@@ -549,6 +570,13 @@ typedef struct Engine
 	//TODO - these lists but not generic / pointer - int lists! then remove same fields from Renderables.
 	//List changedMesh; //indices of Renderables that changed vertex data
 	//List changedMaterials; //indices of Renderables that changed uniforms
+	
+	//map is best - if devices connect in different orders at runtime, we are not relying on compile-time indices into an array
+	//DeviceHub deviceHub;
+	//Device array[2];
+	Map 	 devicesByName;
+	uint64_t deviceKeys[2];
+	Device	 devices[2];
 	
 	//should be in the order they are to be rendered in
 	Renderable renderables[HH_RENDERABLES_MAX];
@@ -639,7 +667,11 @@ char* Text_load(char* filename);
 void GLFW_errorCallback(int error, const char * description);
 bool GLTool_isExtensionSupported(const char * extension); //redundant, see GLFW
 
-void Android_onAppCmd(struct android_app* app, int32_t cmd);
+#ifdef __ANDROID__
+void 	Android_frame(Engine * engine);
+void 	Android_onAppCmd(struct android_app* app, int32_t cmd);
+int32_t Android_onInputEvent(struct android_app* app, AInputEvent* event);
+#endif//__ANDROID__
 
 //globals
 //TODO merge all into an Orb object? then call e.g. Engine_one(orb->engine, ...);
