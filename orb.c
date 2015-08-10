@@ -45,6 +45,50 @@ void DeviceChannel_setPreviousState(DeviceChannel * this)
 	this->state[PREVIOUS] = this->state[CURRENT];
 }
 
+#define CURT_SOURCE
+
+#define CURT_ELEMENT_STRUCT
+#define CURT_ELEMENT_TYPE InputResponse
+#include "pod/list.h"
+#undef  CURT_ELEMENT_TYPE
+#undef  CURT_ELEMENT_STRUCT
+
+#undef  CURT_SOURCE
+
+void InputResponse_executeList(InputResponseList * list, void * model)
+{
+for (int i = 0; i < list->length; i++)
+	{
+		InputResponse * inputResponse = &list->entries[i];
+
+		if (inputResponse->inputPos != NULL) //mandatory positive input contributor
+		{
+			//TODO inputPos and -Neg should be pre-specified channels
+			float pos = inputResponse->inputPos();
+			float neg = 0;
+			if (inputResponse->inputNeg != NULL) //optional negative input contributor
+				neg = inputResponse->inputNeg();
+
+			float valueLast = 	inputResponse->valueLast 	= inputResponse->value;
+			float value = 		inputResponse->value 		= pos - neg; //assumes both pos & neg are abs magnitudes
+			//apply the information in user-defined fashion
+			inputResponse->response(model, value, valueLast);
+		}
+		else
+		{
+			if (inputResponse->inputNeg == NULL) //both NULL? always execute
+			{
+				inputResponse->response(model, 0, 0);
+			}
+		}
+	}
+}
+
+bool InputResponse_equals(InputResponse a, InputResponse b) //TODO make equals a function pointer in list.h
+{
+	return false; //DEV no members yet
+}
+
 void Window_terminate(Engine * engine)
 {
 	#ifdef DESKTOP
@@ -76,14 +120,20 @@ void Loop_processInputs(Engine * engine)
 	double p[2];
 	glfwGetCursorPos(window, &p[XX], &p[YY]);
 	
-	Device * device = (Device *) get(&engine->devicesByName, *(uint64_t *) pad("Cursor"));
+	Device * mouse = (Device *) get(&engine->devicesByName, *(uint64_t *) pad("cursor"));
 	for (int i = 0; i < 2; i++)
 	{
-		DeviceChannel * channel = &device->channels[i];
+		DeviceChannel * channel = &mouse->channels[i];
 		channel->state[CURRENT] = p[i];
 		DeviceChannel_setCurrentDelta(channel);
 		DeviceChannel_setPreviousState(channel);
 	}
+	
+	Device * keyboard = (Device *) get(&engine->devicesByName, *(uint64_t *) pad("keyboard"));
+	DeviceChannel * channel = &keyboard->channels[0];
+	channel->state[CURRENT] = glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS;
+	DeviceChannel_setCurrentDelta(channel);
+	DeviceChannel_setPreviousState(channel);
 	#endif//DESKTOP
 }
 
@@ -160,7 +210,7 @@ int32_t Android_onInputEvent(struct android_app* app, AInputEvent* event)
 		p[YY] = AMotionEvent_getY(event, 0);
 	
 		Engine * engine = (Engine *)app->userData;
-		Device * device = (Device *) get(&engine->devicesByName, *(uint64_t *) pad("Cursor"));
+		Device * device = (Device *) get(&engine->devicesByName, *(uint64_t *) pad("cursor"));
 		for (int i = 0; i < 2; i++)
 		{
 			DeviceChannel * channel = &device->channels[i];

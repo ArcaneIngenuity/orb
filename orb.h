@@ -527,11 +527,10 @@ typedef struct Color
 
 typedef struct DeviceChannel
 {
-	//2 states & 2 deltas is enough to calculate the other (state for delta or delta for state)
+	//2 states & 2 deltas is enough to calculate the most recent other (state for delta or delta for state)
 	float state[2];
 	float delta[2];
 	//bool blocked;
-	//int historyLength;
 } DeviceChannel;
 
 typedef struct Device
@@ -539,6 +538,32 @@ typedef struct Device
 	DeviceChannel channels[4];
 	
 } Device;
+
+typedef float (*InputFunction) ();
+typedef void  (*ResponseFunction) (void * model, float value, float valueLast);
+
+typedef struct InputResponse
+{
+	InputFunction inputPos;
+	InputFunction inputNeg;
+	ResponseFunction response;
+	DeviceChannel * channel;
+	float value;
+	float valueLast;
+} InputResponse;
+const struct InputResponse inputResponseEmpty;
+
+bool InputResponse_equals(InputResponse a, InputResponse b); //TODO make equals a function pointer in list.h
+
+#define CURT_HEADER
+
+#define CURT_ELEMENT_STRUCT
+#define CURT_ELEMENT_TYPE InputResponse
+#include "pod/list.h"
+#undef  CURT_ELEMENT_TYPE
+#undef  CURT_ELEMENT_STRUCT
+
+#undef  CURT_HEADER
 
 typedef struct Engine
 {
