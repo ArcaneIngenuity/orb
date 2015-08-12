@@ -69,6 +69,19 @@ void DeviceChannel_setPreviousState(DeviceChannel * this)
 	this->state[PREVIOUS] = this->state[CURRENT];
 }
 
+bool Device_isChannelActive(Device * this, size_t index)
+{
+	//return (this->channelsActiveMask >> index) & 1);
+	return !((this->channelsActiveMask >> index) & 1); //NOT since we treat zero as active, one as false to avoid initialisation
+}
+
+void Device_setChannelActive(Device * this, size_t index)
+{
+	//this->channelsActiveMask |= (1 << index);
+	this->channelsActiveMask &= !(1 << index); //NOT, AND since we treat zero as active, one as false to avoid initialisation
+}
+
+
 #define CURT_SOURCE
 
 #define CURT_ELEMENT_STRUCT
@@ -285,54 +298,55 @@ int32_t Android_onInputEvent(struct android_app* app, AInputEvent* event)
 	Engine * engine = (Engine *)app->userData;
 	Device * device = (Device *) get(&engine->devicesByName, *(uint64_t *) pad("cursor"));
 	
+	int32_t count, action, index;
+	uint32_t flags;
+	float p[2];
+	
 	switch (AInputEvent_getType(event))
 	{
-	case AINPUT_EVENT_TYPE_MOTION:
-		float p[2];
-		p[XX] = AMotionEvent_getX(event, 0);
-		p[YY] = AMotionEvent_getY(event, 0);
+	case AINPUT_EVENT_TYPE_KEY:
+		break;
 	
-		for (int i = 0; i < 2; i++)
+	case AINPUT_EVENT_TYPE_MOTION:
+	
+		count  = AMotionEvent_getPointerCount(event);
+		action = AMotionEvent_getAction(event);
+		index  = (action & AMOTION_EVENT_ACTION_POINTER_INDEX_MASK) >> AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT;
+		flags  =  action & AMOTION_EVENT_ACTION_MASK;
+		
+		switch(flags)
 		{
-			DeviceChannel * channel = &device->channels[i];
-			channel->state[CURRENT] = p[i];
-			//DeviceChannel_setCurrentDelta(channel);
-			//DeviceChannel_setPreviousState(channel);
-		}
+		case AMOTION_EVENT_ACTION_DOWN:
 
-		LOGI("x %f\ty %f\n",p[XX], p[YY]);
-		return 1;
-		break;
-	case ACTION_DOWN:
-		//set last state to current, so first delta on touch will be 0
-		for (int i = 0; i < 2; i++)
-		{
-			DeviceChannel * channel = &device->channels[i];
-			channel->_active = true;
-		}
-		break;
-	case ACTION_UP:
-		for (int i = 0; i < 2; i++)
-		{
-			//set  delta to zero
-			DeviceChannel * channel = &device->channels[i];
-			channel->_active = false;
-		}
-		break;
-	case ACTION_POINTER_DOWN:
-		//set last state to current, so first delta on touch will be 0
-		for (int i = 0; i < 2; i++)
-		{
-			DeviceChannel * channel = &device->channels[i];
-			//channel->_active = true;
-		}
-		break;
-	case ACTION_POINTER_UP:
-		for (int i = 0; i < 2; i++)
-		{
-			//set  delta to zero
-			DeviceChannel * channel = &device->channels[i];
-			//channel->_active = false;
+			break;
+		case AMOTION_EVENT_ACTION_POINTER_DOWN:
+		
+			break;
+		case AMOTION_EVENT_ACTION_UP:
+
+			break;
+		case AMOTION_EVENT_ACTION_POINTER_UP:
+
+			break;
+		case AMOTION_EVENT_ACTION_MOVE:
+			p[XX] = AMotionEvent_getX(event, 0);
+			p[YY] = AMotionEvent_getY(event, 0);
+		
+			for (int i = 0; i < 2; i++)
+			{
+				DeviceChannel * channel = &device->channels[i];
+				channel->state[CURRENT] = p[i];
+				//DeviceChannel_setCurrentDelta(channel);
+				//DeviceChannel_setPreviousState(channel);
+			}
+
+			LOGI("x %f\ty %f\n",p[XX], p[YY]);
+			return 1;
+			
+			break;
+		case AMOTION_EVENT_ACTION_CANCEL:
+		
+			break;
 		}
 		break;
 	}

@@ -123,6 +123,7 @@
 #define XX 0
 #define YY 1
 #define ZZ 2
+#define PRESSURE 2 //touch
 
 //multitouch channels
 #define XX0 0
@@ -555,9 +556,24 @@ typedef struct DeviceChannel
 typedef struct Device
 {
 	DeviceChannel channels[8];
-	
+	//void * other; //special reference to other information, e.g. an array of fingers for a touch device.
+	//TODO Finger fingers[]; //or rather, a pointer to an array elsewhere, if touchscreen device.
+	uint64_t channelsActiveMask;
 } Device;
+/*
+typedef struct Finger
+{
+	size_t index; //id?
+	DeviceChannel channels[3]; //X, Y, pressure
+} Finger;
 
+//use as alternative to Device
+typedef struct TouchDevice
+{
+	Finger fingers[10];
+	size_t fingerCount; //fingers in actual use at this moment
+}
+*/
 typedef float (*InputFunction) ();
 typedef void  (*ResponseFunction) (void * model, float value, float valueLast);
 
@@ -659,6 +675,8 @@ typedef struct Engine
 	void * userUpdateArg;
 	
 	float deltaSec;
+	
+	//TouchDevice touch;
 	
 } Engine;
 const struct Engine engineEmpty;
