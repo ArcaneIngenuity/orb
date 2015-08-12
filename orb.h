@@ -119,11 +119,25 @@
 //#define GL_MAX_COLOR_ATTACHMENTS 0x8CDF
 
 //FIXED CONSTANTS
-#define CURRENT 0
-#define PREVIOUS 1
+
 #define XX 0
 #define YY 1
 #define ZZ 2
+
+//multitouch channels
+#define XX0 0
+#define YY0 1
+#define XX1 2
+#define YY1 3
+#define XX2 4
+#define YY2 5
+#define XX3 6
+#define YY3 7
+
+//channel state/delta index
+#define CURRENT 0
+#define PREVIOUS 1
+
 #define POSITION_COMPONENTS 3
 #define TEXCOORD_COMPONENTS 2
 #define VERTICES_PER_TRIANGLE 3
@@ -522,38 +536,46 @@ typedef struct Color
 	float a;
 } Color;
 
-
-
+typedef enum InputBasis
+{
+	STATE, //default
+	DELTA
+} InputBasis;
 
 typedef struct DeviceChannel
 {
 	//2 states & 2 deltas is enough to calculate the most recent other (state for delta or delta for state)
 	float state[2];
 	float delta[2];
+	InputBasis basis;
 	//bool blocked;
+	bool _active; //framework-private, particularly useful for multi-touch or devices that have disconnected but are waiting on clean-up by OS etc.
 } DeviceChannel;
 
 typedef struct Device
 {
-	DeviceChannel channels[4];
+	DeviceChannel channels[8];
 	
 } Device;
 
 typedef float (*InputFunction) ();
 typedef void  (*ResponseFunction) (void * model, float value, float valueLast);
 
+//abstracts raw channel inputs into game logic inputs, provides a response for same, and stores recent values
 typedef struct InputResponse
 {
-	InputFunction inputPos;
-	InputFunction inputNeg;
+	//InputFunction inputPos;
+	//InputFunction inputNeg;
+	DeviceChannel * channelPos;
+	DeviceChannel * channelNeg;
 	ResponseFunction response;
-	DeviceChannel * channel;
-	float value;
-	float valueLast;
+	InputBasis basis;
+	//TODO optional custom function for combining raw channel values?
+		
+	float state[2];
+	float delta[2];
 } InputResponse;
 const struct InputResponse inputResponseEmpty;
-
-bool InputResponse_equals(InputResponse a, InputResponse b); //TODO make equals a function pointer in list.h
 
 #define CURT_HEADER
 
@@ -564,6 +586,10 @@ bool InputResponse_equals(InputResponse a, InputResponse b); //TODO make equals 
 #undef  CURT_ELEMENT_STRUCT
 
 #undef  CURT_HEADER
+
+void InputResponse_executeList(InputResponseList * list, void * model);
+bool InputResponse_equals(InputResponse a, InputResponse b); //TODO make equals a function pointer in list.h
+
 
 typedef struct Engine
 {
@@ -619,6 +645,7 @@ typedef struct Engine
 	EGLDisplay display;
 	EGLSurface surface;
 	EGLContext context;
+	bool initialisedWindow;
 	#endif//__ANDROID__
 	
 	int32_t width;
@@ -630,6 +657,8 @@ typedef struct Engine
 	
 	void (*userUpdateFunc)(void *);
 	void * userUpdateArg;
+	
+	float deltaSec;
 	
 } Engine;
 const struct Engine engineEmpty;

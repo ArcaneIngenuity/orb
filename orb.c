@@ -2,6 +2,30 @@
 
 #define KEYPARTS 1
 
+void Window_terminate(Engine * engine)
+{
+	#ifdef DESKTOP
+	glfwTerminate();//free()s any windows
+	window = NULL; //JIC
+	#elif MOBILE
+	#ifdef __ANDROID__
+	if (engine->display != EGL_NO_DISPLAY) {
+		eglMakeCurrent(engine->display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+		if (engine->context != EGL_NO_CONTEXT) {
+			eglDestroyContext(engine->display, engine->context);
+		}
+		if (engine->surface != EGL_NO_SURFACE) {
+			eglDestroySurface(engine->display, engine->surface);
+		}
+		eglTerminate(engine->display);
+	}
+	engine->display = EGL_NO_DISPLAY;
+	engine->context = EGL_NO_CONTEXT;
+	engine->surface = EGL_NO_SURFACE;
+	#endif//__ANDROID__
+	#endif//DESKTOP/MOBILE
+}
+
 /*
 void DeviceChannel_shift(DeviceChannel * this)
 {
@@ -55,30 +79,47 @@ void DeviceChannel_setPreviousState(DeviceChannel * this)
 
 #undef  CURT_SOURCE
 
-void InputResponse_executeList(InputResponseList * list, void * model)
+void InputResponse_executeList(InputResponseList * list, void * target)
 {
 for (int i = 0; i < list->length; i++)
 	{
 		InputResponse * inputResponse = &list->entries[i];
 
-		if (inputResponse->inputPos != NULL) //mandatory positive input contributor
+		if (inputResponse->channelPos != NULL) //mandatory positive input contributor
 		{
-			//TODO inputPos and -Neg should be pre-specified channels
-			float pos = inputResponse->inputPos();
-			float neg = 0;
-			if (inputResponse->inputNeg != NULL) //optional negative input contributor
-				neg = inputResponse->inputNeg();
+			if (inputResponse->basis == STATE)
+			{
+				//LOGI("STATE");
+				float pos = inputResponse->channelPos->state[CURRENT];
+				float neg = 0;
+				if (inputResponse->channelNeg != NULL) //optional negative input contributor
+					neg = inputResponse->channelNeg->state[CURRENT];
 
-			float valueLast = 	inputResponse->valueLast 	= inputResponse->value;
-			float value = 		inputResponse->value 		= pos - neg; //assumes both pos & neg are abs magnitudes
-			//apply the information in user-defined fashion
-			inputResponse->response(model, value, valueLast);
+				inputResponse->state[PREVIOUS] = inputResponse->state[CURRENT];
+				inputResponse->state[CURRENT]  = pos - neg; //assumes both are abs magnitudes
+				
+				inputResponse->response(target, inputResponse->state[CURRENT], inputResponse->state[PREVIOUS]);
+			}
+			else //(inputResponse->basis = DELTA) //only trigger on a change between the two values
+			{
+				//LOGI("DELTA");
+				float pos = inputResponse->channelPos->delta[CURRENT];
+				float neg = 0;
+				if (inputResponse->channelNeg != NULL) //optional negative input contributor
+					neg = inputResponse->channelNeg->delta[CURRENT];
+
+				inputResponse->delta[PREVIOUS] = inputResponse->delta[CURRENT];
+				inputResponse->delta[CURRENT]  = pos - neg; //assumes both are abs magnitudes
+				
+				if (inputResponse->delta[CURRENT] != 0)
+					inputResponse->response(target, inputResponse->delta[CURRENT], inputResponse->delta[PREVIOUS]);
+			}
 		}
 		else
 		{
-			if (inputResponse->inputNeg == NULL) //both NULL? always execute
+			if (inputResponse->channelNeg == NULL) //both NULL? always execute
 			{
-				inputResponse->response(model, 0, 0);
+				inputResponse->response(target, 0, 0);
 			}
 		}
 	}
@@ -89,51 +130,55 @@ bool InputResponse_equals(InputResponse a, InputResponse b) //TODO make equals a
 	return false; //DEV no members yet
 }
 
-void Window_terminate(Engine * engine)
-{
-	#ifdef DESKTOP
-	glfwTerminate();//free()s any windows
-	window = NULL; //JIC
-	#elif MOBILE
-	#ifdef __ANDROID__
-	if (engine->display != EGL_NO_DISPLAY) {
-		eglMakeCurrent(engine->display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
-		if (engine->context != EGL_NO_CONTEXT) {
-			eglDestroyContext(engine->display, engine->context);
-		}
-		if (engine->surface != EGL_NO_SURFACE) {
-			eglDestroySurface(engine->display, engine->surface);
-		}
-		eglTerminate(engine->display);
-	}
-	engine->display = EGL_NO_DISPLAY;
-	engine->context = EGL_NO_CONTEXT;
-	engine->surface = EGL_NO_SURFACE;
-	#endif//__ANDROID__
-	#endif//DESKTOP/MOBILE
-}
-
 void Loop_processInputs(Engine * engine)
 {
 	#ifdef DESKTOP //glfw!
 	//relative to mouse start point: For FPS
 	double p[2];
 	glfwGetCursorPos(window, &p[XX], &p[YY]);
-	
+	DeviceChannel * channel;
 	Device * mouse = (Device *) get(&engine->devicesByName, *(uint64_t *) pad("cursor"));
 	for (int i = 0; i < 2; i++)
 	{
-		DeviceChannel * channel = &mouse->channels[i];
+		channel = &mouse->channels[i];
 		channel->state[CURRENT] = p[i];
 		DeviceChannel_setCurrentDelta(channel);
 		DeviceChannel_setPreviousState(channel);
 	}
+	LOGI("x=%.3f y=%.3f\n", p[XX], p[YY]);
 	
 	Device * keyboard = (Device *) get(&engine->devicesByName, *(uint64_t *) pad("keyboard"));
-	DeviceChannel * channel = &keyboard->channels[0];
+	
+	//space
+	channel = &keyboard->channels[0];
 	channel->state[CURRENT] = glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS;
 	DeviceChannel_setCurrentDelta(channel);
 	DeviceChannel_setPreviousState(channel);
+	
+	//S
+	channel = &keyboard->channels[1];
+	channel->state[CURRENT] = glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS;
+	DeviceChannel_setCurrentDelta(channel);
+	DeviceChannel_setPreviousState(channel);
+	
+	//W
+	channel = &keyboard->channels[2];
+	channel->state[CURRENT] = glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS;
+	DeviceChannel_setCurrentDelta(channel);
+	DeviceChannel_setPreviousState(channel);
+	
+	//D
+	channel = &keyboard->channels[3];
+	channel->state[CURRENT] = glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS;
+	DeviceChannel_setCurrentDelta(channel);
+	DeviceChannel_setPreviousState(channel);
+	
+	//A
+	channel = &keyboard->channels[4];
+	channel->state[CURRENT] = glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS;
+	DeviceChannel_setCurrentDelta(channel);
+	DeviceChannel_setPreviousState(channel);
+	
 	#endif//DESKTOP
 }
 
@@ -165,7 +210,7 @@ void Loop_run(Engine * engine)
 		
 		t2 = t1;\
 		t1 = glfwGetTime();
-		//deltaSec = t1 - t2;
+		engine->deltaSec = t1 - t2;
 		//printf("deltaSec %.10f\n", deltaSec);
 
 		//TODO
@@ -181,6 +226,25 @@ void Loop_run(Engine * engine)
 		int events;
 		struct android_poll_source* source;
 		struct android_app* state = engine->app;
+		
+
+		if (engine->initialisedWindow) //TODO make this a function pointer set when cmd init occurs to avoid branch
+		{
+
+		//we must flush input to get rid of old deltas / states or they will persist
+		//do so BEFORE event loop to ensure event values don't get overridden
+		Device * device = (Device *) get(&engine->devicesByName, *(uint64_t *) pad("cursor"));
+		
+		for (int i = 0; i < 2; i++)
+		{
+			DeviceChannel * channel = &device->channels[i];
+			//DeviceChannel_setCurrentDelta(channel);
+			DeviceChannel_setPreviousState(channel);
+			channel->state[CURRENT] = 0;
+			//channel->delta[CURRENT] = 0;
+		}
+		}
+		
 		while ((ident=ALooper_pollAll(0, NULL, &events,(void**)&source)) >= 0)
 		{
 			if (source != NULL)
@@ -193,6 +257,21 @@ void Loop_run(Engine * engine)
 				exit(0);
 			}
 		}
+		
+		if (engine->initialisedWindow) //TODO make this a function pointer set when cmd init occurs to avoid branch
+		{
+
+		//we must flush input to get rid of old deltas / states or they will persist
+		//do so BEFORE event loop to ensure event values don't get overridden
+		Device * device = (Device *) get(&engine->devicesByName, *(uint64_t *) pad("cursor"));
+		
+		for (int i = 0; i < 2; i++)
+		{
+			DeviceChannel * channel = &device->channels[i];
+			DeviceChannel_setCurrentDelta(channel);
+		}
+		}
+		
 		//TODO if accumulated sufficient time
 		Android_frame(engine);
 	}
@@ -203,24 +282,59 @@ void Loop_run(Engine * engine)
 #ifdef __ANDROID__
 int32_t Android_onInputEvent(struct android_app* app, AInputEvent* event)
 {
-	if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_MOTION)
+	Engine * engine = (Engine *)app->userData;
+	Device * device = (Device *) get(&engine->devicesByName, *(uint64_t *) pad("cursor"));
+	
+	switch (AInputEvent_getType(event))
 	{
+	case AINPUT_EVENT_TYPE_MOTION:
 		float p[2];
 		p[XX] = AMotionEvent_getX(event, 0);
 		p[YY] = AMotionEvent_getY(event, 0);
 	
-		Engine * engine = (Engine *)app->userData;
-		Device * device = (Device *) get(&engine->devicesByName, *(uint64_t *) pad("cursor"));
 		for (int i = 0; i < 2; i++)
 		{
 			DeviceChannel * channel = &device->channels[i];
 			channel->state[CURRENT] = p[i];
-			DeviceChannel_setCurrentDelta(channel);
-			DeviceChannel_setPreviousState(channel);
+			//DeviceChannel_setCurrentDelta(channel);
+			//DeviceChannel_setPreviousState(channel);
 		}
 
 		LOGI("x %f\ty %f\n",p[XX], p[YY]);
 		return 1;
+		break;
+	case ACTION_DOWN:
+		//set last state to current, so first delta on touch will be 0
+		for (int i = 0; i < 2; i++)
+		{
+			DeviceChannel * channel = &device->channels[i];
+			channel->_active = true;
+		}
+		break;
+	case ACTION_UP:
+		for (int i = 0; i < 2; i++)
+		{
+			//set  delta to zero
+			DeviceChannel * channel = &device->channels[i];
+			channel->_active = false;
+		}
+		break;
+	case ACTION_POINTER_DOWN:
+		//set last state to current, so first delta on touch will be 0
+		for (int i = 0; i < 2; i++)
+		{
+			DeviceChannel * channel = &device->channels[i];
+			//channel->_active = true;
+		}
+		break;
+	case ACTION_POINTER_UP:
+		for (int i = 0; i < 2; i++)
+		{
+			//set  delta to zero
+			DeviceChannel * channel = &device->channels[i];
+			//channel->_active = false;
+		}
+		break;
 	}
 	return 0;
 }
@@ -254,6 +368,8 @@ void Android_onAppCmd(struct android_app* app, int32_t cmd)
 			engine->userInitialiseFunc(); //TODO - call from within Engine_initialise()?
 			
 			Android_frame(engine);
+			
+			engine->initialisedWindow = true;
 		}
 		break;
 	case APP_CMD_TERM_WINDOW:
