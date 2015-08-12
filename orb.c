@@ -85,60 +85,60 @@ void Device_setChannelActive(Device * this, size_t index)
 #define CURT_SOURCE
 
 #define CURT_ELEMENT_STRUCT
-#define CURT_ELEMENT_TYPE InputResponse
+#define CURT_ELEMENT_TYPE Input
 #include "pod/list.h"
 #undef  CURT_ELEMENT_TYPE
 #undef  CURT_ELEMENT_STRUCT
 
 #undef  CURT_SOURCE
 
-void InputResponse_executeList(InputResponseList * list, void * target)
+void Input_executeList(InputList * list, void * target)
 {
-for (int i = 0; i < list->length; i++)
+	for (int i = 0; i < list->length; i++)
 	{
-		InputResponse * inputResponse = &list->entries[i];
+		Input * input = &list->entries[i];
 
-		if (inputResponse->channelPos != NULL) //mandatory positive input contributor
+		if (input->channelPos != NULL) //mandatory positive input contributor
 		{
-			if (inputResponse->basis == STATE)
+			if (input->basis == STATE)
 			{
 				//LOGI("STATE");
-				float pos = inputResponse->channelPos->state[CURRENT];
+				float pos = input->channelPos->state[CURRENT];
 				float neg = 0;
-				if (inputResponse->channelNeg != NULL) //optional negative input contributor
-					neg = inputResponse->channelNeg->state[CURRENT];
+				if (input->channelNeg != NULL) //optional negative input contributor
+					neg = input->channelNeg->state[CURRENT];
 
-				inputResponse->state[PREVIOUS] = inputResponse->state[CURRENT];
-				inputResponse->state[CURRENT]  = pos - neg; //assumes both are abs magnitudes
+				input->state[PREVIOUS] = input->state[CURRENT];
+				input->state[CURRENT]  = pos - neg; //assumes both are abs magnitudes
 				
-				inputResponse->response(target, inputResponse->state[CURRENT], inputResponse->state[PREVIOUS]);
+				input->response(target, input->state[CURRENT], input->state[PREVIOUS]);
 			}
-			else //(inputResponse->basis = DELTA) //only trigger on a change between the two values
+			else //(input->basis = DELTA) //only trigger on a change between the two values
 			{
 				//LOGI("DELTA");
-				float pos = inputResponse->channelPos->delta[CURRENT];
+				float pos = input->channelPos->delta[CURRENT];
 				float neg = 0;
-				if (inputResponse->channelNeg != NULL) //optional negative input contributor
-					neg = inputResponse->channelNeg->delta[CURRENT];
+				if (input->channelNeg != NULL) //optional negative input contributor
+					neg = input->channelNeg->delta[CURRENT];
 
-				inputResponse->delta[PREVIOUS] = inputResponse->delta[CURRENT];
-				inputResponse->delta[CURRENT]  = pos - neg; //assumes both are abs magnitudes
+				input->delta[PREVIOUS] = input->delta[CURRENT];
+				input->delta[CURRENT]  = pos - neg; //assumes both are abs magnitudes
 				
-				if (inputResponse->delta[CURRENT] != 0)
-					inputResponse->response(target, inputResponse->delta[CURRENT], inputResponse->delta[PREVIOUS]);
+				if (input->delta[CURRENT] != 0)
+					input->response(target, input->delta[CURRENT], input->delta[PREVIOUS]);
 			}
 		}
 		else
 		{
-			if (inputResponse->channelNeg == NULL) //both NULL? always execute
+			if (input->channelNeg == NULL) //both NULL? always execute
 			{
-				inputResponse->response(target, 0, 0);
+				input->response(target, 0, 0);
 			}
 		}
 	}
 }
 
-bool InputResponse_equals(InputResponse a, InputResponse b) //TODO make equals a function pointer in list.h
+bool Input_equals(Input a, Input b) //TODO make equals a function pointer in list.h
 {
 	return false; //DEV no members yet
 }

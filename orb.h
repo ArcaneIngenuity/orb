@@ -578,7 +578,7 @@ typedef float (*InputFunction) ();
 typedef void  (*ResponseFunction) (void * model, float value, float valueLast);
 
 //abstracts raw channel inputs into game logic inputs, provides a response for same, and stores recent values
-typedef struct InputResponse
+typedef struct Input
 {
 	//InputFunction inputPos;
 	//InputFunction inputNeg;
@@ -590,21 +590,21 @@ typedef struct InputResponse
 		
 	float state[2];
 	float delta[2];
-} InputResponse;
-const struct InputResponse inputResponseEmpty;
+} Input;
+const struct Input inputEmpty;
 
 #define CURT_HEADER
 
 #define CURT_ELEMENT_STRUCT
-#define CURT_ELEMENT_TYPE InputResponse
+#define CURT_ELEMENT_TYPE Input
 #include "pod/list.h"
 #undef  CURT_ELEMENT_TYPE
 #undef  CURT_ELEMENT_STRUCT
 
 #undef  CURT_HEADER
 
-void InputResponse_executeList(InputResponseList * list, void * model);
-bool InputResponse_equals(InputResponse a, InputResponse b); //TODO make equals a function pointer in list.h
+void Input_executeList(InputList * list, void * model);
+bool Input_equals(Input a, Input b); //TODO make equals a function pointer in list.h
 
 
 typedef struct Engine
