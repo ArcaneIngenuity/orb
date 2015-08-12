@@ -26,29 +26,6 @@ void Window_terminate(Engine * engine)
 	#endif//DESKTOP/MOBILE
 }
 
-/*
-void DeviceChannel_shift(DeviceChannel * this)
-{
-	int length = this->historyLength;
-	
-	//TODO one loop would work here if the two arrays were known to be of equal length... could this be made an option?
-	
-	//set all later values by shifting forward
-	int states = this->states;
-	for (int i = 0; i < states.length - 1; i++)
-	{
-		DeviceChannel_shiftState(this, i, i+1);
-	}
-	
-	//set all later values by shifting forward
-	var deltas = this.deltas;
-	for (int i = 0; i < deltas.length - 1; i++)
-	{
-		DeviceChannel_shiftDelta(this, i, i+1);
-	}
-	
-}
-*/
 void DeviceChannel_setCurrentDelta(DeviceChannel * this)
 {
 	this->delta[CURRENT] = this->state[CURRENT] - this->state[PREVIOUS];
@@ -69,19 +46,6 @@ void DeviceChannel_setPreviousState(DeviceChannel * this)
 	this->state[PREVIOUS] = this->state[CURRENT];
 }
 
-bool Device_isChannelActive(Device * this, size_t index)
-{
-	//return (this->channelsActiveMask >> index) & 1);
-	return !((this->channelsActiveMask >> index) & 1); //NOT since we treat zero as active, one as false to avoid initialisation
-}
-
-void Device_setChannelActive(Device * this, size_t index)
-{
-	//this->channelsActiveMask |= (1 << index);
-	this->channelsActiveMask &= !(1 << index); //NOT, AND since we treat zero as active, one as false to avoid initialisation
-}
-
-
 #define CURT_SOURCE
 
 #define CURT_ELEMENT_STRUCT
@@ -94,45 +58,47 @@ void Device_setChannelActive(Device * this, size_t index)
 
 void Input_executeList(InputList * list, void * target)
 {
+	float pos = 0, neg = 0;
 	for (int i = 0; i < list->length; i++)
 	{
 		Input * input = &list->entries[i];
 
-		if (input->channelPos != NULL) //mandatory positive input contributor
+		if (!input->channelPos && !input->channelNeg) //"always-run" response
+			input->response(target, 0, 0);
+		else
 		{
-			if (input->basis == STATE)
+			switch (input->basis)
 			{
-				//LOGI("STATE");
-				float pos = input->channelPos->state[CURRENT];
-				float neg = 0;
-				if (input->channelNeg != NULL) //optional negative input contributor
-					neg = input->channelNeg->state[CURRENT];
+			case STATE: //only call response when channel state [CURRENT] is non-zero
+				
+				if (input->channelPos)
+					pos = input->channelPos->state[CURRENT] * !input->channelPos->inactive;
+				
+				if (input->channelNeg) //optional negative input contributor
+					neg = input->channelNeg->state[CURRENT] * !input->channelNeg->inactive;
 
 				input->state[PREVIOUS] = input->state[CURRENT];
 				input->state[CURRENT]  = pos - neg; //assumes both are abs magnitudes
 				
-				input->response(target, input->state[CURRENT], input->state[PREVIOUS]);
-			}
-			else //(input->basis = DELTA) //only trigger on a change between the two values
-			{
-				//LOGI("DELTA");
-				float pos = input->channelPos->delta[CURRENT];
-				float neg = 0;
-				if (input->channelNeg != NULL) //optional negative input contributor
-					neg = input->channelNeg->delta[CURRENT];
-
+				if (input->state[CURRENT] != 0)
+					input->response(target, input->state[CURRENT], input->state[PREVIOUS]);
+				break;
+				
+			case DELTA: //only call response when channel delta [CURRENT] is non-zero
+				
+				if (input->channelPos)
+					pos = input->channelPos->delta[CURRENT] * !input->channelPos->inactive;
+				
+				if (input->channelNeg) //optional negative input contributor
+					neg = input->channelNeg->delta[CURRENT] * !input->channelNeg->inactive;
+				
+				
 				input->delta[PREVIOUS] = input->delta[CURRENT];
 				input->delta[CURRENT]  = pos - neg; //assumes both are abs magnitudes
 				
 				if (input->delta[CURRENT] != 0)
 					input->response(target, input->delta[CURRENT], input->delta[PREVIOUS]);
-			}
-		}
-		else
-		{
-			if (input->channelNeg == NULL) //both NULL? always execute
-			{
-				input->response(target, 0, 0);
+				break;
 			}
 		}
 	}
@@ -203,6 +169,8 @@ void Loop_initialise(Engine * engine)
 	app->userData = engine;
 	app->onAppCmd = Android_onAppCmd;
 	app->onInputEvent = Android_onInputEvent;
+	
+
 
 	#endif//__ANDROID__
 	#ifdef DESKTOP
@@ -253,7 +221,7 @@ void Loop_run(Engine * engine)
 			DeviceChannel * channel = &device->channels[i];
 			//DeviceChannel_setCurrentDelta(channel);
 			DeviceChannel_setPreviousState(channel);
-			channel->state[CURRENT] = 0;
+			//channel->state[CURRENT] = 0;
 			//channel->delta[CURRENT] = 0;
 		}
 		}
@@ -314,23 +282,37 @@ int32_t Android_onInputEvent(struct android_app* app, AInputEvent* event)
 		index  = (action & AMOTION_EVENT_ACTION_POINTER_INDEX_MASK) >> AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT;
 		flags  =  action & AMOTION_EVENT_ACTION_MASK;
 		
+		p[XX] = AMotionEvent_getX(event, 0);
+		p[YY] = AMotionEvent_getY(event, 0);
 		switch(flags)
 		{
 		case AMOTION_EVENT_ACTION_DOWN:
-
+			LOGI("DOWN... %.3f %.3f\n", p[XX], p[YY]);
+			for (int i = 0; i < 2; i++)
+			{
+				DeviceChannel * channel = &device->channels[i];
+				channel->inactive = false;
+				channel->state[CURRENT] = p[i]; //must set it to the start point
+				channel->state[PREVIOUS] = p[i]; //must set it to the start point
+				LOGI("DOWN...");
+			}
 			break;
 		case AMOTION_EVENT_ACTION_POINTER_DOWN:
 		
 			break;
 		case AMOTION_EVENT_ACTION_UP:
-
+			for (int i = 0; i < 2; i++)
+			{
+				DeviceChannel * channel = &device->channels[i];
+				channel->inactive = true;
+			}
 			break;
 		case AMOTION_EVENT_ACTION_POINTER_UP:
 
 			break;
 		case AMOTION_EVENT_ACTION_MOVE:
-			p[XX] = AMotionEvent_getX(event, 0);
-			p[YY] = AMotionEvent_getY(event, 0);
+			LOGI("MOVE... %.3f %.3f\n", p[XX], p[YY]);
+			LOGI("LAST... %.3f %.3f\n", device->channels[XX].state[PREVIOUS], device->channels[YY].state[PREVIOUS]);
 		
 			for (int i = 0; i < 2; i++)
 			{
