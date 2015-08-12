@@ -182,7 +182,7 @@ void Loop_initialise(Engine * engine)
 void Loop_run(Engine * engine)
 {
 	#ifdef DESKTOP
-	double t1, t2 = 0;\
+	double t1, t2 = 0;
 	while (!glfwWindowShouldClose(window))
 	{
 		glfwPollEvents();
@@ -203,6 +203,8 @@ void Loop_run(Engine * engine)
 	#ifdef __ANDROID__
 	while (1)
 	{
+		engine->deltaSec = 0.0333333f;
+		
 		int ident;
 		int events;
 		struct android_poll_source* source;
@@ -216,7 +218,7 @@ void Loop_run(Engine * engine)
 		//do so BEFORE event loop to ensure event values don't get overridden
 		Device * device = (Device *) get(&engine->devicesByName, *(uint64_t *) pad("cursor"));
 		
-		for (int i = 0; i < 2; i++)
+		for (int i = 0; i < 8; i++)
 		{
 			DeviceChannel * channel = &device->channels[i];
 			//DeviceChannel_setCurrentDelta(channel);
@@ -239,6 +241,23 @@ void Loop_run(Engine * engine)
 			}
 		}
 		
+		/*
+		int getEventResult = -1;
+
+		while (AInputQueue_hasEvents (app->inputQueue) || (getEventResult = AInputQueue_getEvent (app->inputQueue, &event)) >= 0)
+		{
+			if (getEventResult < 0)
+			{
+			getEventResult = AInputQueue_getEvent 	(app->inputQueue, &event);
+		}
+
+		if (getEventResult >= 0)
+		{
+		[...standard_handling...]
+		getEventResult = -1;
+		}
+		} 
+		*/
 		if (engine->initialisedWindow) //TODO make this a function pointer set when cmd init occurs to avoid branch
 		{
 
@@ -246,7 +265,7 @@ void Loop_run(Engine * engine)
 		//do so BEFORE event loop to ensure event values don't get overridden
 		Device * device = (Device *) get(&engine->devicesByName, *(uint64_t *) pad("cursor"));
 		
-		for (int i = 0; i < 2; i++)
+		for (int i = 0; i < 8; i++)
 		{
 			DeviceChannel * channel = &device->channels[i];
 			DeviceChannel_setCurrentDelta(channel);
@@ -266,8 +285,10 @@ int32_t Android_onInputEvent(struct android_app* app, AInputEvent* event)
 	Engine * engine = (Engine *)app->userData;
 	Device * device = (Device *) get(&engine->devicesByName, *(uint64_t *) pad("cursor"));
 	
-	int32_t count, action, index;
-	uint32_t flags;
+	int32_t count, eventAction, pid;
+	uint32_t touchAction;
+	size_t index;
+
 	float p[2];
 	
 	switch (AInputEvent_getType(event))
@@ -277,62 +298,115 @@ int32_t Android_onInputEvent(struct android_app* app, AInputEvent* event)
 	
 	case AINPUT_EVENT_TYPE_MOTION:
 	
-		count  = AMotionEvent_getPointerCount(event);
-		action = AMotionEvent_getAction(event);
-		index  = (action & AMOTION_EVENT_ACTION_POINTER_INDEX_MASK) >> AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT;
-		flags  =  action & AMOTION_EVENT_ACTION_MASK;
 		
-		p[XX] = AMotionEvent_getX(event, 0);
-		p[YY] = AMotionEvent_getY(event, 0);
-		switch(flags)
+		eventAction = AMotionEvent_getAction(event);
+		touchAction = eventAction & AMOTION_EVENT_ACTION_MASK;//eventAction & ;
+		index  = (eventAction & AMOTION_EVENT_ACTION_POINTER_INDEX_MASK) >> AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT;
+		count  = AMotionEvent_getPointerCount(event);
+		
+		//LOGI("AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT %d\n", AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT);
+		//flags  =  action & AMOTION_EVENT_ACTION_MASK;
+		
+		LOGI("POINTER... index=%d count=%d\n", index, count);
+		
+
+		
+		p[XX] = AMotionEvent_getX(event, index);
+		p[YY] = AMotionEvent_getY(event, index);
+		switch(touchAction)
 		{
 		case AMOTION_EVENT_ACTION_DOWN:
 			LOGI("DOWN... %.3f %.3f\n", p[XX], p[YY]);
 			for (int i = 0; i < 2; i++)
 			{
-				DeviceChannel * channel = &device->channels[i];
+				DeviceChannel * channel = &device->channels[i+index*3];
 				channel->inactive = false;
 				channel->state[CURRENT] = p[i]; //must set it to the start point
 				channel->state[PREVIOUS] = p[i]; //must set it to the start point
-				LOGI("DOWN...");
+				
+				engine->touches[index] = true;
 			}
+			return true;
 			break;
-		case AMOTION_EVENT_ACTION_POINTER_DOWN:
 		
-			break;
-		case AMOTION_EVENT_ACTION_UP:
+		case AMOTION_EVENT_ACTION_POINTER_DOWN:
+			LOGI("POINTER DOWN %d at %.3f, %.3f\n", index, p[XX], p[YY]);
 			for (int i = 0; i < 2; i++)
 			{
-				DeviceChannel * channel = &device->channels[i];
-				channel->inactive = true;
+				DeviceChannel * channel = &device->channels[i+index*3];
+				channel->inactive = false;
+				channel->state[CURRENT] = p[i]; //must set it to the start point
+				channel->state[PREVIOUS] = p[i]; //must set it to the start point
+				
+				engine->touches[index] = true;
 			}
+			return true;
+			break;
+		case AMOTION_EVENT_ACTION_UP:
+			LOGI("UP\n", index);
+			for (int i = 0; i < 2; i++)
+			{
+				DeviceChannel * channel = &device->channels[i+index*3];
+				channel->inactive = true;
+				
+				engine->touches[index] = false;
+			}
+			return true;
 			break;
 		case AMOTION_EVENT_ACTION_POINTER_UP:
-
+			LOGI("POINTER UP %d\n", index);
+			for (int i = 0; i < 2; i++)
+			{
+				DeviceChannel * channel = &device->channels[i+index*3];
+				channel->inactive = true;
+				
+				engine->touches[index] = false;
+			}
+			return true;
 			break;
 		case AMOTION_EVENT_ACTION_MOVE:
 			LOGI("MOVE... %.3f %.3f\n", p[XX], p[YY]);
 			LOGI("LAST... %.3f %.3f\n", device->channels[XX].state[PREVIOUS], device->channels[YY].state[PREVIOUS]);
-		
-			for (int i = 0; i < 2; i++)
+			
+			for (int j = 0; j < count; j++)
 			{
-				DeviceChannel * channel = &device->channels[i];
-				channel->state[CURRENT] = p[i];
-				//DeviceChannel_setCurrentDelta(channel);
-				//DeviceChannel_setPreviousState(channel);
+				//pids are the indices of touches which persist and may not be zero-based
+				pid = AMotionEvent_getPointerId(event, j);
+				p[XX] = AMotionEvent_getX(event, pid);
+				p[YY] = AMotionEvent_getY(event, pid);
+				for (int i = 0; i < 2; i++)
+				{
+					DeviceChannel * channel = &device->channels[pid*3 + i];
+					channel->state[CURRENT] = p[i];
+				}
+				LOGI("POINTER ID=%d x=%.3f y=%.3f\n", pid, p[XX], p[YY]);
 			}
-
-			LOGI("x %f\ty %f\n",p[XX], p[YY]);
-			return 1;
+		/*
+			for (int t = 0; t < 10; t++) //< sizeof(engine->touches) / sizeof(bool)
+			{
+				if (engine->touches[t])
+				{
+					
+						
+						//DeviceChannel_setCurrentDelta(channel);
+						//DeviceChannel_setPreviousState(channel);
+					
+					LOGI("TOUCH %d", t);
+				}
+			}
+*/
+			//LOGI("x %f\ty %f\n",p[XX], p[YY]);
+			return true;
 			
 			break;
 		case AMOTION_EVENT_ACTION_CANCEL:
-		
+			LOGI("CANCEL");
 			break;
+		default: LOGI("WTF");
 		}
 		break;
 	}
-	return 0;
+	return true;
 }
 
 void Android_frame(Engine * engine)

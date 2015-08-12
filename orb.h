@@ -128,12 +128,16 @@
 //multitouch channels
 #define XX0 0
 #define YY0 1
-#define XX1 2
-#define YY1 3
-#define XX2 4
-#define YY2 5
-#define XX3 6
-#define YY3 7
+#define PRESSURE0 2
+#define XX1 3
+#define YY1 4
+#define PRESSURE1 5
+#define XX2 6
+#define YY2 7
+#define PRESSURE2 8
+#define XX3 9
+#define YY3 10
+#define PRESSURE3 11
 
 //channel state/delta index
 #define CURRENT 0
@@ -662,6 +666,8 @@ typedef struct Engine
 	EGLSurface surface;
 	EGLContext context;
 	bool initialisedWindow;
+	
+	bool touches[10]; //DEV
 	#endif//__ANDROID__
 	
 	int32_t width;
@@ -675,9 +681,6 @@ typedef struct Engine
 	void * userUpdateArg;
 	
 	float deltaSec;
-	
-	//TouchDevice touch;
-	
 } Engine;
 const struct Engine engineEmpty;
 
