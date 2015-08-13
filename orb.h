@@ -313,6 +313,14 @@ typedef struct Attribute
 	//count is in the Mesh holding the Attribute.
 	void * vertex; //ShaderAttribute will know how to read it, depending on which attribute it is.
 	GLuint id; //buffer id
+    //args for glVertexAttribPointer()
+    GLuint index; //attribute location
+	GLint size;
+	GLenum type;
+	GLboolean normalized;
+	GLsizei stride;
+	const GLvoid * pointer;
+
 } Attribute;
 
 typedef struct Uniform
@@ -382,7 +390,7 @@ typedef struct Mesh
 
 	//TODO bounds only require a single attribute. Maybe we should make this a pointer to an array? But Attribute is really small, points to data elsewhere.
 	Attribute attribute[HH_ATTRIBUTES_MAX]; //also contains positions needed for faces
-	Face * face;
+	uint8_t attributeCount;
 	
 	GLushort * index; //what we send to GPU.... TODO generate from face
 	
@@ -392,6 +400,8 @@ typedef struct Mesh
 	
 	GLuint vao;
 	GLuint sampler;
+	
+	Face * face;
 	
 	/** Did vertices get modified / need upload? */
 	bool changed;
@@ -609,11 +619,15 @@ const struct Input inputEmpty;
 
 void Input_executeList(InputList * list, void * model);
 bool Input_equals(Input a, Input b); //TODO make equals a function pointer in list.h
-
+typedef struct Capabilities
+{
+	bool vao;
+} Capabilities;
 
 typedef struct Engine
 {
-	
+	Capabilities capabilities;
+	bool debugDesktopNoVAO;
 	
 	Map programsByName;
 	Map shadersByName;
@@ -730,8 +744,7 @@ void Engine_clear();
 void Engine_many(Program * program, RenderableSet * renderableSet, const GLfloat * matVP);
 void Engine_one(Engine * this, Renderable * renderable, const GLfloat * matM, const GLfloat * matVP);
 void Engine_oneUI(Engine * this, Renderable * renderable, const GLfloat * matM);
-void Engine_createFullscreenQuad(Engine * this, GLuint positionVertexAttributeIndex, GLuint texcoordVertexAttributeIndex);
-void Engine_createScreenQuad(Mesh * mesh, GLuint positionVertexAttributeIndex, GLuint texcoordVertexAttributeIndex,
+void Engine_createScreenQuad(Engine * this, Mesh * mesh, GLuint positionVertexAttributeIndex, GLuint texcoordVertexAttributeIndex,
 	int w, int h,
 	int rcx, int rcy
 );

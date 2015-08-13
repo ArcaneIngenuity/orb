@@ -1125,73 +1125,7 @@ void Engine_clearDepth()
 	 glClear(GL_DEPTH_BUFFER_BIT);
 }
 
-void Engine_createFullscreenQuad(Engine * this, GLuint positionVertexAttributeIndex, GLuint texcoordVertexAttributeIndex)
-{
-	mat4x4_identity(this->fullscreenQuadMatrix);
-	
-	//mesh + associated VAO
-	Mesh * mesh = this->fullscreenQuad.mesh = malloc(sizeof(Mesh));;
-	mesh->topology = GL_TRIANGLES;
-	mesh->indexCount = 6;
-	mesh->vertexCount = 4;
-	mesh->index = malloc(sizeof(GLushort) * mesh->indexCount);
-	mesh->attribute[positionVertexAttributeIndex].vertex = malloc(sizeof(GLfloat) * mesh->vertexCount * TEXCOORD_COMPONENTS);
-	mesh->attribute[texcoordVertexAttributeIndex].vertex = malloc(sizeof(GLfloat) * mesh->vertexCount * TEXCOORD_COMPONENTS);
-	
-	Attribute * position = &mesh->attribute[positionVertexAttributeIndex];
-	Attribute * texcoord = &mesh->attribute[texcoordVertexAttributeIndex];
-
-	//create vertex attributes using static initialisers, then copy these into the Mesh
-	GLushort _index[6] = {
-		0, 1, 2,
-		2, 3, 0
-	};
-	
-	GLfloat _position[8] = {
-		-1.0, -1.0,
-		+1.0, -1.0,
-		+1.0, +1.0,
-		-1.0, +1.0
-	};
-	
-	GLfloat _texcoord[8] = {
-		//y-inverted due to texture space flip
-		0.0, 0.0,
-		1.0, 0.0,
-		1.0, 1.0,
-		0.0, 1.0
-	};
-
-	memcpy(mesh->index, _index, sizeof(_index));
-	memcpy(position->vertex, _position, sizeof(_position));
-	memcpy(texcoord->vertex, _texcoord, sizeof(_texcoord));
-	
-	LOGI("index %d %d\n", sizeof(_index), mesh->indexCount * 2);
-	LOGI("pos   %d %d\n", sizeof(_position), mesh->vertexCount * 4);
-	LOGI("texco %d %d\n", sizeof(_texcoord), mesh->vertexCount * 4);
-	
-	glGenVertexArrays(1, &(mesh->vao)); //VAO frees us from having to call glGetAttribLocation & glVertexAttribPointer on each modify op
-	glBindVertexArray(mesh->vao);
-	
-	//positions
-	glGenBuffers(1, &position->id);
-	glBindBuffer(GL_ARRAY_BUFFER, position->id);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * mesh->vertexCount * TEXCOORD_COMPONENTS, position->vertex, GL_DYNAMIC_DRAW);
-	glVertexAttribPointer(positionVertexAttributeIndex, TEXCOORD_COMPONENTS, GL_FLOAT, GL_FALSE, 0, 0); //provide data / layout info; "take buffer that is bound at the time called and associates that buffer with the current VAO"
-	glEnableVertexAttribArray(positionVertexAttributeIndex); //enable attribute for use
-
-	//texcoords
-	glGenBuffers(1, &texcoord->id);
-	glBindBuffer(GL_ARRAY_BUFFER, texcoord->id);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * mesh->vertexCount * TEXCOORD_COMPONENTS, texcoord->vertex, GL_DYNAMIC_DRAW);
-	glVertexAttribPointer(texcoordVertexAttributeIndex, TEXCOORD_COMPONENTS, GL_FLOAT, GL_FALSE, 0, 0); //provide data / layout info; "take buffer that is bound at the time called and associates that buffer with the current VAO"
-	glEnableVertexAttribArray(texcoordVertexAttributeIndex); //enable attribute for use
-
-	//unbind
-	glBindVertexArray(0);
-}
-
-void Engine_createScreenQuad(Mesh * mesh, GLuint positionVertexAttributeIndex, GLuint texcoordVertexAttributeIndex,
+void Engine_createScreenQuad(Engine * this, Mesh * mesh, GLuint positionVertexAttributeIndex, GLuint texcoordVertexAttributeIndex,
 	int w, int h,
 	int rcx, int rcy
 )
@@ -1202,6 +1136,7 @@ void Engine_createScreenQuad(Mesh * mesh, GLuint positionVertexAttributeIndex, G
 	mesh->index = malloc(sizeof(GLushort) * mesh->indexCount);
 	mesh->attribute[positionVertexAttributeIndex].vertex = malloc(sizeof(GLfloat) * mesh->vertexCount * TEXCOORD_COMPONENTS);
 	mesh->attribute[texcoordVertexAttributeIndex].vertex = malloc(sizeof(GLfloat) * mesh->vertexCount * TEXCOORD_COMPONENTS);
+	mesh->attributeCount = 2; //TODO should add the attributes through a method that tracks count.
 	
 	Attribute * position = &mesh->attribute[positionVertexAttributeIndex];
 	Attribute * texcoord = &mesh->attribute[texcoordVertexAttributeIndex];
@@ -1234,29 +1169,57 @@ void Engine_createScreenQuad(Mesh * mesh, GLuint positionVertexAttributeIndex, G
 	memcpy(position->vertex, _position, sizeof(_position));
 	memcpy(texcoord->vertex, _texcoord, sizeof(_texcoord));
 	
+    position->index = positionVertexAttributeIndex;
+    texcoord->index = texcoordVertexAttributeIndex;
+    position->size = TEXCOORD_COMPONENTS;
+    texcoord->size = TEXCOORD_COMPONENTS;
+    position->type = GL_FLOAT; //actually could be int byte?
+    texcoord->type = GL_FLOAT; //actually could be int byte?
+    position->normalized = GL_FALSE;
+    texcoord->normalized = GL_FALSE;
+    position->stride = 0;
+    texcoord->stride = 0;
+    position->pointer = 0;
+    texcoord->pointer = 0;
+	
 	LOGI("0index %d %d\n", sizeof(_index), mesh->indexCount * 2);
 	LOGI("0pos   %d %d\n", sizeof(_position), mesh->vertexCount * 4);
 	LOGI("0texco %d %d\n", sizeof(_texcoord), mesh->vertexCount * 4);
 	
-	//gen & bind
-	glGenVertexArrays(1, &(mesh->vao)); //VAO frees us from having to call glGetAttribLocation & glVertexAttribPointer on each modify op
-	glBindVertexArray(mesh->vao);
+	if (this->capabilities.vao || this->debugDesktopNoVAO)
+	{
+		//gen & bind
+		glGenVertexArrays(1, &(mesh->vao)); //VAO frees us from having to call glGetAttribLocation & glVertexAttribPointer on each modify op
+		glBindVertexArray(mesh->vao);
+	}
+	//else //not VAO capable (supposedly) but running
+	
+	//each attribute... TODO for loop using attribute members set above.
 	
 	//positions
 	glGenBuffers(1, &position->id);
 	glBindBuffer(GL_ARRAY_BUFFER, position->id);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * mesh->vertexCount * TEXCOORD_COMPONENTS, position->vertex, GL_DYNAMIC_DRAW);
-	glVertexAttribPointer(positionVertexAttributeIndex, TEXCOORD_COMPONENTS, GL_FLOAT, GL_FALSE, 0, 0); //provide data / layout info; "take buffer that is bound at the time called and associates that buffer with the current VAO"
-	glEnableVertexAttribArray(positionVertexAttributeIndex); //enable attribute for use
+	if (this->capabilities.vao || this->debugDesktopNoVAO)
+	{
+		glVertexAttribPointer(positionVertexAttributeIndex, TEXCOORD_COMPONENTS, GL_FLOAT, GL_FALSE, 0, 0); //provide data / layout info; "take buffer that is bound at the time called and associates that buffer with the current VAO"
+		glEnableVertexAttribArray(positionVertexAttributeIndex); //enable attribute for use
+	}
 	//texcoords
 	glGenBuffers(1, &texcoord->id);
 	glBindBuffer(GL_ARRAY_BUFFER, texcoord->id);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * mesh->vertexCount * TEXCOORD_COMPONENTS, texcoord->vertex, GL_DYNAMIC_DRAW);
-	glVertexAttribPointer(texcoordVertexAttributeIndex, TEXCOORD_COMPONENTS, GL_FLOAT, GL_FALSE, 0, 0); //provide data / layout info; "take buffer that is bound at the time called and associates that buffer with the current VAO"
-	glEnableVertexAttribArray(texcoordVertexAttributeIndex); //enable attribute for use
-
-	//unbind
-	glBindVertexArray(0);
+	if (this->capabilities.vao || this->debugDesktopNoVAO)
+	{
+		glVertexAttribPointer(texcoordVertexAttributeIndex, TEXCOORD_COMPONENTS, GL_FLOAT, GL_FALSE, 0, 0); //provide data / layout info; "take buffer that is bound at the time called and associates that buffer with the current VAO"
+		glEnableVertexAttribArray(texcoordVertexAttributeIndex); //enable attribute for use
+	}
+	
+	if (this->capabilities.vao)
+	{
+		//unbind
+		glBindVertexArray(0);
+	}
 }
 /*
 void Engine_many(Program * program, RenderableSet * renderableSet, const GLfloat * matVP)
@@ -1296,8 +1259,9 @@ void Engine_many(Program * program, RenderableSet * renderableSet, const GLfloat
 void Engine_one(Engine * this, Renderable * renderable, const GLfloat * matM, const GLfloat * matVP)
 {
 	Mesh * mesh = renderable->mesh;
-
-	glBindVertexArray(mesh->vao);
+	
+	//if (this->capabilities.vao)
+		glBindVertexArray(mesh->vao);
 	
 	//prep uniforms...
 	//...view-projection matrix
@@ -1312,17 +1276,27 @@ void Engine_one(Engine * this, Renderable * renderable, const GLfloat * matM, co
 	else
 		glDrawElements(mesh->topology, mesh->indexCount, GL_UNSIGNED_SHORT, mesh->index);
 	
-	glBindVertexArray(0);
+	//if (this->capabilities.vao)
+		glBindVertexArray(0);
 }
 
 void Engine_oneUI(Engine * this, Renderable * renderable, const GLfloat * matM)
 {
 	Mesh * mesh = renderable->mesh;
-	//LOGI("mesh == NULL? %i", mesh==NULL);
-	//LOGI("glBindVertexArray == NULL? %i", glBindVertexArray==NULL);
-	//LOGI("??? %i", mesh->vao);
-
-	glBindVertexArray(mesh->vao);
+	
+	if (this->capabilities.vao)
+		glBindVertexArray(mesh->vao);
+	else
+	{
+		for (int i = 0; i < mesh->attributeCount; i++)
+		{
+			Attribute * attribute = &mesh->attribute[i];
+			
+			glBindBuffer(GL_ARRAY_BUFFER, attribute->id);
+			glVertexAttribPointer(attribute->index, attribute->size, attribute->type, attribute->normalized, attribute->stride, attribute->pointer); //provide data / layout info; "take buffer that is bound at the time called and associates that buffer with the current VAO"
+			glEnableVertexAttribArray(attribute->index); //enable attribute for use
+		}
+	}
 
 	//prep uniforms...
 	//...model matrix
@@ -1333,8 +1307,12 @@ void Engine_oneUI(Engine * this, Renderable * renderable, const GLfloat * matM)
 		glDrawArrays(mesh->topology, 0, mesh->vertexCount);
 	else
 		glDrawElements(mesh->topology, mesh->indexCount, GL_UNSIGNED_SHORT, mesh->index);
-	
-	glBindVertexArray(0);
+
+	if (this->capabilities.vao)
+	{
+		glBindBuffer(GL_ARRAY_BUFFER,0);
+		glBindVertexArray(0);
+	}
 }
 
 void Engine_initialise(Engine * this)
@@ -1397,6 +1375,11 @@ void Engine_initialise(Engine * this)
 	printf("GL_MAX_TEXTURE_SIZE=%d\n", maxSize);
 	printf("GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS=%d\n", maxUnits);
 	printf("GL_MAX_COLOR_ATTACHMENTS=%d\n", maxAttachments);
+	
+	//DEBUG as though no VAOs on desktop
+	this->debugDesktopNoVAO = true;
+	if (this->debugDesktopNoVAO)
+		this->capabilities.vao = false;
 	
 	#elif MOBILE
 	#if __ANDROID__
@@ -1493,6 +1476,14 @@ void Engine_initialise(Engine * this)
 			LOGI("DeleteVertexArraysOES? %s", glDeleteVertexArrays ? "YES" : "NO");										
 			LOGI("GenVertexArraysOES? %s", glGenVertexArrays ? "YES" : "NO");										
 			LOGI("IsVertexArrayOES? %s", glIsVertexArray ? "YES" : "NO");	
+			
+			this->capabilities.vao =
+				glBindVertexArray &&
+				glDeleteVertexArrays &&
+				glGenVertexArrays &&
+				glIsVertexArray;
+				
+			LOGI("VAO supported? %s", this->capabilities.vao ? "YES" : "NO");
 		}
 		else
 		{
