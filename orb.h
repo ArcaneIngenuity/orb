@@ -629,6 +629,8 @@ typedef struct Engine
 	Capabilities capabilities;
 	bool debugDesktopNoVAO;
 	
+	int inputEventCount;
+	
 	Map programsByName;
 	Map shadersByName;
 	Map texturesByName;

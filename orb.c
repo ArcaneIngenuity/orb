@@ -1192,15 +1192,14 @@ void Engine_createScreenQuad(Engine * this, Mesh * mesh, GLuint positionVertexAt
 		glGenVertexArrays(1, &(mesh->vao)); //VAO frees us from having to call glGetAttribLocation & glVertexAttribPointer on each modify op
 		glBindVertexArray(mesh->vao);
 	}
-	//else //not VAO capable (supposedly) but running
-	
+
 	//each attribute... TODO for loop using attribute members set above.
 	
 	//positions
 	glGenBuffers(1, &position->id);
 	glBindBuffer(GL_ARRAY_BUFFER, position->id);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * mesh->vertexCount * TEXCOORD_COMPONENTS, position->vertex, GL_DYNAMIC_DRAW);
-	if (this->capabilities.vao || this->debugDesktopNoVAO)
+	if (this->capabilities.vao)
 	{
 		glVertexAttribPointer(positionVertexAttributeIndex, TEXCOORD_COMPONENTS, GL_FLOAT, GL_FALSE, 0, 0); //provide data / layout info; "take buffer that is bound at the time called and associates that buffer with the current VAO"
 		glEnableVertexAttribArray(positionVertexAttributeIndex); //enable attribute for use
@@ -1209,7 +1208,7 @@ void Engine_createScreenQuad(Engine * this, Mesh * mesh, GLuint positionVertexAt
 	glGenBuffers(1, &texcoord->id);
 	glBindBuffer(GL_ARRAY_BUFFER, texcoord->id);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * mesh->vertexCount * TEXCOORD_COMPONENTS, texcoord->vertex, GL_DYNAMIC_DRAW);
-	if (this->capabilities.vao || this->debugDesktopNoVAO)
+	if (this->capabilities.vao)
 	{
 		glVertexAttribPointer(texcoordVertexAttributeIndex, TEXCOORD_COMPONENTS, GL_FLOAT, GL_FALSE, 0, 0); //provide data / layout info; "take buffer that is bound at the time called and associates that buffer with the current VAO"
 		glEnableVertexAttribArray(texcoordVertexAttributeIndex); //enable attribute for use
@@ -1260,8 +1259,19 @@ void Engine_one(Engine * this, Renderable * renderable, const GLfloat * matM, co
 {
 	Mesh * mesh = renderable->mesh;
 	
-	//if (this->capabilities.vao)
+	if (this->capabilities.vao)
 		glBindVertexArray(mesh->vao);
+	else
+	{
+		for (int i = 0; i < mesh->attributeCount; i++)
+		{
+			Attribute * attribute = &mesh->attribute[i];
+			
+			glBindBuffer(GL_ARRAY_BUFFER, attribute->id);
+			glVertexAttribPointer(attribute->index, attribute->size, attribute->type, attribute->normalized, attribute->stride, attribute->pointer); //provide data / layout info; "take buffer that is bound at the time called and associates that buffer with the current VAO"
+			glEnableVertexAttribArray(attribute->index); //enable attribute for use
+		}
+	}
 	
 	//prep uniforms...
 	//...view-projection matrix
@@ -1270,14 +1280,17 @@ void Engine_one(Engine * this, Renderable * renderable, const GLfloat * matM, co
 	//...model matrix
 	GLint mLoc = glGetUniformLocation(this->program->id, "m");
 	glUniformMatrix4fv(mLoc, 1, GL_FALSE, (GLfloat *)matM);
-	
+
 	if (mesh->index == NULL)
 		glDrawArrays(mesh->topology, 0, mesh->vertexCount);
 	else
 		glDrawElements(mesh->topology, mesh->indexCount, GL_UNSIGNED_SHORT, mesh->index);
 	
-	//if (this->capabilities.vao)
+	if (this->capabilities.vao)
+	{
+		glBindBuffer(GL_ARRAY_BUFFER,0);
 		glBindVertexArray(0);
+	}
 }
 
 void Engine_oneUI(Engine * this, Renderable * renderable, const GLfloat * matM)
