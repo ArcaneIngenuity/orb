@@ -681,9 +681,12 @@ typedef struct Engine
 	EGLDisplay display;
 	EGLSurface surface;
 	EGLContext context;
+	EGLConfig config;
+	EGLint attribList[3];
 	bool initialisedWindow;
 	
 	bool touches[10]; //DEV
+	bool paused;
 	#endif//__ANDROID__
 	
 	int32_t width;
@@ -757,11 +760,14 @@ char* Text_load(char* filename);
 void GLFW_errorCallback(int error, const char * description);
 bool GLTool_isExtensionSupported(const char * extension); //redundant, see GLFW
 
+/*
+//Private:
 #ifdef __ANDROID__
 void 	Android_frame(Engine * engine);
 void 	Android_onAppCmd(struct android_app* app, int32_t cmd);
 int32_t Android_onInputEvent(struct android_app* app, AInputEvent* event);
 #endif//__ANDROID__
+*/
 
 //globals
 //TODO merge all into an Orb object? then call e.g. Engine_one(orb->engine, ...);

@@ -11,11 +11,14 @@ void Window_terminate(Engine * engine)
 	#ifdef __ANDROID__
 	if (engine->display != EGL_NO_DISPLAY) {
 		eglMakeCurrent(engine->display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+		LOGI("AA");
 		if (engine->context != EGL_NO_CONTEXT) {
 			eglDestroyContext(engine->display, engine->context);
+			LOGI("BB");
 		}
 		if (engine->surface != EGL_NO_SURFACE) {
 			eglDestroySurface(engine->display, engine->surface);
+			LOGI("CC");
 		}
 		eglTerminate(engine->display);
 	}
@@ -107,6 +110,216 @@ void Input_executeList(InputList * list, void * target)
 bool Input_equals(Input a, Input b) //TODO make equals a function pointer in list.h
 {
 	return false; //DEV no members yet
+}
+
+#ifdef __ANDROID__
+//PRIVATE
+int32_t Android_onInputEvent(struct android_app* app, AInputEvent* event)
+{
+	Engine * engine = (Engine *)app->userData;
+	Device * device = (Device *) get(&engine->devicesByName, *(uint64_t *) pad("cursor"));
+	
+	int32_t count, eventAction, pid;
+	uint32_t touchAction;
+	size_t index;
+
+	float p[2];
+	
+	switch (AInputEvent_getType(event))
+	{
+	case AINPUT_EVENT_TYPE_KEY:
+		return 0; //allows back button to work
+		break;
+	
+	case AINPUT_EVENT_TYPE_MOTION:
+	
+		eventAction = AMotionEvent_getAction(event);
+		touchAction = eventAction & AMOTION_EVENT_ACTION_MASK;//eventAction & ;
+		index  = (eventAction & AMOTION_EVENT_ACTION_POINTER_INDEX_MASK) >> AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT;
+		count  = AMotionEvent_getPointerCount(event);
+		
+		//LOGI("AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT %d\n", AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT);
+		//flags  =  action & AMOTION_EVENT_ACTION_MASK;
+		
+		LOGI("POINTER... index=%d count=%d\n", index, count);
+		
+		p[XX] = AMotionEvent_getX(event, index);
+		p[YY] = AMotionEvent_getY(event, index);
+		switch(touchAction)
+		{
+		case AMOTION_EVENT_ACTION_DOWN:
+			LOGI("DOWN... %.3f %.3f\n", p[XX], p[YY]);
+			for (int i = 0; i < 2; i++)
+			{
+				DeviceChannel * channel = &device->channels[i+index*3];
+				channel->inactive = false;
+				channel->state[CURRENT] = p[i]; //must set it to the start point
+				channel->state[PREVIOUS] = p[i]; //must set it to the start point
+				
+				engine->touches[index] = true;
+			}
+			return true;
+			break;
+		
+		case AMOTION_EVENT_ACTION_POINTER_DOWN:
+			LOGI("POINTER DOWN %d at %.3f, %.3f\n", index, p[XX], p[YY]);
+			for (int i = 0; i < 2; i++)
+			{
+				DeviceChannel * channel = &device->channels[i+index*3];
+				channel->inactive = false;
+				channel->state[CURRENT] = p[i]; //must set it to the start point
+				channel->state[PREVIOUS] = p[i]; //must set it to the start point
+				
+				engine->touches[index] = true;
+			}
+			return true;
+			break;
+		case AMOTION_EVENT_ACTION_UP:
+			LOGI("UP\n", index);
+			for (int i = 0; i < 2; i++)
+			{
+				DeviceChannel * channel = &device->channels[i+index*3];
+				channel->inactive = true;
+				
+				engine->touches[index] = false;
+			}
+			return true;
+			break;
+		case AMOTION_EVENT_ACTION_POINTER_UP:
+			LOGI("POINTER UP %d\n", index);
+			for (int i = 0; i < 2; i++)
+			{
+				DeviceChannel * channel = &device->channels[i+index*3];
+				channel->inactive = true;
+				
+				engine->touches[index] = false;
+			}
+			return true;
+			break;
+		case AMOTION_EVENT_ACTION_MOVE:
+			LOGI("MOVE... %.3f %.3f\n", p[XX], p[YY]);
+			LOGI("LAST... %.3f %.3f\n", device->channels[XX].state[PREVIOUS], device->channels[YY].state[PREVIOUS]);
+			
+			for (int j = 0; j < count; j++)
+			{
+				//pids are the indices of touches which persist and may not be zero-based
+				pid = AMotionEvent_getPointerId(event, j);
+				p[XX] = AMotionEvent_getX(event, pid);
+				p[YY] = AMotionEvent_getY(event, pid);
+				for (int i = 0; i < 2; i++)
+				{
+					DeviceChannel * channel = &device->channels[pid*3 + i];
+					channel->state[CURRENT] = p[i];
+				}
+				LOGI("POINTER ID=%d x=%.3f y=%.3f\n", pid, p[XX], p[YY]);
+			}
+		/*
+			for (int t = 0; t < 10; t++) //< sizeof(engine->touches) / sizeof(bool)
+			{
+				if (engine->touches[t])
+				{
+					
+						
+						//DeviceChannel_setCurrentDelta(channel);
+						//DeviceChannel_setPreviousState(channel);
+					
+					LOGI("TOUCH %d", t);
+				}
+			}
+*/
+			//LOGI("x %f\ty %f\n",p[XX], p[YY]);
+			return true;
+			
+			break;
+		case AMOTION_EVENT_ACTION_CANCEL:
+			LOGI("CANCEL");
+			break;
+		default: LOGI("WTF");
+		}
+		break;
+	}
+	return true;
+}
+
+//PRIVATE
+void Android_frame(Engine * engine)
+{
+	// No display.
+	if (engine->display == NULL) return;
+	
+	engine->userUpdateFunc(engine->userUpdateArg);
+	
+	eglSwapBuffers(engine->display, engine->surface);
+}
+
+/**
+ * Process the next main command.
+ */
+ //PRIVATE
+void Android_onAppCmd(struct android_app* app, int32_t cmd)
+{
+	Engine * engine = (struct engine*)app->userData;
+	switch (cmd)
+	{
+	case APP_CMD_INPUT_CHANGED:
+		LOGI("INPUT_CHANGED");
+		break;
+	case APP_CMD_SAVE_STATE:
+		LOGI("SAVE_STATE");
+		break;
+	case APP_CMD_INIT_WINDOW:
+		LOGI("INIT_WINDOW");
+		// The window is being shown, get it ready.
+		/*
+		if (engine->app->window != NULL)
+		{
+			Engine_initialise(engine);
+			Android_frame(engine);
+			engine->userInitialiseFunc(); //TODO - call from within Engine_initialise()?
+			engine->initialisedWindow = true;
+		}
+		*/
+		break;
+	
+	case APP_CMD_TERM_WINDOW:
+		// The window is being hidden or closed, clean it up.
+		
+		LOGI("TERM_WINDOW");
+		Window_terminate(engine);
+		break;
+	case APP_CMD_GAINED_FOCUS:
+		LOGI("GAINED_FOCUS");
+		break;
+	case APP_CMD_LOST_FOCUS:
+		LOGI("LOST_FOCUS");
+		Android_frame(engine);
+		break;
+		
+	case APP_CMD_PAUSE:
+		LOGI("PAUSE");
+		engine->paused = true;
+		break;
+		
+	case APP_CMD_RESUME:
+		LOGI("RESUME");
+		//engine->paused = false;
+		/*
+		if (!engine->context)
+		{
+		engine->context = eglCreateContext(engine->display, engine->config, NULL, engine->attribList);
+
+		if (eglMakeCurrent(engine->display, engine->surface, engine->surface, engine->context) == EGL_FALSE)
+		{
+			LOGW("Unable to eglMakeCurrent");
+			//return -1;
+		}
+		else
+			LOGI("Success eglMakeCurrent");
+		
+		}
+		*/
+		break;
+	}
 }
 
 void Loop_processInputs(Engine * engine)
@@ -273,183 +486,11 @@ void Loop_run(Engine * engine)
 		}
 		
 		//TODO if accumulated sufficient time
-		Android_frame(engine);
+		if (!engine->paused)
+			Android_frame(engine);
 	}
 	#endif//__ANDROID__
 	#endif//DESKTOP/MOBILE
-}
-
-#ifdef __ANDROID__
-int32_t Android_onInputEvent(struct android_app* app, AInputEvent* event)
-{
-	Engine * engine = (Engine *)app->userData;
-	Device * device = (Device *) get(&engine->devicesByName, *(uint64_t *) pad("cursor"));
-	
-	int32_t count, eventAction, pid;
-	uint32_t touchAction;
-	size_t index;
-
-	float p[2];
-	
-	switch (AInputEvent_getType(event))
-	{
-	case AINPUT_EVENT_TYPE_KEY:
-		break;
-	
-	case AINPUT_EVENT_TYPE_MOTION:
-	
-		
-		eventAction = AMotionEvent_getAction(event);
-		touchAction = eventAction & AMOTION_EVENT_ACTION_MASK;//eventAction & ;
-		index  = (eventAction & AMOTION_EVENT_ACTION_POINTER_INDEX_MASK) >> AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT;
-		count  = AMotionEvent_getPointerCount(event);
-		
-		//LOGI("AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT %d\n", AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT);
-		//flags  =  action & AMOTION_EVENT_ACTION_MASK;
-		
-		LOGI("POINTER... index=%d count=%d\n", index, count);
-		
-
-		
-		p[XX] = AMotionEvent_getX(event, index);
-		p[YY] = AMotionEvent_getY(event, index);
-		switch(touchAction)
-		{
-		case AMOTION_EVENT_ACTION_DOWN:
-			LOGI("DOWN... %.3f %.3f\n", p[XX], p[YY]);
-			for (int i = 0; i < 2; i++)
-			{
-				DeviceChannel * channel = &device->channels[i+index*3];
-				channel->inactive = false;
-				channel->state[CURRENT] = p[i]; //must set it to the start point
-				channel->state[PREVIOUS] = p[i]; //must set it to the start point
-				
-				engine->touches[index] = true;
-			}
-			return true;
-			break;
-		
-		case AMOTION_EVENT_ACTION_POINTER_DOWN:
-			LOGI("POINTER DOWN %d at %.3f, %.3f\n", index, p[XX], p[YY]);
-			for (int i = 0; i < 2; i++)
-			{
-				DeviceChannel * channel = &device->channels[i+index*3];
-				channel->inactive = false;
-				channel->state[CURRENT] = p[i]; //must set it to the start point
-				channel->state[PREVIOUS] = p[i]; //must set it to the start point
-				
-				engine->touches[index] = true;
-			}
-			return true;
-			break;
-		case AMOTION_EVENT_ACTION_UP:
-			LOGI("UP\n", index);
-			for (int i = 0; i < 2; i++)
-			{
-				DeviceChannel * channel = &device->channels[i+index*3];
-				channel->inactive = true;
-				
-				engine->touches[index] = false;
-			}
-			return true;
-			break;
-		case AMOTION_EVENT_ACTION_POINTER_UP:
-			LOGI("POINTER UP %d\n", index);
-			for (int i = 0; i < 2; i++)
-			{
-				DeviceChannel * channel = &device->channels[i+index*3];
-				channel->inactive = true;
-				
-				engine->touches[index] = false;
-			}
-			return true;
-			break;
-		case AMOTION_EVENT_ACTION_MOVE:
-			LOGI("MOVE... %.3f %.3f\n", p[XX], p[YY]);
-			LOGI("LAST... %.3f %.3f\n", device->channels[XX].state[PREVIOUS], device->channels[YY].state[PREVIOUS]);
-			
-			for (int j = 0; j < count; j++)
-			{
-				//pids are the indices of touches which persist and may not be zero-based
-				pid = AMotionEvent_getPointerId(event, j);
-				p[XX] = AMotionEvent_getX(event, pid);
-				p[YY] = AMotionEvent_getY(event, pid);
-				for (int i = 0; i < 2; i++)
-				{
-					DeviceChannel * channel = &device->channels[pid*3 + i];
-					channel->state[CURRENT] = p[i];
-				}
-				LOGI("POINTER ID=%d x=%.3f y=%.3f\n", pid, p[XX], p[YY]);
-			}
-		/*
-			for (int t = 0; t < 10; t++) //< sizeof(engine->touches) / sizeof(bool)
-			{
-				if (engine->touches[t])
-				{
-					
-						
-						//DeviceChannel_setCurrentDelta(channel);
-						//DeviceChannel_setPreviousState(channel);
-					
-					LOGI("TOUCH %d", t);
-				}
-			}
-*/
-			//LOGI("x %f\ty %f\n",p[XX], p[YY]);
-			return true;
-			
-			break;
-		case AMOTION_EVENT_ACTION_CANCEL:
-			LOGI("CANCEL");
-			break;
-		default: LOGI("WTF");
-		}
-		break;
-	}
-	return true;
-}
-
-void Android_frame(Engine * engine)
-{
-	// No display.
-	if (engine->display == NULL) return;
-	
-	engine->userUpdateFunc(engine->userUpdateArg);
-	
-	eglSwapBuffers(engine->display, engine->surface);
-}
-
-/**
- * Process the next main command.
- */
-void Android_onAppCmd(struct android_app* app, int32_t cmd)
-{
-	Engine * engine = (struct engine*)app->userData;
-	switch (cmd)
-	{
-	case APP_CMD_SAVE_STATE:
-		break;
-	case APP_CMD_INIT_WINDOW:
-		// The window is being shown, get it ready.
-		if (engine->app->window != NULL)
-		{
-			Engine_initialise(engine);
-
-			engine->userInitialiseFunc(); //TODO - call from within Engine_initialise()?
-			
-			Android_frame(engine);
-			
-			engine->initialisedWindow = true;
-		}
-		break;
-	case APP_CMD_TERM_WINDOW:
-		// The window is being hidden or closed, clean it up.
-		Window_terminate(engine);
-		break;
-	case APP_CMD_LOST_FOCUS:
-		Android_frame(engine);
-		break;
-	}
 }
 #endif//__ANDROID__
 #ifdef DESKTOP
@@ -1410,41 +1451,46 @@ void Engine_initialise(Engine * this)
 			EGL_RED_SIZE, 8,
 			EGL_NONE
 	};
-
+/*
 	EGLint attribList[] =
 	{
 			EGL_CONTEXT_CLIENT_VERSION, 2,
 			EGL_NONE
 	};
+*/
+	this->attribList[0] = EGL_CONTEXT_CLIENT_VERSION;
+	this->attribList[1] = 2;
+	this->attribList[2] = EGL_NONE;
+	
 
 	EGLint w, h, dummy, format;
 	EGLint numConfigs;
-	EGLConfig config;
-	EGLSurface surface;
-	EGLContext context;
+	
+	//EGLSurface surface;
+	//EGLContext context;
 
-	EGLDisplay display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+	this->display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
 
-	eglInitialize(display, 0, 0);
+	eglInitialize(this->display, 0, 0);
 
 	/* Here, the application chooses the configuration it desires. In this
 	 * sample, we have a very simplified selection process, where we pick
 	 * the first EGLConfig that matches our criteria */
-	eglChooseConfig(display, attribs, &config, 1, &numConfigs);
+	eglChooseConfig(this->display, attribs, &this->config, 1, &numConfigs);
 
 	/* EGL_NATIVE_VISUAL_ID is an attribute of the EGLConfig that is
 	 * guaranteed to be accepted by ANativeWindow_setBuffersGeometry().
 	 * As soon as we picked a EGLConfig, we can safely reconfigure the
 	 * ANativeWindow buffers to match, using EGL_NATIVE_VISUAL_ID. */
-	eglGetConfigAttrib(display, config, EGL_NATIVE_VISUAL_ID, &format);
+	eglGetConfigAttrib(this->display, this->config, EGL_NATIVE_VISUAL_ID, &format);
 
 	ANativeWindow_setBuffersGeometry(this->app->window, 0, 0, format);
 
-	surface = eglCreateWindowSurface(display, config, this->app->window, NULL);
+	this->surface = eglCreateWindowSurface(this->display, this->config, this->app->window, NULL);
 
-	context = eglCreateContext(display, config, NULL, attribList);
+	this->context = eglCreateContext(this->display, this->config, NULL, this->attribList);
 
-	if (eglMakeCurrent(display, surface, surface, context) == EGL_FALSE) {
+	if (eglMakeCurrent(this->display, this->surface, this->surface, this->context) == EGL_FALSE) {
 		LOGW("Unable to eglMakeCurrent");
 		return -1;
 	}
@@ -1452,12 +1498,14 @@ void Engine_initialise(Engine * this)
 		LOGI("Success eglMakeCurrent");
 
 	// Grab the width and height of the surface
-	eglQuerySurface(display, surface, EGL_WIDTH, &w);
-	eglQuerySurface(display, surface, EGL_HEIGHT, &h);
+	eglQuerySurface(this->display, this->surface, EGL_WIDTH, &w);
+	eglQuerySurface(this->display, this->surface, EGL_HEIGHT, &h);
 
+	/*
 	this->display = display;
 	this->context = context;
 	this->surface = surface;
+	*/
 	this->width = w;
 	this->height = h;
 
