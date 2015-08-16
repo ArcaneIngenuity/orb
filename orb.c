@@ -321,6 +321,7 @@ void Android_onAppCmd(struct android_app* app, int32_t cmd)
 		break;
 	}
 }
+#endif //__ANDROID__
 
 void Loop_processInputs(Engine * engine)
 {
@@ -373,7 +374,6 @@ void Loop_processInputs(Engine * engine)
 	
 	#endif//DESKTOP
 }
-
 void Loop_initialise(Engine * engine)
 {
 	#ifdef __ANDROID__
@@ -492,7 +492,7 @@ void Loop_run(Engine * engine)
 	#endif//__ANDROID__
 	#endif//DESKTOP/MOBILE
 }
-#endif//__ANDROID__
+
 #ifdef DESKTOP
 //TODO see "I/O callbacks" in stbi_image.h for loading images out of a data file
 void GLFW_errorCallback(int error, const char * description)
