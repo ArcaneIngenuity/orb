@@ -270,20 +270,22 @@ void Android_onAppCmd(struct android_app* app, int32_t cmd)
 	case APP_CMD_INIT_WINDOW:
 		LOGI("INIT_WINDOW");
 		// The window is being shown, get it ready.
-		/*
+		
 		if (engine->app->window != NULL)
 		{
+			
 			Engine_initialise(engine);
-			Android_frame(engine);
+			//Android_frame(engine);
 			engine->userInitialiseFunc(); //TODO - call from within Engine_initialise()?
 			engine->initialisedWindow = true;
+			LOGI("...INIT_WINDOW!");
 		}
-		*/
+		
+		//engine->initialisedWindow = true;
 		break;
 	
 	case APP_CMD_TERM_WINDOW:
 		// The window is being hidden or closed, clean it up.
-		
 		LOGI("TERM_WINDOW");
 		Window_terminate(engine);
 		break;
@@ -292,7 +294,7 @@ void Android_onAppCmd(struct android_app* app, int32_t cmd)
 		break;
 	case APP_CMD_LOST_FOCUS:
 		LOGI("LOST_FOCUS");
-		Android_frame(engine);
+		//Android_frame(engine);
 		break;
 		
 	case APP_CMD_PAUSE:
