@@ -245,11 +245,15 @@ int32_t Android_onInputEvent(struct android_app* app, AInputEvent* event)
 void Android_frame(Engine * engine)
 {
 	// No display.
-	if (engine->display == NULL) return;
-	
+	if (engine->display == NULL)
+	{
+		LOGI("no engine->display");
+		return;
+	}
 	engine->userUpdateFunc(engine->userUpdateArg);
 	
-	eglSwapBuffers(engine->display, engine->surface);
+	bool result = eglSwapBuffers(engine->display, engine->surface);
+	//LOGI("Swap? %d", result);
 }
 
 /**
@@ -265,6 +269,11 @@ void Android_onAppCmd(struct android_app* app, int32_t cmd)
 		LOGI("INPUT_CHANGED");
 		break;
 	case APP_CMD_SAVE_STATE:
+	/*
+		app->savedState = malloc(sizeof(struct saved_state));
+        *((struct saved_state*)engine->app->savedState) = engine->state;
+        app->savedStateSize = sizeof(struct saved_state);
+*/
 		LOGI("SAVE_STATE");
 		break;
 	case APP_CMD_INIT_WINDOW:
@@ -273,28 +282,27 @@ void Android_onAppCmd(struct android_app* app, int32_t cmd)
 		
 		if (engine->app->window != NULL)
 		{
-			
+			LOGI("engine->app->window is NULL!");
 			Engine_initialise(engine);
-			//Android_frame(engine);
+
 			engine->userInitialiseFunc(); //TODO - call from within Engine_initialise()?
-			engine->initialisedWindow = true;
+
 			LOGI("...INIT_WINDOW!");
 		}
 		
-		//engine->initialisedWindow = true;
 		break;
 	
 	case APP_CMD_TERM_WINDOW:
 		// The window is being hidden or closed, clean it up.
 		LOGI("TERM_WINDOW");
 		Window_terminate(engine);
+		//engine->initialisedWindow = false;
 		break;
 	case APP_CMD_GAINED_FOCUS:
 		LOGI("GAINED_FOCUS");
 		break;
 	case APP_CMD_LOST_FOCUS:
 		LOGI("LOST_FOCUS");
-		//Android_frame(engine);
 		break;
 		
 	case APP_CMD_PAUSE:
@@ -304,11 +312,11 @@ void Android_onAppCmd(struct android_app* app, int32_t cmd)
 		
 	case APP_CMD_RESUME:
 		LOGI("RESUME");
-		//engine->paused = false;
+		engine->paused = false; //TODO actually should be done when eglContextMakeCurrent() succeeds
 		/*
 		if (!engine->context)
 		{
-		engine->context = eglCreateContext(engine->display, engine->config, NULL, engine->attribList);
+		engine->context = eglCreateContext(engine->display, engine->config, NULL, engine->attribsList);
 
 		if (eglMakeCurrent(engine->display, engine->surface, engine->surface, engine->context) == EGL_FALSE)
 		{
@@ -426,7 +434,8 @@ void Loop_run(Engine * engine)
 		struct android_app* state = engine->app;
 		
 
-		if (engine->initialisedWindow) //TODO make this a function pointer set when cmd init occurs to avoid branch
+		//if (engine->initialisedWindow) //TODO make this a function pointer set when cmd init occurs to avoid branch
+		if (engine->app->window)
 		{
 
 		//we must flush input to get rid of old deltas / states or they will persist
@@ -473,7 +482,8 @@ void Loop_run(Engine * engine)
 		}
 		} 
 		*/
-		if (engine->initialisedWindow) //TODO make this a function pointer set when cmd init occurs to avoid branch
+		//if (engine->initialisedWindow) //TODO make this a function pointer set when cmd init occurs to avoid branch
+		if (engine->app->window)
 		{
 
 		//we must flush input to get rid of old deltas / states or they will persist
@@ -1446,24 +1456,20 @@ void Engine_initialise(Engine * this)
 	// Setup OpenGL ES 2
 	// http://stackoverflow.com/questions/11478957/how-do-i-create-an-opengl-es-2-context-in-a-native-activity
 
-	const EGLint attribs[] = {
-			EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT, //important
-			EGL_BLUE_SIZE, 8,
-			EGL_GREEN_SIZE, 8,
-			EGL_RED_SIZE, 8,
-			EGL_NONE
+	const EGLint configAttribs[] = {
+		//EGL_CONTEXT_CLIENT_VERSION, 2,
+		EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
+		EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT, //important
+		EGL_BLUE_SIZE, 8,
+		EGL_GREEN_SIZE, 8,
+		EGL_RED_SIZE, 8,
+		EGL_ALPHA_SIZE, 8,
+		EGL_DEPTH_SIZE, 16,
+		EGL_NONE
 	};
-/*
-	EGLint attribList[] =
-	{
-			EGL_CONTEXT_CLIENT_VERSION, 2,
-			EGL_NONE
-	};
-*/
-	this->attribList[0] = EGL_CONTEXT_CLIENT_VERSION;
-	this->attribList[1] = 2;
-	this->attribList[2] = EGL_NONE;
-	
+
+	//this->attribsList = attribs;
+	//memcpy(this->attribsList, attribs, sizeof(attribs));
 
 	EGLint w, h, dummy, format;
 	EGLint numConfigs;
@@ -1473,27 +1479,39 @@ void Engine_initialise(Engine * this)
 
 	this->display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
 
-	eglInitialize(this->display, 0, 0);
-
+	bool r = eglInitialize(this->display, 0, 0);
+	LOGI("r=%d", r);
 	/* Here, the application chooses the configuration it desires. In this
 	 * sample, we have a very simplified selection process, where we pick
 	 * the first EGLConfig that matches our criteria */
-	eglChooseConfig(this->display, attribs, &this->config, 1, &numConfigs);
+	eglChooseConfig(this->display, configAttribs, &this->config, 1, &numConfigs);
 
+	LOGI("numConfigs=%d",numConfigs);
+	
 	/* EGL_NATIVE_VISUAL_ID is an attribute of the EGLConfig that is
 	 * guaranteed to be accepted by ANativeWindow_setBuffersGeometry().
 	 * As soon as we picked a EGLConfig, we can safely reconfigure the
 	 * ANativeWindow buffers to match, using EGL_NATIVE_VISUAL_ID. */
-	eglGetConfigAttrib(this->display, this->config, EGL_NATIVE_VISUAL_ID, &format);
-
+	bool re = eglGetConfigAttrib(this->display, this->config, EGL_NATIVE_VISUAL_ID, &format);
+	LOGI("re=%d", re);
 	ANativeWindow_setBuffersGeometry(this->app->window, 0, 0, format);
 
 	this->surface = eglCreateWindowSurface(this->display, this->config, this->app->window, NULL);
 
-	this->context = eglCreateContext(this->display, this->config, NULL, this->attribList);
+	const EGLint contextAttribs[] = {
+		EGL_CONTEXT_CLIENT_VERSION, 2,
+		EGL_NONE
+	};
+	this->context = eglCreateContext(this->display, this->config, NULL, contextAttribs);
 
-	if (eglMakeCurrent(this->display, this->surface, this->surface, this->context) == EGL_FALSE) {
-		LOGW("Unable to eglMakeCurrent");
+	if (eglMakeCurrent(this->display, this->surface, this->surface, this->context) == EGL_FALSE)
+	{
+		//LOGW("Unable to eglMakeCurrent");
+		EGLint err = eglGetError();
+		LOGW( "Unable to eglMakeCurrent %d", err );
+			
+			
+			
 		return -1;
 	}
 	else
@@ -1503,18 +1521,13 @@ void Engine_initialise(Engine * this)
 	eglQuerySurface(this->display, this->surface, EGL_WIDTH, &w);
 	eglQuerySurface(this->display, this->surface, EGL_HEIGHT, &h);
 
-	/*
-	this->display = display;
-	this->context = context;
-	this->surface = surface;
-	*/
 	this->width = w;
 	this->height = h;
 
 	// Initialize GL state.
 	//glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_FASTEST);
-	glEnable(GL_CULL_FACE);
-	glDisable(GL_DEPTH_TEST);
+	//glEnable(GL_CULL_FACE);
+	//glDisable(GL_DEPTH_TEST);
 	glViewport(0, 0, w, h);
 	
 	//EXTENSIONS

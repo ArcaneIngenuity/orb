@@ -682,7 +682,7 @@ typedef struct Engine
 	EGLSurface surface;
 	EGLContext context;
 	EGLConfig config;
-	EGLint attribList[3];
+	EGLint * attribsList;
 	bool initialisedWindow;
 	
 	bool touches[10]; //DEV
