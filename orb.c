@@ -62,6 +62,7 @@ void DeviceChannel_setPreviousState(DeviceChannel * this)
 void Input_executeList(InputList * list, void * target)
 {
 	float pos = 0, neg = 0;
+
 	for (int i = 0; i < list->length; i++)
 	{
 		Input * input = &list->entries[i];
@@ -75,10 +76,10 @@ void Input_executeList(InputList * list, void * target)
 			case STATE: //only call response when channel state [CURRENT] is non-zero
 				
 				if (input->channelPos)
-					pos = input->channelPos->state[CURRENT] * !input->channelPos->inactive;
+					pos = input->channelPos->state[CURRENT] * input->channelPos->active;
 				
 				if (input->channelNeg) //optional negative input contributor
-					neg = input->channelNeg->state[CURRENT] * !input->channelNeg->inactive;
+					neg = input->channelNeg->state[CURRENT] * input->channelNeg->active;
 
 				input->state[PREVIOUS] = input->state[CURRENT];
 				input->state[CURRENT]  = pos - neg; //assumes both are abs magnitudes
@@ -90,12 +91,12 @@ void Input_executeList(InputList * list, void * target)
 			case DELTA: //only call response when channel delta [CURRENT] is non-zero
 				
 				if (input->channelPos)
-					pos = input->channelPos->delta[CURRENT] * !input->channelPos->inactive;
+					pos = input->channelPos->delta[CURRENT] * input->channelPos->active;
 				
 				if (input->channelNeg) //optional negative input contributor
-					neg = input->channelNeg->delta[CURRENT] * !input->channelNeg->inactive;
+					neg = input->channelNeg->delta[CURRENT] * input->channelNeg->active;
 				
-				
+				//LOGI("p=%f c=%f act=%f d=%f", input->delta[PREVIOUS], input->delta[CURRENT], input->channelPos->active, pos - neg);
 				input->delta[PREVIOUS] = input->delta[CURRENT];
 				input->delta[CURRENT]  = pos - neg; //assumes both are abs magnitudes
 				
@@ -141,18 +142,18 @@ int32_t Android_onInputEvent(struct android_app* app, AInputEvent* event)
 		//LOGI("AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT %d\n", AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT);
 		//flags  =  action & AMOTION_EVENT_ACTION_MASK;
 		
-		LOGI("POINTER... index=%d count=%d\n", index, count);
+		//LOGI("POINTER... index=%d count=%d\n", index, count);
 		
 		p[XX] = AMotionEvent_getX(event, index);
 		p[YY] = AMotionEvent_getY(event, index);
 		switch(touchAction)
 		{
 		case AMOTION_EVENT_ACTION_DOWN:
-			LOGI("DOWN... %.3f %.3f\n", p[XX], p[YY]);
+			//LOGI("DOWN... %.3f %.3f\n", p[XX], p[YY]);
 			for (int i = 0; i < 2; i++)
 			{
 				DeviceChannel * channel = &device->channels[i+index*3];
-				channel->inactive = false;
+				channel->active = true;
 				channel->state[CURRENT] = p[i]; //must set it to the start point
 				channel->state[PREVIOUS] = p[i]; //must set it to the start point
 				
@@ -162,11 +163,11 @@ int32_t Android_onInputEvent(struct android_app* app, AInputEvent* event)
 			break;
 		
 		case AMOTION_EVENT_ACTION_POINTER_DOWN:
-			LOGI("POINTER DOWN %d at %.3f, %.3f\n", index, p[XX], p[YY]);
+			//LOGI("POINTER DOWN %d at %.3f, %.3f\n", index, p[XX], p[YY]);
 			for (int i = 0; i < 2; i++)
 			{
 				DeviceChannel * channel = &device->channels[i+index*3];
-				channel->inactive = false;
+				channel->active = true;
 				channel->state[CURRENT] = p[i]; //must set it to the start point
 				channel->state[PREVIOUS] = p[i]; //must set it to the start point
 				
@@ -175,30 +176,30 @@ int32_t Android_onInputEvent(struct android_app* app, AInputEvent* event)
 			return true;
 			break;
 		case AMOTION_EVENT_ACTION_UP:
-			LOGI("UP\n", index);
+			//LOGI("UP\n", index);
 			for (int i = 0; i < 2; i++)
 			{
 				DeviceChannel * channel = &device->channels[i+index*3];
-				channel->inactive = true;
+				channel->active = false;
 				
 				engine->touches[index] = false;
 			}
 			return true;
 			break;
 		case AMOTION_EVENT_ACTION_POINTER_UP:
-			LOGI("POINTER UP %d\n", index);
+			//LOGI("POINTER UP %d\n", index);
 			for (int i = 0; i < 2; i++)
 			{
 				DeviceChannel * channel = &device->channels[i+index*3];
-				channel->inactive = true;
+				channel->active = false;
 				
 				engine->touches[index] = false;
 			}
 			return true;
 			break;
 		case AMOTION_EVENT_ACTION_MOVE:
-			LOGI("MOVE... %.3f %.3f\n", p[XX], p[YY]);
-			LOGI("LAST... %.3f %.3f\n", device->channels[XX].state[PREVIOUS], device->channels[YY].state[PREVIOUS]);
+			//LOGI("MOVE... %.3f %.3f\n", p[XX], p[YY]);
+			//LOGI("LAST... %.3f %.3f\n", device->channels[XX].state[PREVIOUS], device->channels[YY].state[PREVIOUS]);
 			
 			for (int j = 0; j < count; j++)
 			{
@@ -211,7 +212,7 @@ int32_t Android_onInputEvent(struct android_app* app, AInputEvent* event)
 					DeviceChannel * channel = &device->channels[pid*3 + i];
 					channel->state[CURRENT] = p[i];
 				}
-				LOGI("POINTER ID=%d x=%.3f y=%.3f\n", pid, p[XX], p[YY]);
+				//LOGI("POINTER ID=%d x=%.3f y=%.3f\n", pid, p[XX], p[YY]);
 			}
 		/*
 			for (int t = 0; t < 10; t++) //< sizeof(engine->touches) / sizeof(bool)
@@ -265,6 +266,11 @@ void Android_onAppCmd(struct android_app* app, int32_t cmd)
 	Engine * engine = (struct engine*)app->userData;
 	switch (cmd)
 	{
+	case APP_CMD_CONFIG_CHANGED:
+		Window_terminate(engine);
+		Engine_initialise(engine);
+		engine->userInitialiseFunc(); //TODO - call from within Engine_initialise()?
+		break;
 	case APP_CMD_INPUT_CHANGED:
 		LOGI("INPUT_CHANGED");
 		break;
@@ -299,7 +305,7 @@ void Android_onAppCmd(struct android_app* app, int32_t cmd)
 		//engine->initialisedWindow = false;
 		break;
 	case APP_CMD_GAINED_FOCUS:
-		LOGI("GAINED_FOCUS");
+		//LOGI("GAINED_FOCUS");
 		break;
 	case APP_CMD_LOST_FOCUS:
 		LOGI("LOST_FOCUS");
@@ -434,7 +440,7 @@ void Loop_run(Engine * engine)
 		struct android_app* state = engine->app;
 		
 
-		//if (engine->initialisedWindow) //TODO make this a function pointer set when cmd init occurs to avoid branch
+		//TODO make this a function pointer set when cmd init occurs to avoid branch
 		if (engine->app->window)
 		{
 
@@ -461,28 +467,11 @@ void Loop_run(Engine * engine)
 			if (state->destroyRequested != 0)
 			{
 				Window_terminate(engine);
+				LOGI("state destroy has been req");
 				exit(0);
 			}
 		}
 		
-		/*
-		int getEventResult = -1;
-
-		while (AInputQueue_hasEvents (app->inputQueue) || (getEventResult = AInputQueue_getEvent (app->inputQueue, &event)) >= 0)
-		{
-			if (getEventResult < 0)
-			{
-			getEventResult = AInputQueue_getEvent 	(app->inputQueue, &event);
-		}
-
-		if (getEventResult >= 0)
-		{
-		[...standard_handling...]
-		getEventResult = -1;
-		}
-		} 
-		*/
-		//if (engine->initialisedWindow) //TODO make this a function pointer set when cmd init occurs to avoid branch
 		if (engine->app->window)
 		{
 

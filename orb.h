@@ -564,7 +564,7 @@ typedef struct DeviceChannel
 	float delta[2];
 	InputBasis basis;
 	//bool blocked;
-	bool inactive; //framework-private, particularly useful for multi-touch or devices that have disconnected but are waiting on clean-up by OS etc.
+	bool active; //framework-private, particularly useful for multi-touch or devices that have disconnected but are waiting on clean-up by OS etc.
 } DeviceChannel;
 
 typedef struct Device
