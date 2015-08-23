@@ -129,6 +129,10 @@ int32_t Android_onInputEvent(struct android_app* app, AInputEvent* event)
 	switch (AInputEvent_getType(event))
 	{
 	case AINPUT_EVENT_TYPE_KEY:
+		if (AKeyEvent_getKeyCode(event) == AKEYCODE_BACK)
+		{
+			return 1;
+		}
 		return 0; //allows back button to work
 		break;
 	
@@ -468,7 +472,7 @@ void Loop_run(Engine * engine)
 			{
 				Window_terminate(engine);
 				LOGI("state destroy has been req");
-				exit(0);
+				//exit(0);
 			}
 		}
 		
