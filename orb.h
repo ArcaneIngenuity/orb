@@ -695,7 +695,7 @@ typedef struct Engine
 	int32_t touchY;
 	
 	void (*userInitialiseFunc)();
-	
+	bool   userInitialised;
 	void (*userUpdateFunc)(void *);
 	void * userUpdateArg;
 	

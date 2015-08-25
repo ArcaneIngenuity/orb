@@ -267,13 +267,12 @@ void Android_frame(Engine * engine)
  //PRIVATE
 void Android_onAppCmd(struct android_app* app, int32_t cmd)
 {
-	Engine * engine = (struct engine*)app->userData;
+	Engine * engine = (Engine *)app->userData;
 	switch (cmd)
 	{
 	case APP_CMD_CONFIG_CHANGED:
-		Window_terminate(engine);
-		Engine_initialise(engine);
-		engine->userInitialiseFunc(); //TODO - call from within Engine_initialise()?
+		LOGI("CONFIG_CHANGED");
+
 		break;
 	case APP_CMD_INPUT_CHANGED:
 		LOGI("INPUT_CHANGED");
@@ -294,9 +293,12 @@ void Android_onAppCmd(struct android_app* app, int32_t cmd)
 		{
 			LOGI("engine->app->window is NULL!");
 			Engine_initialise(engine);
-
-			engine->userInitialiseFunc(); //TODO - call from within Engine_initialise()?
-
+			//if (!engine->userInitialised)
+			{
+				engine->userInitialiseFunc(); //TODO - call from within Engine_initialise()?
+				engine->userInitialised = true;
+			}
+			
 			LOGI("...INIT_WINDOW!");
 		}
 		
@@ -309,7 +311,7 @@ void Android_onAppCmd(struct android_app* app, int32_t cmd)
 		//engine->initialisedWindow = false;
 		break;
 	case APP_CMD_GAINED_FOCUS:
-		//LOGI("GAINED_FOCUS");
+		LOGI("GAINED_FOCUS");
 		break;
 	case APP_CMD_LOST_FOCUS:
 		LOGI("LOST_FOCUS");
@@ -409,6 +411,7 @@ void Loop_initialise(Engine * engine)
 	#ifdef DESKTOP
 	Engine_initialise(engine); 
 	engine->userInitialiseFunc(); //!!! For now, Ctrl_init must go after Engine_initialise(), because it still relies on glfw for input AND glReadPixels
+	engine->userInitialised = true;
 	#endif//DESKTOP
 }
 
