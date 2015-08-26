@@ -683,7 +683,6 @@ typedef struct Engine
 	EGLContext context;
 	EGLConfig config;
 	EGLint * attribsList;
-	bool initialisedWindow;
 	
 	bool touches[10]; //DEV
 	bool paused;
@@ -696,8 +695,12 @@ typedef struct Engine
 	
 	void (*userInitialiseFunc)();
 	bool   userInitialised;
+	
 	void (*userUpdateFunc)(void *);
 	void * userUpdateArg;
+	
+	void (*userSuspendFunc)(void *);
+	void * userSuspendArg;
 	
 	float deltaSec;
 } Engine;

@@ -308,7 +308,7 @@ void Android_onAppCmd(struct android_app* app, int32_t cmd)
 		// The window is being hidden or closed, clean it up.
 		LOGI("TERM_WINDOW");
 		Window_terminate(engine);
-		//engine->initialisedWindow = false;
+		engine->userSuspendFunc(engine->userSuspendArg);
 		break;
 	case APP_CMD_GAINED_FOCUS:
 		LOGI("GAINED_FOCUS");
