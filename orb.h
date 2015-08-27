@@ -773,7 +773,7 @@ int32_t Android_onInputEvent(struct android_app* app, AInputEvent* event);
 */
 
 //globals
-Engine engine; //allows every other file to ref as extern, and no requirement to include main from renderer etc.
+//Engine engine; //allows every other file to ref as extern, and no requirement to include main from renderer etc.
 #ifdef DESKTOP
 GLFWwindow * window; //TODO include as void * window in Engine
 #endif//DESKTOP
