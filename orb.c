@@ -59,7 +59,7 @@ void DeviceChannel_setPreviousState(DeviceChannel * this)
 
 #undef  CURT_SOURCE
 
-void Input_executeList(InputList * list, void * target)
+void Input_executeList(InputList * list, void * target, bool debug)
 {
 	float pos = 0, neg = 0;
 
@@ -96,7 +96,7 @@ void Input_executeList(InputList * list, void * target)
 				if (input->channelNeg) //optional negative input contributor
 					neg = input->channelNeg->delta[CURRENT] * input->channelNeg->active;
 				
-				//LOGI("p=%f c=%f act=%f d=%f", input->delta[PREVIOUS], input->delta[CURRENT], input->channelPos->active, pos - neg);
+				if (debug) LOGI("p=%f c=%f act=%d d=%f\n", input->delta[PREVIOUS], input->delta[CURRENT], input->channelPos->active, pos - neg);
 				input->delta[PREVIOUS] = input->delta[CURRENT];
 				input->delta[CURRENT]  = pos - neg; //assumes both are abs magnitudes
 				
@@ -356,9 +356,9 @@ void Loop_processInputs(Engine * engine)
 	for (int i = 0; i < 2; i++)
 	{
 		channel = &mouse->channels[i];
+		DeviceChannel_setPreviousState(channel);
 		channel->state[CURRENT] = p[i];
 		DeviceChannel_setCurrentDelta(channel);
-		DeviceChannel_setPreviousState(channel);
 	}
 	//LOGI("x=%.3f y=%.3f\n", p[XX], p[YY]);
 	
@@ -366,33 +366,35 @@ void Loop_processInputs(Engine * engine)
 	
 	//space
 	channel = &keyboard->channels[0];
-	channel->state[CURRENT] = glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS;
-	DeviceChannel_setCurrentDelta(channel);
 	DeviceChannel_setPreviousState(channel);
+	channel->state[CURRENT] = (float)glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS;
+	DeviceChannel_setCurrentDelta(channel);
 	
+	//LOGI("sc=%.3f sp=%.3f sd=%.3f\n", channel->state[CURRENT], channel->state[PREVIOUS], channel->delta[CURRENT]);
 	//S
 	channel = &keyboard->channels[1];
+	DeviceChannel_setPreviousState(channel);
 	channel->state[CURRENT] = glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS;
 	DeviceChannel_setCurrentDelta(channel);
-	DeviceChannel_setPreviousState(channel);
 	
 	//W
 	channel = &keyboard->channels[2];
+	DeviceChannel_setPreviousState(channel);
 	channel->state[CURRENT] = glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS;
 	DeviceChannel_setCurrentDelta(channel);
-	DeviceChannel_setPreviousState(channel);
 	
 	//D
 	channel = &keyboard->channels[3];
+	DeviceChannel_setPreviousState(channel);
 	channel->state[CURRENT] = glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS;
 	DeviceChannel_setCurrentDelta(channel);
-	DeviceChannel_setPreviousState(channel);
 	
 	//A
 	channel = &keyboard->channels[4];
+	DeviceChannel_setPreviousState(channel);
 	channel->state[CURRENT] = glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS;
 	DeviceChannel_setCurrentDelta(channel);
-	DeviceChannel_setPreviousState(channel);
+	
 	
 	#endif//DESKTOP
 }

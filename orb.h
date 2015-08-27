@@ -617,7 +617,7 @@ const struct Input inputEmpty;
 
 #undef  CURT_HEADER
 
-void Input_executeList(InputList * list, void * model);
+void Input_executeList(InputList * list, void * model, bool debug);
 bool Input_equals(Input a, Input b); //TODO make equals a function pointer in list.h
 typedef struct Capabilities
 {
