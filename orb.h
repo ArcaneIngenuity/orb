@@ -773,10 +773,9 @@ int32_t Android_onInputEvent(struct android_app* app, AInputEvent* event);
 */
 
 //globals
-//TODO merge all into an Orb object? then call e.g. Engine_one(orb->engine, ...);
-Engine engine;
+Engine engine; //allows every other file to ref as extern, and no requirement to include main from renderer etc.
 #ifdef DESKTOP
-GLFWwindow * window;
+GLFWwindow * window; //TODO include as void * window in Engine
 #endif//DESKTOP
 #ifdef __ANDROID__
 #endif//__ANDROID__

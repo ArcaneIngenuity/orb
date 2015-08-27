@@ -9,16 +9,16 @@ void Window_terminate(Engine * engine)
 	window = NULL; //JIC
 	#elif MOBILE
 	#ifdef __ANDROID__
-	if (engine->display != EGL_NO_DISPLAY) {
+	if (engine->display != EGL_NO_DISPLAY)
+	{
 		eglMakeCurrent(engine->display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
-		LOGI("AA");
-		if (engine->context != EGL_NO_CONTEXT) {
+		if (engine->context != EGL_NO_CONTEXT)
+		{
 			eglDestroyContext(engine->display, engine->context);
-			LOGI("BB");
 		}
-		if (engine->surface != EGL_NO_SURFACE) {
+		if (engine->surface != EGL_NO_SURFACE)
+		{
 			eglDestroySurface(engine->display, engine->surface);
-			LOGI("CC");
 		}
 		eglTerminate(engine->display);
 	}
@@ -239,7 +239,7 @@ int32_t Android_onInputEvent(struct android_app* app, AInputEvent* event)
 		case AMOTION_EVENT_ACTION_CANCEL:
 			LOGI("CANCEL");
 			break;
-		default: LOGI("WTF");
+		default: LOGI("Unknown input event type.");
 		}
 		break;
 	}
@@ -360,7 +360,7 @@ void Loop_processInputs(Engine * engine)
 		DeviceChannel_setCurrentDelta(channel);
 		DeviceChannel_setPreviousState(channel);
 	}
-	LOGI("x=%.3f y=%.3f\n", p[XX], p[YY]);
+	//LOGI("x=%.3f y=%.3f\n", p[XX], p[YY]);
 	
 	Device * keyboard = (Device *) get(&engine->devicesByName, *(uint64_t *) pad("keyboard"));
 	
@@ -863,7 +863,6 @@ void Texture_applyParameters(Texture * this)
 	LOGI("e0 %s\n",glGetError());
 	glBindTexture(GL_TEXTURE_2D, this->id);
 	LOGI("e1 %s\n",glGetError());
-	LOGI("b.2\n");
 	for (uint8_t p = 0; p < this->intParametersByName.count; p++)
 	{
 		GLenum key = this->intParametersByName.keys[p];
@@ -878,7 +877,6 @@ void Texture_applyParameters(Texture * this)
 		glTexParameteri(this->dimensions, key, value);
 		//LOGI("berrror %s\n",glGetError());
 	}
-	LOGI("b.3\n");
 	//TODO loop over float params
 }
 //------------------GLBuffer------------------//
@@ -1476,20 +1474,20 @@ void Engine_initialise(Engine * this)
 	this->display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
 
 	bool r = eglInitialize(this->display, 0, 0);
-	LOGI("r=%d", r);
+	//LOGI("r=%d", r);
 	/* Here, the application chooses the configuration it desires. In this
 	 * sample, we have a very simplified selection process, where we pick
 	 * the first EGLConfig that matches our criteria */
 	eglChooseConfig(this->display, configAttribs, &this->config, 1, &numConfigs);
 
-	LOGI("numConfigs=%d",numConfigs);
+	//LOGI("numConfigs=%d",numConfigs);
 	
 	/* EGL_NATIVE_VISUAL_ID is an attribute of the EGLConfig that is
 	 * guaranteed to be accepted by ANativeWindow_setBuffersGeometry().
 	 * As soon as we picked a EGLConfig, we can safely reconfigure the
 	 * ANativeWindow buffers to match, using EGL_NATIVE_VISUAL_ID. */
 	bool re = eglGetConfigAttrib(this->display, this->config, EGL_NATIVE_VISUAL_ID, &format);
-	LOGI("re=%d", re);
+	//LOGI("re=%d", re);
 	ANativeWindow_setBuffersGeometry(this->app->window, 0, 0, format);
 
 	this->surface = eglCreateWindowSurface(this->display, this->config, this->app->window, NULL);
@@ -1588,8 +1586,7 @@ void Engine_initialise(Engine * this)
 	voidPtrMap_create(&this->materialsByName, 	HH_MATERIALS_MAX, 	&this->materialKeys, 	(void *)&this->materials, NULL);
 	voidPtrMap_create(&this->meshesByName, 		HH_MESHES_MAX, 		&this->meshKeys,	 	(void *)&this->meshes, NULL);
 	voidPtrMap_create(&this->devicesByName, 	2, 					&this->deviceKeys,	 	(void *)&this->devices, NULL);
-	LOGI("map count=%i", this->programsByName.count);
-
+	
 	//reintroduce if we bring transform list back into this library.
 	//Renderable * renderable = &this->renderable;
 	//for (int i = 0; i < transformsCount; i++)
@@ -1659,22 +1656,14 @@ char* Text_load(char* filename)
 	//should be portable - http://stackoverflow.com/questions/14002954/c-programming-how-to-read-the-whole-file-contents-into-a-buffer
 	
 	char * str;
-	
-	
-			
 
-	//#ifdef DESKTOP
 	FILE *file = fopen(filename, "rb"); //open for reading
 	if (file)
 	{
-
-		
 		fseek(file, 0, SEEK_END); //seek to end
 		long fileSize = ftell(file); //get current position in stream
 		fseek(file, 0, SEEK_SET); //seek to start
 		LOGI(filename);
-		LOGI("? %ld", fileSize);
-		
 		
 		str = malloc(fileSize + 1); //allocate enough room for file + null terminator (\0)
 
@@ -1702,12 +1691,6 @@ char* Text_load(char* filename)
 	}
 	else
 		LOGI("File not found: %s", filename);
-	
-	
-	
-	//#elif __ANDROID__
-
-	//#endif //platforms
 	
 	return str;
 }
