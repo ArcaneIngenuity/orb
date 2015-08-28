@@ -503,6 +503,8 @@ typedef struct Program
 	Shader geometry;
 	Shader fragment;
 	
+	//const char * attributeLocations[16]; //TODO see Program_construct() for similar quandary WRT size.
+	//List attributeLocationsList;
 	//inputs: as vertex shader's inputs?
 
 	//output (frame or render) buffer
@@ -749,7 +751,7 @@ GLuint GLBuffer_create(
 	GLenum usage
 );
 
-void Shader_load(Engine * this, const char * path, const char * name);
+void Shader_load(Engine * this, const char * path, const char * name);//, const char ** attributeLocations);
 void Shader_construct(Shader * this);
 void Program_construct(Program * this, GLuint vertex_shader, GLuint fragment_shader); //we pass in a reference to a position in an already-defined array. This lets us keep our structures local.
 

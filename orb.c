@@ -898,7 +898,7 @@ GLuint GLBuffer_create(
 }
 
 //------------------Shader------------------//
-void Shader_load(Engine * this, const char * path, const char * name)
+void Shader_load(Engine * this, const char * path, const char * name)//, const char ** attributeLocations)
 {
 	Shader * vert;
 	Shader * frag;
@@ -950,13 +950,6 @@ void Shader_load(Engine * this, const char * path, const char * name)
 	LOGI("f=%s\n", fragKey);
 	//TODO check whether key exists
 	put(&this->shadersByName, *(uint64_t *) fragKey, frag); //diffusef
-	
-	program = malloc(sizeof(Program));
-	Program_construct(program, vert->id, frag->id);
-	program->topology = GL_TRIANGLES;
-	LOGI("program %d", program);
-	//TODO check whether key exists
-	put(&this->programsByName, *(uint64_t *) pad(name), program);
 }
 
 void Shader_construct(Shader * this)//, const char* shader_str, GLenum shader_type)
@@ -1088,6 +1081,7 @@ void Program_construct(Program * this, GLuint vertex_shader, GLuint fragment_sha
 	
 	glBindAttribLocation(id, 0, "position");
 	glBindAttribLocation(id, 1, "texcoord");
+	glBindAttribLocation(id, 2, "lighting");
 	
 	// Link program and check success
 	glLinkProgram(id);
@@ -1256,7 +1250,7 @@ void Engine_createScreenQuad(Engine * this, Mesh * mesh, GLuint positionVertexAt
 		Attribute * attribute = &mesh->attribute[i];
 		
 		glGenBuffers(1, &attribute->id);
-		Attribute_submitData(attribute, &engine);
+		Attribute_submitData(attribute, this);
 	}
 
 	if (this->capabilities.vao)
