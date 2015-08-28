@@ -9,12 +9,15 @@ void Window_terminate(Engine * engine)
 	window = NULL; //JIC
 	#elif MOBILE
 	#ifdef __ANDROID__
-	if (engine->display != EGL_NO_DISPLAY) {
+	if (engine->display != EGL_NO_DISPLAY)
+	{
 		eglMakeCurrent(engine->display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
-		if (engine->context != EGL_NO_CONTEXT) {
+		if (engine->context != EGL_NO_CONTEXT)
+		{
 			eglDestroyContext(engine->display, engine->context);
 		}
-		if (engine->surface != EGL_NO_SURFACE) {
+		if (engine->surface != EGL_NO_SURFACE)
+		{
 			eglDestroySurface(engine->display, engine->surface);
 		}
 		eglTerminate(engine->display);
@@ -56,9 +59,10 @@ void DeviceChannel_setPreviousState(DeviceChannel * this)
 
 #undef  CURT_SOURCE
 
-void Input_executeList(InputList * list, void * target)
+void Input_executeList(InputList * list, void * target, bool debug)
 {
 	float pos = 0, neg = 0;
+
 	for (int i = 0; i < list->length; i++)
 	{
 		Input * input = &list->entries[i];
@@ -72,10 +76,10 @@ void Input_executeList(InputList * list, void * target)
 			case STATE: //only call response when channel state [CURRENT] is non-zero
 				
 				if (input->channelPos)
-					pos = input->channelPos->state[CURRENT] * !input->channelPos->inactive;
+					pos = input->channelPos->state[CURRENT] * input->channelPos->active;
 				
 				if (input->channelNeg) //optional negative input contributor
-					neg = input->channelNeg->state[CURRENT] * !input->channelNeg->inactive;
+					neg = input->channelNeg->state[CURRENT] * input->channelNeg->active;
 
 				input->state[PREVIOUS] = input->state[CURRENT];
 				input->state[CURRENT]  = pos - neg; //assumes both are abs magnitudes
@@ -87,12 +91,12 @@ void Input_executeList(InputList * list, void * target)
 			case DELTA: //only call response when channel delta [CURRENT] is non-zero
 				
 				if (input->channelPos)
-					pos = input->channelPos->delta[CURRENT] * !input->channelPos->inactive;
+					pos = input->channelPos->delta[CURRENT] * input->channelPos->active;
 				
 				if (input->channelNeg) //optional negative input contributor
-					neg = input->channelNeg->delta[CURRENT] * !input->channelNeg->inactive;
+					neg = input->channelNeg->delta[CURRENT] * input->channelNeg->active;
 				
-				
+				if (debug) LOGI("p=%f c=%f act=%d d=%f\n", input->delta[PREVIOUS], input->delta[CURRENT], input->channelPos->active, pos - neg);
 				input->delta[PREVIOUS] = input->delta[CURRENT];
 				input->delta[CURRENT]  = pos - neg; //assumes both are abs magnitudes
 				
@@ -109,6 +113,238 @@ bool Input_equals(Input a, Input b) //TODO make equals a function pointer in lis
 	return false; //DEV no members yet
 }
 
+#ifdef __ANDROID__
+//PRIVATE
+int32_t Android_onInputEvent(struct android_app* app, AInputEvent* event)
+{
+	Engine * engine = (Engine *)app->userData;
+	Device * device = (Device *) get(&engine->devicesByName, *(uint64_t *) pad("cursor"));
+	
+	int32_t count, eventAction, pid;
+	uint32_t touchAction;
+	size_t index;
+
+	float p[2];
+	
+	switch (AInputEvent_getType(event))
+	{
+	case AINPUT_EVENT_TYPE_KEY:
+		if (AKeyEvent_getKeyCode(event) == AKEYCODE_BACK)
+		{
+			return 1;
+		}
+		return 0; //allows back button to work
+		break;
+	
+	case AINPUT_EVENT_TYPE_MOTION:
+	
+		eventAction = AMotionEvent_getAction(event);
+		touchAction = eventAction & AMOTION_EVENT_ACTION_MASK;//eventAction & ;
+		index  = (eventAction & AMOTION_EVENT_ACTION_POINTER_INDEX_MASK) >> AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT;
+		count  = AMotionEvent_getPointerCount(event);
+		
+		//LOGI("AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT %d\n", AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT);
+		//flags  =  action & AMOTION_EVENT_ACTION_MASK;
+		
+		//LOGI("POINTER... index=%d count=%d\n", index, count);
+		
+		p[XX] = AMotionEvent_getX(event, index);
+		p[YY] = AMotionEvent_getY(event, index);
+		switch(touchAction)
+		{
+		case AMOTION_EVENT_ACTION_DOWN:
+			//LOGI("DOWN... %.3f %.3f\n", p[XX], p[YY]);
+			for (int i = 0; i < 2; i++)
+			{
+				DeviceChannel * channel = &device->channels[i+index*3];
+				channel->active = true;
+				channel->state[CURRENT] = p[i]; //must set it to the start point
+				channel->state[PREVIOUS] = p[i]; //must set it to the start point
+				
+				engine->touches[index] = true;
+			}
+			return true;
+			break;
+		
+		case AMOTION_EVENT_ACTION_POINTER_DOWN:
+			//LOGI("POINTER DOWN %d at %.3f, %.3f\n", index, p[XX], p[YY]);
+			for (int i = 0; i < 2; i++)
+			{
+				DeviceChannel * channel = &device->channels[i+index*3];
+				channel->active = true;
+				channel->state[CURRENT] = p[i]; //must set it to the start point
+				channel->state[PREVIOUS] = p[i]; //must set it to the start point
+				
+				engine->touches[index] = true;
+			}
+			return true;
+			break;
+		case AMOTION_EVENT_ACTION_UP:
+			//LOGI("UP\n", index);
+			for (int i = 0; i < 2; i++)
+			{
+				DeviceChannel * channel = &device->channels[i+index*3];
+				channel->active = false;
+				
+				engine->touches[index] = false;
+			}
+			return true;
+			break;
+		case AMOTION_EVENT_ACTION_POINTER_UP:
+			//LOGI("POINTER UP %d\n", index);
+			for (int i = 0; i < 2; i++)
+			{
+				DeviceChannel * channel = &device->channels[i+index*3];
+				channel->active = false;
+				
+				engine->touches[index] = false;
+			}
+			return true;
+			break;
+		case AMOTION_EVENT_ACTION_MOVE:
+			//LOGI("MOVE... %.3f %.3f\n", p[XX], p[YY]);
+			//LOGI("LAST... %.3f %.3f\n", device->channels[XX].state[PREVIOUS], device->channels[YY].state[PREVIOUS]);
+			
+			for (int j = 0; j < count; j++)
+			{
+				//pids are the indices of touches which persist and may not be zero-based
+				pid = AMotionEvent_getPointerId(event, j);
+				p[XX] = AMotionEvent_getX(event, pid);
+				p[YY] = AMotionEvent_getY(event, pid);
+				for (int i = 0; i < 2; i++)
+				{
+					DeviceChannel * channel = &device->channels[pid*3 + i];
+					channel->state[CURRENT] = p[i];
+				}
+				//LOGI("POINTER ID=%d x=%.3f y=%.3f\n", pid, p[XX], p[YY]);
+			}
+		/*
+			for (int t = 0; t < 10; t++) //< sizeof(engine->touches) / sizeof(bool)
+			{
+				if (engine->touches[t])
+				{
+					
+						
+						//DeviceChannel_setCurrentDelta(channel);
+						//DeviceChannel_setPreviousState(channel);
+					
+					LOGI("TOUCH %d", t);
+				}
+			}
+*/
+			//LOGI("x %f\ty %f\n",p[XX], p[YY]);
+			return true;
+			
+			break;
+		case AMOTION_EVENT_ACTION_CANCEL:
+			LOGI("CANCEL");
+			break;
+		default: LOGI("Unknown input event type.");
+		}
+		break;
+	}
+	return true;
+}
+
+//PRIVATE
+void Android_frame(Engine * engine)
+{
+	// No display.
+	if (engine->display == NULL)
+	{
+		LOGI("no engine->display");
+		return;
+	}
+	engine->userUpdateFunc(engine->userUpdateArg);
+	
+	bool result = eglSwapBuffers(engine->display, engine->surface);
+	//LOGI("Swap? %d", result);
+}
+
+/**
+ * Process the next main command.
+ */
+ //PRIVATE
+void Android_onAppCmd(struct android_app* app, int32_t cmd)
+{
+	Engine * engine = (Engine *)app->userData;
+	switch (cmd)
+	{
+	case APP_CMD_CONFIG_CHANGED:
+		LOGI("CONFIG_CHANGED");
+
+		break;
+	case APP_CMD_INPUT_CHANGED:
+		LOGI("INPUT_CHANGED");
+		break;
+	case APP_CMD_SAVE_STATE:
+	/*
+		app->savedState = malloc(sizeof(struct saved_state));
+        *((struct saved_state*)engine->app->savedState) = engine->state;
+        app->savedStateSize = sizeof(struct saved_state);
+*/
+		LOGI("SAVE_STATE");
+		break;
+	case APP_CMD_INIT_WINDOW:
+		LOGI("INIT_WINDOW");
+		// The window is being shown, get it ready.
+		
+		if (engine->app->window != NULL)
+		{
+			LOGI("engine->app->window is NULL!");
+			Engine_initialise(engine);
+			//if (!engine->userInitialised)
+			{
+				engine->userInitialiseFunc(); //TODO - call from within Engine_initialise()?
+				engine->userInitialised = true;
+			}
+			
+			LOGI("...INIT_WINDOW!");
+		}
+		
+		break;
+	
+	case APP_CMD_TERM_WINDOW:
+		// The window is being hidden or closed, clean it up.
+		LOGI("TERM_WINDOW");
+		Window_terminate(engine);
+		engine->userSuspendFunc(engine->userSuspendArg);
+		break;
+	case APP_CMD_GAINED_FOCUS:
+		LOGI("GAINED_FOCUS");
+		break;
+	case APP_CMD_LOST_FOCUS:
+		LOGI("LOST_FOCUS");
+		break;
+		
+	case APP_CMD_PAUSE:
+		LOGI("PAUSE");
+		engine->paused = true;
+		break;
+		
+	case APP_CMD_RESUME:
+		LOGI("RESUME");
+		engine->paused = false; //TODO actually should be done when eglContextMakeCurrent() succeeds
+		/*
+		if (!engine->context)
+		{
+		engine->context = eglCreateContext(engine->display, engine->config, NULL, engine->attribsList);
+
+		if (eglMakeCurrent(engine->display, engine->surface, engine->surface, engine->context) == EGL_FALSE)
+		{
+			LOGW("Unable to eglMakeCurrent");
+			//return -1;
+		}
+		else
+			LOGI("Success eglMakeCurrent");
+		
+		}
+		*/
+		break;
+	}
+}
+#endif //__ANDROID__
+
 void Loop_processInputs(Engine * engine)
 {
 	#ifdef DESKTOP //glfw!
@@ -120,47 +356,48 @@ void Loop_processInputs(Engine * engine)
 	for (int i = 0; i < 2; i++)
 	{
 		channel = &mouse->channels[i];
+		DeviceChannel_setPreviousState(channel);
 		channel->state[CURRENT] = p[i];
 		DeviceChannel_setCurrentDelta(channel);
-		DeviceChannel_setPreviousState(channel);
 	}
-	LOGI("x=%.3f y=%.3f\n", p[XX], p[YY]);
+	//LOGI("x=%.3f y=%.3f\n", p[XX], p[YY]);
 	
 	Device * keyboard = (Device *) get(&engine->devicesByName, *(uint64_t *) pad("keyboard"));
 	
 	//space
 	channel = &keyboard->channels[0];
-	channel->state[CURRENT] = glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS;
-	DeviceChannel_setCurrentDelta(channel);
 	DeviceChannel_setPreviousState(channel);
+	channel->state[CURRENT] = (float)glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS;
+	DeviceChannel_setCurrentDelta(channel);
 	
+	//LOGI("sc=%.3f sp=%.3f sd=%.3f\n", channel->state[CURRENT], channel->state[PREVIOUS], channel->delta[CURRENT]);
 	//S
 	channel = &keyboard->channels[1];
+	DeviceChannel_setPreviousState(channel);
 	channel->state[CURRENT] = glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS;
 	DeviceChannel_setCurrentDelta(channel);
-	DeviceChannel_setPreviousState(channel);
 	
 	//W
 	channel = &keyboard->channels[2];
+	DeviceChannel_setPreviousState(channel);
 	channel->state[CURRENT] = glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS;
 	DeviceChannel_setCurrentDelta(channel);
-	DeviceChannel_setPreviousState(channel);
 	
 	//D
 	channel = &keyboard->channels[3];
+	DeviceChannel_setPreviousState(channel);
 	channel->state[CURRENT] = glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS;
 	DeviceChannel_setCurrentDelta(channel);
-	DeviceChannel_setPreviousState(channel);
 	
 	//A
 	channel = &keyboard->channels[4];
+	DeviceChannel_setPreviousState(channel);
 	channel->state[CURRENT] = glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS;
 	DeviceChannel_setCurrentDelta(channel);
-	DeviceChannel_setPreviousState(channel);
+	
 	
 	#endif//DESKTOP
 }
-
 void Loop_initialise(Engine * engine)
 {
 	#ifdef __ANDROID__
@@ -176,6 +413,7 @@ void Loop_initialise(Engine * engine)
 	#ifdef DESKTOP
 	Engine_initialise(engine); 
 	engine->userInitialiseFunc(); //!!! For now, Ctrl_init must go after Engine_initialise(), because it still relies on glfw for input AND glReadPixels
+	engine->userInitialised = true;
 	#endif//DESKTOP
 }
 
@@ -211,7 +449,8 @@ void Loop_run(Engine * engine)
 		struct android_app* state = engine->app;
 		
 
-		if (engine->initialisedWindow) //TODO make this a function pointer set when cmd init occurs to avoid branch
+		//TODO make this a function pointer set when cmd init occurs to avoid branch
+		if (engine->app->window)
 		{
 
 		//we must flush input to get rid of old deltas / states or they will persist
@@ -237,28 +476,12 @@ void Loop_run(Engine * engine)
 			if (state->destroyRequested != 0)
 			{
 				Window_terminate(engine);
-				exit(0);
+				LOGI("state destroy has been req");
+				//exit(0);
 			}
 		}
 		
-		/*
-		int getEventResult = -1;
-
-		while (AInputQueue_hasEvents (app->inputQueue) || (getEventResult = AInputQueue_getEvent (app->inputQueue, &event)) >= 0)
-		{
-			if (getEventResult < 0)
-			{
-			getEventResult = AInputQueue_getEvent 	(app->inputQueue, &event);
-		}
-
-		if (getEventResult >= 0)
-		{
-		[...standard_handling...]
-		getEventResult = -1;
-		}
-		} 
-		*/
-		if (engine->initialisedWindow) //TODO make this a function pointer set when cmd init occurs to avoid branch
+		if (engine->app->window)
 		{
 
 		//we must flush input to get rid of old deltas / states or they will persist
@@ -273,185 +496,13 @@ void Loop_run(Engine * engine)
 		}
 		
 		//TODO if accumulated sufficient time
-		Android_frame(engine);
+		if (!engine->paused)
+			Android_frame(engine);
 	}
 	#endif//__ANDROID__
 	#endif//DESKTOP/MOBILE
 }
 
-#ifdef __ANDROID__
-int32_t Android_onInputEvent(struct android_app* app, AInputEvent* event)
-{
-	Engine * engine = (Engine *)app->userData;
-	Device * device = (Device *) get(&engine->devicesByName, *(uint64_t *) pad("cursor"));
-	
-	int32_t count, eventAction, pid;
-	uint32_t touchAction;
-	size_t index;
-
-	float p[2];
-	
-	switch (AInputEvent_getType(event))
-	{
-	case AINPUT_EVENT_TYPE_KEY:
-		break;
-	
-	case AINPUT_EVENT_TYPE_MOTION:
-	
-		
-		eventAction = AMotionEvent_getAction(event);
-		touchAction = eventAction & AMOTION_EVENT_ACTION_MASK;//eventAction & ;
-		index  = (eventAction & AMOTION_EVENT_ACTION_POINTER_INDEX_MASK) >> AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT;
-		count  = AMotionEvent_getPointerCount(event);
-		
-		//LOGI("AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT %d\n", AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT);
-		//flags  =  action & AMOTION_EVENT_ACTION_MASK;
-		
-		LOGI("POINTER... index=%d count=%d\n", index, count);
-		
-
-		
-		p[XX] = AMotionEvent_getX(event, index);
-		p[YY] = AMotionEvent_getY(event, index);
-		switch(touchAction)
-		{
-		case AMOTION_EVENT_ACTION_DOWN:
-			LOGI("DOWN... %.3f %.3f\n", p[XX], p[YY]);
-			for (int i = 0; i < 2; i++)
-			{
-				DeviceChannel * channel = &device->channels[i+index*3];
-				channel->inactive = false;
-				channel->state[CURRENT] = p[i]; //must set it to the start point
-				channel->state[PREVIOUS] = p[i]; //must set it to the start point
-				
-				engine->touches[index] = true;
-			}
-			return true;
-			break;
-		
-		case AMOTION_EVENT_ACTION_POINTER_DOWN:
-			LOGI("POINTER DOWN %d at %.3f, %.3f\n", index, p[XX], p[YY]);
-			for (int i = 0; i < 2; i++)
-			{
-				DeviceChannel * channel = &device->channels[i+index*3];
-				channel->inactive = false;
-				channel->state[CURRENT] = p[i]; //must set it to the start point
-				channel->state[PREVIOUS] = p[i]; //must set it to the start point
-				
-				engine->touches[index] = true;
-			}
-			return true;
-			break;
-		case AMOTION_EVENT_ACTION_UP:
-			LOGI("UP\n", index);
-			for (int i = 0; i < 2; i++)
-			{
-				DeviceChannel * channel = &device->channels[i+index*3];
-				channel->inactive = true;
-				
-				engine->touches[index] = false;
-			}
-			return true;
-			break;
-		case AMOTION_EVENT_ACTION_POINTER_UP:
-			LOGI("POINTER UP %d\n", index);
-			for (int i = 0; i < 2; i++)
-			{
-				DeviceChannel * channel = &device->channels[i+index*3];
-				channel->inactive = true;
-				
-				engine->touches[index] = false;
-			}
-			return true;
-			break;
-		case AMOTION_EVENT_ACTION_MOVE:
-			LOGI("MOVE... %.3f %.3f\n", p[XX], p[YY]);
-			LOGI("LAST... %.3f %.3f\n", device->channels[XX].state[PREVIOUS], device->channels[YY].state[PREVIOUS]);
-			
-			for (int j = 0; j < count; j++)
-			{
-				//pids are the indices of touches which persist and may not be zero-based
-				pid = AMotionEvent_getPointerId(event, j);
-				p[XX] = AMotionEvent_getX(event, pid);
-				p[YY] = AMotionEvent_getY(event, pid);
-				for (int i = 0; i < 2; i++)
-				{
-					DeviceChannel * channel = &device->channels[pid*3 + i];
-					channel->state[CURRENT] = p[i];
-				}
-				LOGI("POINTER ID=%d x=%.3f y=%.3f\n", pid, p[XX], p[YY]);
-			}
-		/*
-			for (int t = 0; t < 10; t++) //< sizeof(engine->touches) / sizeof(bool)
-			{
-				if (engine->touches[t])
-				{
-					
-						
-						//DeviceChannel_setCurrentDelta(channel);
-						//DeviceChannel_setPreviousState(channel);
-					
-					LOGI("TOUCH %d", t);
-				}
-			}
-*/
-			//LOGI("x %f\ty %f\n",p[XX], p[YY]);
-			return true;
-			
-			break;
-		case AMOTION_EVENT_ACTION_CANCEL:
-			LOGI("CANCEL");
-			break;
-		default: LOGI("WTF");
-		}
-		break;
-	}
-	return true;
-}
-
-void Android_frame(Engine * engine)
-{
-	// No display.
-	if (engine->display == NULL) return;
-	
-	engine->userUpdateFunc(engine->userUpdateArg);
-	
-	eglSwapBuffers(engine->display, engine->surface);
-}
-
-/**
- * Process the next main command.
- */
-void Android_onAppCmd(struct android_app* app, int32_t cmd)
-{
-	Engine * engine = (struct engine*)app->userData;
-	switch (cmd)
-	{
-	case APP_CMD_SAVE_STATE:
-		break;
-	case APP_CMD_INIT_WINDOW:
-		// The window is being shown, get it ready.
-		if (engine->app->window != NULL)
-		{
-			Engine_initialise(engine);
-
-			engine->userInitialiseFunc(); //TODO - call from within Engine_initialise()?
-			
-			Android_frame(engine);
-			
-			engine->initialisedWindow = true;
-		}
-		break;
-	case APP_CMD_TERM_WINDOW:
-		// The window is being hidden or closed, clean it up.
-		Window_terminate(engine);
-		break;
-	case APP_CMD_LOST_FOCUS:
-		Android_frame(engine);
-		break;
-	}
-}
-#endif//__ANDROID__
 #ifdef DESKTOP
 //TODO see "I/O callbacks" in stbi_image.h for loading images out of a data file
 void GLFW_errorCallback(int error, const char * description)
@@ -814,7 +865,6 @@ void Texture_applyParameters(Texture * this)
 	LOGI("e0 %s\n",glGetError());
 	glBindTexture(GL_TEXTURE_2D, this->id);
 	LOGI("e1 %s\n",glGetError());
-	LOGI("b.2\n");
 	for (uint8_t p = 0; p < this->intParametersByName.count; p++)
 	{
 		GLenum key = this->intParametersByName.keys[p];
@@ -829,7 +879,6 @@ void Texture_applyParameters(Texture * this)
 		glTexParameteri(this->dimensions, key, value);
 		//LOGI("berrror %s\n",glGetError());
 	}
-	LOGI("b.3\n");
 	//TODO loop over float params
 }
 //------------------GLBuffer------------------//
@@ -1403,68 +1452,78 @@ void Engine_initialise(Engine * this)
 	// Setup OpenGL ES 2
 	// http://stackoverflow.com/questions/11478957/how-do-i-create-an-opengl-es-2-context-in-a-native-activity
 
-	const EGLint attribs[] = {
-			EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT, //important
-			EGL_BLUE_SIZE, 8,
-			EGL_GREEN_SIZE, 8,
-			EGL_RED_SIZE, 8,
-			EGL_NONE
+	const EGLint configAttribs[] = {
+		//EGL_CONTEXT_CLIENT_VERSION, 2,
+		EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
+		EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT, //important
+		EGL_BLUE_SIZE, 8,
+		EGL_GREEN_SIZE, 8,
+		EGL_RED_SIZE, 8,
+		EGL_ALPHA_SIZE, 8,
+		EGL_DEPTH_SIZE, 16,
+		EGL_NONE
 	};
 
-	EGLint attribList[] =
-	{
-			EGL_CONTEXT_CLIENT_VERSION, 2,
-			EGL_NONE
-	};
+	//this->attribsList = attribs;
+	//memcpy(this->attribsList, attribs, sizeof(attribs));
 
 	EGLint w, h, dummy, format;
 	EGLint numConfigs;
-	EGLConfig config;
-	EGLSurface surface;
-	EGLContext context;
+	
+	//EGLSurface surface;
+	//EGLContext context;
 
-	EGLDisplay display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+	this->display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
 
-	eglInitialize(display, 0, 0);
-
+	bool r = eglInitialize(this->display, 0, 0);
+	//LOGI("r=%d", r);
 	/* Here, the application chooses the configuration it desires. In this
 	 * sample, we have a very simplified selection process, where we pick
 	 * the first EGLConfig that matches our criteria */
-	eglChooseConfig(display, attribs, &config, 1, &numConfigs);
+	eglChooseConfig(this->display, configAttribs, &this->config, 1, &numConfigs);
 
+	//LOGI("numConfigs=%d",numConfigs);
+	
 	/* EGL_NATIVE_VISUAL_ID is an attribute of the EGLConfig that is
 	 * guaranteed to be accepted by ANativeWindow_setBuffersGeometry().
 	 * As soon as we picked a EGLConfig, we can safely reconfigure the
 	 * ANativeWindow buffers to match, using EGL_NATIVE_VISUAL_ID. */
-	eglGetConfigAttrib(display, config, EGL_NATIVE_VISUAL_ID, &format);
-
+	bool re = eglGetConfigAttrib(this->display, this->config, EGL_NATIVE_VISUAL_ID, &format);
+	//LOGI("re=%d", re);
 	ANativeWindow_setBuffersGeometry(this->app->window, 0, 0, format);
 
-	surface = eglCreateWindowSurface(display, config, this->app->window, NULL);
+	this->surface = eglCreateWindowSurface(this->display, this->config, this->app->window, NULL);
 
-	context = eglCreateContext(display, config, NULL, attribList);
+	const EGLint contextAttribs[] = {
+		EGL_CONTEXT_CLIENT_VERSION, 2,
+		EGL_NONE
+	};
+	this->context = eglCreateContext(this->display, this->config, NULL, contextAttribs);
 
-	if (eglMakeCurrent(display, surface, surface, context) == EGL_FALSE) {
-		LOGW("Unable to eglMakeCurrent");
+	if (eglMakeCurrent(this->display, this->surface, this->surface, this->context) == EGL_FALSE)
+	{
+		//LOGW("Unable to eglMakeCurrent");
+		EGLint err = eglGetError();
+		LOGW( "Unable to eglMakeCurrent %d", err );
+			
+			
+			
 		return -1;
 	}
 	else
 		LOGI("Success eglMakeCurrent");
 
 	// Grab the width and height of the surface
-	eglQuerySurface(display, surface, EGL_WIDTH, &w);
-	eglQuerySurface(display, surface, EGL_HEIGHT, &h);
+	eglQuerySurface(this->display, this->surface, EGL_WIDTH, &w);
+	eglQuerySurface(this->display, this->surface, EGL_HEIGHT, &h);
 
-	this->display = display;
-	this->context = context;
-	this->surface = surface;
 	this->width = w;
 	this->height = h;
 
 	// Initialize GL state.
 	//glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_FASTEST);
-	glEnable(GL_CULL_FACE);
-	glDisable(GL_DEPTH_TEST);
+	//glEnable(GL_CULL_FACE);
+	//glDisable(GL_DEPTH_TEST);
 	glViewport(0, 0, w, h);
 	
 	//EXTENSIONS
@@ -1529,8 +1588,7 @@ void Engine_initialise(Engine * this)
 	voidPtrMap_create(&this->materialsByName, 	HH_MATERIALS_MAX, 	&this->materialKeys, 	(void *)&this->materials, NULL);
 	voidPtrMap_create(&this->meshesByName, 		HH_MESHES_MAX, 		&this->meshKeys,	 	(void *)&this->meshes, NULL);
 	voidPtrMap_create(&this->devicesByName, 	2, 					&this->deviceKeys,	 	(void *)&this->devices, NULL);
-	LOGI("map count=%i", this->programsByName.count);
-
+	
 	//reintroduce if we bring transform list back into this library.
 	//Renderable * renderable = &this->renderable;
 	//for (int i = 0; i < transformsCount; i++)
@@ -1600,22 +1658,14 @@ char* Text_load(char* filename)
 	//should be portable - http://stackoverflow.com/questions/14002954/c-programming-how-to-read-the-whole-file-contents-into-a-buffer
 	
 	char * str;
-	
-	
-			
 
-	//#ifdef DESKTOP
 	FILE *file = fopen(filename, "rb"); //open for reading
 	if (file)
 	{
-
-		
 		fseek(file, 0, SEEK_END); //seek to end
 		long fileSize = ftell(file); //get current position in stream
 		fseek(file, 0, SEEK_SET); //seek to start
 		LOGI(filename);
-		LOGI("? %ld", fileSize);
-		
 		
 		str = malloc(fileSize + 1); //allocate enough room for file + null terminator (\0)
 
@@ -1643,12 +1693,6 @@ char* Text_load(char* filename)
 	}
 	else
 		LOGI("File not found: %s", filename);
-	
-	
-	
-	//#elif __ANDROID__
-
-	//#endif //platforms
 	
 	return str;
 }

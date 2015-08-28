@@ -39,7 +39,7 @@
 #elif __ANDROID__
 	#include <android/sensor.h>
 	//#include <android/log.h>
-	#include <android_native_app_glue.h>
+	#include "android_native_app_glue.h"
 
 	#include <android/api-level.h>
 	
@@ -564,7 +564,7 @@ typedef struct DeviceChannel
 	float delta[2];
 	InputBasis basis;
 	//bool blocked;
-	bool inactive; //framework-private, particularly useful for multi-touch or devices that have disconnected but are waiting on clean-up by OS etc.
+	bool active; //framework-private, particularly useful for multi-touch or devices that have disconnected but are waiting on clean-up by OS etc.
 } DeviceChannel;
 
 typedef struct Device
@@ -617,7 +617,7 @@ const struct Input inputEmpty;
 
 #undef  CURT_HEADER
 
-void Input_executeList(InputList * list, void * model);
+void Input_executeList(InputList * list, void * model, bool debug);
 bool Input_equals(Input a, Input b); //TODO make equals a function pointer in list.h
 typedef struct Capabilities
 {
@@ -681,9 +681,11 @@ typedef struct Engine
 	EGLDisplay display;
 	EGLSurface surface;
 	EGLContext context;
-	bool initialisedWindow;
+	EGLConfig config;
+	EGLint * attribsList;
 	
 	bool touches[10]; //DEV
+	bool paused;
 	#endif//__ANDROID__
 	
 	int32_t width;
@@ -692,9 +694,13 @@ typedef struct Engine
 	int32_t touchY;
 	
 	void (*userInitialiseFunc)();
+	bool   userInitialised;
 	
 	void (*userUpdateFunc)(void *);
 	void * userUpdateArg;
+	
+	void (*userSuspendFunc)(void *);
+	void * userSuspendArg;
 	
 	float deltaSec;
 } Engine;
@@ -757,17 +763,19 @@ char* Text_load(char* filename);
 void GLFW_errorCallback(int error, const char * description);
 bool GLTool_isExtensionSupported(const char * extension); //redundant, see GLFW
 
+/*
+//Private:
 #ifdef __ANDROID__
 void 	Android_frame(Engine * engine);
 void 	Android_onAppCmd(struct android_app* app, int32_t cmd);
 int32_t Android_onInputEvent(struct android_app* app, AInputEvent* event);
 #endif//__ANDROID__
+*/
 
 //globals
-//TODO merge all into an Orb object? then call e.g. Engine_one(orb->engine, ...);
-Engine engine;
+//Engine engine; //allows every other file to ref as extern, and no requirement to include main from renderer etc.
 #ifdef DESKTOP
-GLFWwindow * window;
+GLFWwindow * window; //TODO include as void * window in Engine
 #endif//DESKTOP
 #ifdef __ANDROID__
 #endif//__ANDROID__
