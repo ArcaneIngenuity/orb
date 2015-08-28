@@ -313,7 +313,6 @@ typedef struct Attribute
 	//count is in the Mesh holding the Attribute.
 	void * vertex; //ShaderAttribute will know how to read it, depending on which attribute it is.
 	GLuint id; //buffer id
-    //args for glVertexAttribPointer()
     GLuint index; //attribute location
 	GLint components; //"size" in glVertexAttribPointer 
 	GLenum type; //as glVertexAttribPointer
@@ -714,6 +713,10 @@ Program * Engine_getCurrentProgram(Engine * this);
 
 void Mesh_calculateNormals(Mesh * this);
 
+void Attribute_submitData(Attribute * attribute, Engine * engine);
+void Attribute_prepare(Attribute * attribute);
+void Attribute_tryPrepare(Attribute * attribute, Engine * engine);
+
 Texture * Texture_create();
 Texture * Texture_load(const char * filename);
 Texture * Texture_loadFromMemory(const char * filename);
@@ -758,8 +761,6 @@ void Engine_createScreenQuad(Engine * this, Mesh * mesh, GLuint positionVertexAt
 	int w, int h,
 	int rcx, int rcy
 );
-void Engine_prepareVertexAttribute(Engine * this, Attribute * attribute);
-void Engine_tryPrepareVertexAttribute(Engine * this, Attribute * attribute);
 float Engine_smoothstep(float t);
 
 char* Text_load(char* filename);

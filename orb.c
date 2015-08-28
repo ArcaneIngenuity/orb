@@ -1256,26 +1256,11 @@ void Engine_createScreenQuad(Engine * this, Mesh * mesh, GLuint positionVertexAt
 		Attribute * attribute = &mesh->attribute[i];
 		
 		glGenBuffers(1, &attribute->id);
-		glBindBuffer(GL_ARRAY_BUFFER, attribute->id);
-		glBufferData(GL_ARRAY_BUFFER, attribute->vertexBytes, attribute->vertex, attribute->usage);
-		Engine_tryPrepareVertexAttribute(this, attribute);
+		Attribute_submitData(attribute, &engine);
 	}
 
 	if (this->capabilities.vao)
 		glBindVertexArray(0); //unbind
-}
-
-void Engine_prepareVertexAttribute(Engine * this, Attribute * attribute)
-{
-	//provide data / layout info; "take buffer that is bound at the time called and associates that buffer with the current VAO"
-	glVertexAttribPointer(attribute->index, attribute->components, attribute->type, attribute->normalized, attribute->stride, attribute->pointer); 
-	glEnableVertexAttribArray(attribute->index); //enable attribute for use
-}
-
-void Engine_tryPrepareVertexAttribute(Engine * this, Attribute * attribute)
-{
-	if (this->capabilities.vao)
-		Engine_prepareVertexAttribute(this, attribute);
 }
 
 /*
@@ -1327,7 +1312,7 @@ void Engine_one(Engine * this, Renderable * renderable, const GLfloat * matM, co
 			
 			glBindBuffer(GL_ARRAY_BUFFER, attribute->id);
 			
-			Engine_prepareVertexAttribute(this, attribute);
+			Attribute_prepare(attribute);
 		}
 	}
 	
@@ -1365,7 +1350,7 @@ void Engine_oneUI(Engine * this, Renderable * renderable, const GLfloat * matM)
 			
 			glBindBuffer(GL_ARRAY_BUFFER, attribute->id);
 			
-			Engine_prepareVertexAttribute(this, attribute);
+			Attribute_prepare(attribute);
 		}
 	}
 
@@ -1709,4 +1694,24 @@ char* Text_load(char* filename)
 float Engine_smoothstep(float t)
 {
 	return 3 * t * t - 2 * t * t * t;
+}
+
+void Attribute_prepare(Attribute * attribute)
+{
+	//provide data / layout info; "take buffer that is bound at the time called and associates that buffer with the current VAO"
+	glVertexAttribPointer(attribute->index, attribute->components, attribute->type, attribute->normalized, attribute->stride, attribute->pointer); 
+	glEnableVertexAttribArray(attribute->index); //enable attribute for use
+}
+
+void Attribute_tryPrepare(Attribute * attribute, Engine * engine)
+{
+	if (engine->capabilities.vao)
+		Attribute_prepare(attribute);
+}
+
+void Attribute_submitData(Attribute * attribute, Engine * engine)
+{
+	glBindBuffer(GL_ARRAY_BUFFER, attribute->id);
+    glBufferData(GL_ARRAY_BUFFER, attribute->vertexBytes, attribute->vertex, attribute->usage);
+	Attribute_tryPrepare(attribute, &engine);
 }
