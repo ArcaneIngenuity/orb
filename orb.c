@@ -1236,6 +1236,8 @@ void Engine_createScreenQuad(Engine * this, Mesh * mesh, GLuint positionVertexAt
     texcoord->pointer = 0;
     position->vertexBytes = positionByteCount;
     texcoord->vertexBytes = texcoordByteCount;
+    position->usage = GL_DYNAMIC_DRAW;
+    texcoord->usage = GL_DYNAMIC_DRAW;
 	
 	LOGI("0index %d %d\n", sizeof(_index), mesh->indexCount * 2);
 	LOGI("0pos   %d %d\n", sizeof(_position), mesh->vertexCount * 4);
@@ -1255,7 +1257,7 @@ void Engine_createScreenQuad(Engine * this, Mesh * mesh, GLuint positionVertexAt
 		
 		glGenBuffers(1, &attribute->id);
 		glBindBuffer(GL_ARRAY_BUFFER, attribute->id);
-		glBufferData(GL_ARRAY_BUFFER, attribute->vertexBytes, attribute->vertex, GL_DYNAMIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, attribute->vertexBytes, attribute->vertex, attribute->usage);
 		Engine_tryPrepareVertexAttribute(this, attribute);
 	}
 
@@ -1344,7 +1346,7 @@ void Engine_one(Engine * this, Renderable * renderable, const GLfloat * matM, co
 	
 	if (this->capabilities.vao)
 	{
-		glBindBuffer(GL_ARRAY_BUFFER,0);
+		glBindBuffer(GL_ARRAY_BUFFER, 0); //vertex attribute array target no longer bound
 		glBindVertexArray(0);
 	}
 }
@@ -1379,7 +1381,7 @@ void Engine_oneUI(Engine * this, Renderable * renderable, const GLfloat * matM)
 
 	if (this->capabilities.vao)
 	{
-		glBindBuffer(GL_ARRAY_BUFFER,0);
+		glBindBuffer(GL_ARRAY_BUFFER, 0); //vertex attribute array target no longer bound
 		glBindVertexArray(0);
 	}
 }

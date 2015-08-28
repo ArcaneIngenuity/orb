@@ -321,6 +321,7 @@ typedef struct Attribute
 	GLsizei stride; //as glVertexAttribPointer
 	const GLvoid * pointer;
 	GLsizeiptr vertexBytes; //"size" in glBufferData
+	GLenum  usage; //as glBufferData
 
 } Attribute;
 
