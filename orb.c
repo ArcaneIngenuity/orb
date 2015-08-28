@@ -1070,7 +1070,7 @@ void Shader_validateAttributeInterface(Shader * out, Shader * in)
 
 //------------------Program------------------//
 
-void Program_construct(Program * this, GLuint vertex_shader, GLuint fragment_shader)
+void Program_construct(Program * this, GLuint vertex_shader, GLuint fragment_shader, const char * attributeLocations[], size_t attributeLocationsCount)
 {
 	GLuint id = this->id = glCreateProgram();
 	
@@ -1079,9 +1079,13 @@ void Program_construct(Program * this, GLuint vertex_shader, GLuint fragment_sha
 	glAttachShader(id, fragment_shader);
 	LOGI("gl error %i\n", glGetError());
 	
-	glBindAttribLocation(id, 0, "position");
-	glBindAttribLocation(id, 1, "texcoord");
-	glBindAttribLocation(id, 2, "lighting");
+	//TODO should these be stored in a list or something, then applied from there? this allows flexibility if re-specifying (unlikely)
+	for (int i = 0; i < attributeLocationsCount; i++)
+		glBindAttribLocation(id, i, attributeLocations[i]);
+	
+	//this->attributeLocationsList.entries = this->attributeLocations;
+	//this->attributeLocationsList.capacity = 16; //TODO query GL for how many max? or use sizeof(program->attributeLocations)
+	//this->attributeLocationsList.fail = NULL;
 	
 	// Link program and check success
 	glLinkProgram(id);

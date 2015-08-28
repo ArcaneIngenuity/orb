@@ -751,9 +751,10 @@ GLuint GLBuffer_create(
 	GLenum usage
 );
 
-void Shader_load(Engine * this, const char * path, const char * name);//, const char ** attributeLocations);
+void Shader_load(Engine * this, const char * path, const char * name);
 void Shader_construct(Shader * this);
-void Program_construct(Program * this, GLuint vertex_shader, GLuint fragment_shader); //we pass in a reference to a position in an already-defined array. This lets us keep our structures local.
+
+void Program_construct(Program * this, GLuint vertex_shader, GLuint fragment_shader, const char * attributeLocations[], size_t attributeLocationsCount);
 
 void Engine_clear();
 void Engine_many(Program * program, RenderableSet * renderableSet, const GLfloat * matVP);
