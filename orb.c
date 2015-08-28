@@ -1183,8 +1183,12 @@ void Engine_createScreenQuad(Engine * this, Mesh * mesh, GLuint positionVertexAt
 	mesh->indexCount = 6;
 	mesh->vertexCount = 4;
 	mesh->index = malloc(sizeof(GLushort) * mesh->indexCount);
-	mesh->attribute[positionVertexAttributeIndex].vertex = malloc(sizeof(GLfloat) * mesh->vertexCount * TEXCOORD_COMPONENTS);
-	mesh->attribute[texcoordVertexAttributeIndex].vertex = malloc(sizeof(GLfloat) * mesh->vertexCount * TEXCOORD_COMPONENTS);
+	
+	int32_t positionByteCount = sizeof(GLfloat) * mesh->vertexCount * TEXCOORD_COMPONENTS;
+	int32_t texcoordByteCount = sizeof(GLfloat) * mesh->vertexCount * TEXCOORD_COMPONENTS;
+	
+	mesh->attribute[positionVertexAttributeIndex].vertex = malloc(positionByteCount);
+	mesh->attribute[texcoordVertexAttributeIndex].vertex = malloc(texcoordByteCount);
 	mesh->attributeCount = 2; //TODO should add the attributes through a method that tracks count.
 	
 	Attribute * position = &mesh->attribute[positionVertexAttributeIndex];
@@ -1220,8 +1224,8 @@ void Engine_createScreenQuad(Engine * this, Mesh * mesh, GLuint positionVertexAt
 	
     position->index = positionVertexAttributeIndex;
     texcoord->index = texcoordVertexAttributeIndex;
-    position->size = TEXCOORD_COMPONENTS;
-    texcoord->size = TEXCOORD_COMPONENTS;
+    position->components = TEXCOORD_COMPONENTS;
+    texcoord->components = TEXCOORD_COMPONENTS;
     position->type = GL_FLOAT; //actually could be int byte?
     texcoord->type = GL_FLOAT; //actually could be int byte?
     position->normalized = GL_FALSE;
@@ -1230,6 +1234,8 @@ void Engine_createScreenQuad(Engine * this, Mesh * mesh, GLuint positionVertexAt
     texcoord->stride = 0;
     position->pointer = 0;
     texcoord->pointer = 0;
+    position->vertexBytes = positionByteCount;
+    texcoord->vertexBytes = texcoordByteCount;
 	
 	LOGI("0index %d %d\n", sizeof(_index), mesh->indexCount * 2);
 	LOGI("0pos   %d %d\n", sizeof(_position), mesh->vertexCount * 4);
@@ -1238,37 +1244,38 @@ void Engine_createScreenQuad(Engine * this, Mesh * mesh, GLuint positionVertexAt
 	if (this->capabilities.vao || this->debugDesktopNoVAO)
 	{
 		//gen & bind
-		glGenVertexArrays(1, &(mesh->vao)); //VAO frees us from having to call glGetAttribLocation & glVertexAttribPointer on each modify op
+		glGenVertexArrays(1, &(mesh->vao)); //VAO de-necessitates glGetAttribLocation & glVertexAttribPointer on each modify op
 		glBindVertexArray(mesh->vao);
 	}
 
-	//each attribute... TODO for loop using attribute members set above.
-	
-	//positions
-	glGenBuffers(1, &position->id);
-	glBindBuffer(GL_ARRAY_BUFFER, position->id);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * mesh->vertexCount * TEXCOORD_COMPONENTS, position->vertex, GL_DYNAMIC_DRAW);
-	if (this->capabilities.vao)
+	//each attribute...
+	for (int i = 0; i < mesh->attributeCount; i++)
 	{
-		glVertexAttribPointer(positionVertexAttributeIndex, TEXCOORD_COMPONENTS, GL_FLOAT, GL_FALSE, 0, 0); //provide data / layout info; "take buffer that is bound at the time called and associates that buffer with the current VAO"
-		glEnableVertexAttribArray(positionVertexAttributeIndex); //enable attribute for use
+		Attribute * attribute = &mesh->attribute[i];
+		
+		glGenBuffers(1, &attribute->id);
+		glBindBuffer(GL_ARRAY_BUFFER, attribute->id);
+		glBufferData(GL_ARRAY_BUFFER, attribute->vertexBytes, attribute->vertex, GL_DYNAMIC_DRAW);
+		Engine_tryPrepareVertexAttribute(this, attribute);
 	}
-	//texcoords
-	glGenBuffers(1, &texcoord->id);
-	glBindBuffer(GL_ARRAY_BUFFER, texcoord->id);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * mesh->vertexCount * TEXCOORD_COMPONENTS, texcoord->vertex, GL_DYNAMIC_DRAW);
+
 	if (this->capabilities.vao)
-	{
-		glVertexAttribPointer(texcoordVertexAttributeIndex, TEXCOORD_COMPONENTS, GL_FLOAT, GL_FALSE, 0, 0); //provide data / layout info; "take buffer that is bound at the time called and associates that buffer with the current VAO"
-		glEnableVertexAttribArray(texcoordVertexAttributeIndex); //enable attribute for use
-	}
-	
-	if (this->capabilities.vao)
-	{
-		//unbind
-		glBindVertexArray(0);
-	}
+		glBindVertexArray(0); //unbind
 }
+
+void Engine_prepareVertexAttribute(Engine * this, Attribute * attribute)
+{
+	//provide data / layout info; "take buffer that is bound at the time called and associates that buffer with the current VAO"
+	glVertexAttribPointer(attribute->index, attribute->components, attribute->type, attribute->normalized, attribute->stride, attribute->pointer); 
+	glEnableVertexAttribArray(attribute->index); //enable attribute for use
+}
+
+void Engine_tryPrepareVertexAttribute(Engine * this, Attribute * attribute)
+{
+	if (this->capabilities.vao)
+		Engine_prepareVertexAttribute(this, attribute);
+}
+
 /*
 void Engine_many(Program * program, RenderableSet * renderableSet, const GLfloat * matVP)
 {
@@ -1317,8 +1324,8 @@ void Engine_one(Engine * this, Renderable * renderable, const GLfloat * matM, co
 			Attribute * attribute = &mesh->attribute[i];
 			
 			glBindBuffer(GL_ARRAY_BUFFER, attribute->id);
-			glVertexAttribPointer(attribute->index, attribute->size, attribute->type, attribute->normalized, attribute->stride, attribute->pointer); //provide data / layout info; "take buffer that is bound at the time called and associates that buffer with the current VAO"
-			glEnableVertexAttribArray(attribute->index); //enable attribute for use
+			
+			Engine_prepareVertexAttribute(this, attribute);
 		}
 	}
 	
@@ -1355,8 +1362,8 @@ void Engine_oneUI(Engine * this, Renderable * renderable, const GLfloat * matM)
 			Attribute * attribute = &mesh->attribute[i];
 			
 			glBindBuffer(GL_ARRAY_BUFFER, attribute->id);
-			glVertexAttribPointer(attribute->index, attribute->size, attribute->type, attribute->normalized, attribute->stride, attribute->pointer); //provide data / layout info; "take buffer that is bound at the time called and associates that buffer with the current VAO"
-			glEnableVertexAttribArray(attribute->index); //enable attribute for use
+			
+			Engine_prepareVertexAttribute(this, attribute);
 		}
 	}
 

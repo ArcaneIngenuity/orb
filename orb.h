@@ -315,11 +315,12 @@ typedef struct Attribute
 	GLuint id; //buffer id
     //args for glVertexAttribPointer()
     GLuint index; //attribute location
-	GLint size;
-	GLenum type;
-	GLboolean normalized;
-	GLsizei stride;
+	GLint components; //"size" in glVertexAttribPointer 
+	GLenum type; //as glVertexAttribPointer
+	GLboolean normalized; //as glVertexAttribPointer
+	GLsizei stride; //as glVertexAttribPointer
 	const GLvoid * pointer;
+	GLsizeiptr vertexBytes; //"size" in glBufferData
 
 } Attribute;
 
@@ -756,6 +757,8 @@ void Engine_createScreenQuad(Engine * this, Mesh * mesh, GLuint positionVertexAt
 	int w, int h,
 	int rcx, int rcy
 );
+void Engine_prepareVertexAttribute(Engine * this, Attribute * attribute);
+void Engine_tryPrepareVertexAttribute(Engine * this, Attribute * attribute);
 float Engine_smoothstep(float t);
 
 char* Text_load(char* filename);
