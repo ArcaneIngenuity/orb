@@ -96,7 +96,7 @@ void Input_executeList(InputList * list, void * target, bool debug)
 				if (input->channelNeg) //optional negative input contributor
 					neg = input->channelNeg->delta[CURRENT] * input->channelNeg->active;
 				
-				if (debug) LOGI("p=%f c=%f act=%d d=%f\n", input->delta[PREVIOUS], input->delta[CURRENT], input->channelPos->active, pos - neg);
+				//if (debug) LOGI("p=%f c=%f act=%d d=%f\n", input->delta[PREVIOUS], input->delta[CURRENT], input->channelPos->active, pos - neg);
 				input->delta[PREVIOUS] = input->delta[CURRENT];
 				input->delta[CURRENT]  = pos - neg; //assumes both are abs magnitudes
 				
@@ -395,18 +395,41 @@ void Loop_processInputs(Engine * engine)
 	channel->state[CURRENT] = glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS;
 	DeviceChannel_setCurrentDelta(channel);
 	
-	//-
+	//K
 	channel = &keyboard->channels[5];
+	DeviceChannel_setPreviousState(channel);
+	channel->state[CURRENT] = glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS;
+	DeviceChannel_setCurrentDelta(channel);
+	
+	//I
+	channel = &keyboard->channels[6];
+	DeviceChannel_setPreviousState(channel);
+	channel->state[CURRENT] = glfwGetKey(window, GLFW_KEY_I) == GLFW_PRESS;
+	DeviceChannel_setCurrentDelta(channel);
+	
+	//L
+	channel = &keyboard->channels[7];
+	DeviceChannel_setPreviousState(channel);
+	channel->state[CURRENT] = glfwGetKey(window, GLFW_KEY_I) == GLFW_PRESS;
+	DeviceChannel_setCurrentDelta(channel);
+	
+	//J
+	channel = &keyboard->channels[8];
+	DeviceChannel_setPreviousState(channel);
+	channel->state[CURRENT] = glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS;
+	DeviceChannel_setCurrentDelta(channel);
+
+	//-
+	channel = &keyboard->channels[9];
 	DeviceChannel_setPreviousState(channel);
 	channel->state[CURRENT] = glfwGetKey(window, GLFW_KEY_MINUS) == GLFW_PRESS;
 	DeviceChannel_setCurrentDelta(channel);
 	
 	//=
-	channel = &keyboard->channels[6];
+	channel = &keyboard->channels[10];
 	DeviceChannel_setPreviousState(channel);
 	channel->state[CURRENT] = glfwGetKey(window, GLFW_KEY_EQUAL) == GLFW_PRESS;
 	DeviceChannel_setCurrentDelta(channel);
-	
 	
 	#endif//DESKTOP
 }

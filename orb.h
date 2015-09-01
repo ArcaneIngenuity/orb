@@ -572,7 +572,7 @@ typedef struct DeviceChannel
 
 typedef struct Device
 {
-	DeviceChannel channels[8];
+	DeviceChannel channels[16];
 	//void * other; //special reference to other information, e.g. an array of fingers for a touch device.
 	//TODO Finger fingers[]; //or rather, a pointer to an array elsewhere, if touchscreen device.
 	uint64_t channelsActiveMask;
