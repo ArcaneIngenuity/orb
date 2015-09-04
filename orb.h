@@ -115,7 +115,7 @@
 #define GL_RG 0x8227
 #define GL_RED 0x1903
 //#define GL_LINE 0x1B01
-//#define GL_FILL 0x1B02
+#define GL_FILL 0x1B02
 //#define GL_MAX_COLOR_ATTACHMENTS 0x8CDF
 
 //FIXED CONSTANTS
