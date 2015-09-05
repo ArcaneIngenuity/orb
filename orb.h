@@ -11,8 +11,29 @@
 #include "linmath.h"
 #include "../pod/list_generic.h"
 #include "../pod/map_generic.h"
-#include "../pod/intMap.h"
-#include "../pod/floatMap.h"
+//#include "../pod/intMap.h"
+//#include "../pod/floatMap.h"
+
+//KHASH...
+#include "klib/khash.h"
+// setup khash for key/value types
+// shorthand way to get the key from hashtable or defVal if not found
+#define kh_get_val(kname, hash, key, defVal) ({k=kh_get(kname, hash, key);(k!=kh_end(hash)?kh_val(hash,k):defVal);})
+
+// shorthand way to set value in hash with single line command.  Returns value
+// returns 0=replaced existing item, 1=bucket empty (new key), 2-adding element previously deleted
+#define kh_set(kname, hash, key, val) ({int ret; k = kh_put(kname, hash,key,&ret); kh_value(hash,k) = val; ret;})
+
+static const int StrInt = 33;
+static const int IntInt = 34;
+static const int IntFloat = 35;
+static const int StrPtr = 36;
+
+//KHASH_DECLARE
+KHASH_DECLARE(StrInt, kh_cstr_t, int)
+KHASH_DECLARE(IntInt, khint32_t, int)
+KHASH_DECLARE(IntFloat, khint32_t, float)
+KHASH_DECLARE(StrPtr, kh_cstr_t, uint64_t)
 
 #ifdef _WIN32
 	//define something for Windows (32-bit and 64-bit, this part is common)
@@ -371,12 +392,10 @@ typedef struct Texture
 	
 	GLenum dimensions; //glTexImage2D & glBindTexture "target"
 	
-	floatMap floatParametersByName;
-	intMap intParametersByName;
-	int 		intParameterValues[HH_TEXTURE_PARAMETERS_MAX];
-	float 		floatParameterValues[HH_TEXTURE_PARAMETERS_MAX];
-	uint64_t 	intParameterKeys[HH_TEXTURE_PARAMETERS_MAX];
-	uint64_t 	floatParameterKeys[HH_TEXTURE_PARAMETERS_MAX];
+	//TODO rename to ...byPname (as https://www.khronos.org/opengles/sdk/docs/man/xhtml/glTexParameter.xml)
+	khash_t(IntFloat) * floatParametersByName;
+	khash_t(IntInt) * intParametersByName;
+
 } Texture;
 
 typedef struct Face
@@ -464,8 +483,8 @@ typedef struct Shader
 	const char * source;
 	
 	//inputs:
-	Map attributesByName;
-	Map uniformsByName;
+	khash_t(StrInt) attributesByName;
+	khash_t(StrInt) uniformsByName;
 	
 	//shader version
 } Shader;
@@ -528,8 +547,8 @@ typedef struct Material
 {
 	Program program;
 	Texture * texture;
-	//Map uniforms; //for referencing uniforms by name
-	//Map attributes; //ref attribs by name
+	/*khash_t(StrInt)*/Map uniforms; //for referencing uniforms by name
+	/*khash_t(StrInt)*/Map attributes; //ref attribs by name
 	
 	//root of the graph from which we determine the assembled code for each class of shader.
 	char * vertexShader;
@@ -634,14 +653,14 @@ typedef struct Engine
 	
 	int inputEventCount;
 	
-	Map programsByName;
-	Map shadersByName;
-	Map texturesByName;
-	Map materialsByName;
-	Map meshesByName;
-	//Map renderPathsByName;
+	/*khash_t(StrInt)*/Map programsByName;
+	/*khash_t(StrInt)*/Map shadersByName;
+	/*khash_t(StrInt)*/Map texturesByName;
+	/*khash_t(StrInt)*/Map materialsByName;
+	/*khash_t(StrInt)*/Map meshesByName;
+	/*khash_t(StrInt)*/Map renderPathsByName;
 	
-	Map renderTexturesByName;
+	/*khash_t(StrInt)*/Map renderTexturesByName;
 	
 	//until we create merged map and list that contain not only pointers to arrays but also the arrays themselves... use these as backing arrays
 	Shader   	shaders[HH_SHADERS_MAX];
@@ -664,9 +683,7 @@ typedef struct Engine
 	//map is best - if devices connect in different orders at runtime, we are not relying on compile-time indices into an array
 	//DeviceHub deviceHub;
 	//Device array[2];
-	Map 	 devicesByName;
-	uint64_t deviceKeys[2];
-	Device	 devices[2];
+	khash_t(StrPtr) * devicesByName;
 	
 	//should be in the order they are to be rendered in
 	Renderable renderables[HH_RENDERABLES_MAX];

@@ -1,7 +1,19 @@
 #include "orb.h"
 
 #define KEYPARTS 1
+/*
+KHASH_DEFINE(khStrInt, kh_cstr_t, int)
+KHASH_DEFINE(khIntInt, khint32_t, int)
+KHASH_DEFINE(khIntFloat, khint32_t, float)
+*/
+//__KHASH_IMPL(name, SCOPE, khkey_t, khval_t, kh_is_map, __hash_func, __hash_equal)
+__KHASH_IMPL(StrInt, kh_inline klib_unused, kh_cstr_t, int, 1, kh_str_hash_func, kh_str_hash_equal)
+__KHASH_IMPL(IntInt, kh_inline klib_unused, khint32_t, int, 1, kh_int_hash_func, kh_int_hash_equal)
+__KHASH_IMPL(IntFloat, kh_inline klib_unused, khint32_t, float, 1, kh_int_hash_func, kh_int_hash_equal)
+__KHASH_IMPL(StrPtr, kh_inline klib_unused, kh_cstr_t, uint64_t, 1, kh_str_hash_func, kh_str_hash_equal)
 
+
+//...KHASH.
 void Window_terminate(Engine * engine)
 {
 	#ifdef DESKTOP
@@ -118,7 +130,10 @@ bool Input_equals(Input a, Input b) //TODO make equals a function pointer in lis
 int32_t Android_onInputEvent(struct android_app* app, AInputEvent* event)
 {
 	Engine * engine = (Engine *)app->userData;
-	Device * device = (Device *) get(&engine->devicesByName, *(uint64_t *) pad("cursor"));
+	
+	khiter_t k;
+	k = kh_get(StrPtr, engine->devicesByName, "cursor");
+	Device * device = kh_val(engine->devicesByName, k);
 	
 	int32_t count, eventAction, pid;
 	uint32_t touchAction;
@@ -352,8 +367,12 @@ void Loop_processInputs(Engine * engine)
 	double p[2];
 	glfwGetCursorPos(window, &p[XX], &p[YY]);
 	DeviceChannel * channel;
-	Device * mouse = (Device *) get(&engine->devicesByName, *(uint64_t *) pad("cursor"));
-	for (int i = 0; i < 2; i++)
+	
+	khiter_t k;
+	k = kh_get(StrPtr, engine->devicesByName, "cursor");
+	Device * mouse = kh_val(engine->devicesByName, k);
+	
+	for (int i = 0; i < 2; i++) //x & y
 	{
 		channel = &mouse->channels[i];
 		DeviceChannel_setPreviousState(channel);
@@ -361,8 +380,9 @@ void Loop_processInputs(Engine * engine)
 		DeviceChannel_setCurrentDelta(channel);
 	}
 	//LOGI("x=%.3f y=%.3f\n", p[XX], p[YY]);
-	
-	Device * keyboard = (Device *) get(&engine->devicesByName, *(uint64_t *) pad("keyboard"));
+
+	k = kh_get(StrPtr, engine->devicesByName, "keyboard");
+	Device * keyboard = kh_val(engine->devicesByName, k);	
 	
 	//space
 	channel = &keyboard->channels[0];
@@ -490,8 +510,10 @@ void Loop_run(Engine * engine)
 
 		//we must flush input to get rid of old deltas / states or they will persist
 		//do so BEFORE event loop to ensure event values don't get overridden
-		Device * device = (Device *) get(&engine->devicesByName, *(uint64_t *) pad("cursor"));
-		
+		khiter_t k;
+		k = kh_get(StrPtr, engine->devicesByName, "cursor");
+		Device * device = kh_val(engine->devicesByName, k);
+	
 		for (int i = 0; i < 8; i++)
 		{
 			DeviceChannel * channel = &device->channels[i];
@@ -521,7 +543,9 @@ void Loop_run(Engine * engine)
 
 		//we must flush input to get rid of old deltas / states or they will persist
 		//do so BEFORE event loop to ensure event values don't get overridden
-		Device * device = (Device *) get(&engine->devicesByName, *(uint64_t *) pad("cursor"));
+		khiter_t k;
+		k = kh_get(StrPtr, engine->devicesByName, "cursor");
+		Device * device = kh_val(engine->devicesByName, k);
 		
 		for (int i = 0; i < 8; i++)
 		{
@@ -777,8 +801,10 @@ Texture * Texture_create()
 {
 	Texture * texture = malloc(sizeof(Texture));
 	glGenTextures(1, &texture->id);
-	intMap_create  (&texture->intParametersByName, 		16, &texture->intParameterKeys,   &texture->intParameterValues,   -1);
-	floatMap_create(&texture->floatParametersByName, 	16, &texture->floatParameterKeys, &texture->floatParameterValues, -1.f);
+	
+	texture->intParametersByName = kh_init(IntInt);
+	texture->floatParametersByName = kh_init(IntFloat);
+	
 	return texture;
 }
 
@@ -801,10 +827,13 @@ void RenderTexture_createDepth(Texture * const this, GLuint i, uint16_t width, u
 	Texture_setDimensionCount(this, GL_TEXTURE_2D);
 	Texture_setTexelFormats(this, GL_DEPTH_COMPONENT16, GL_FLOAT);
 	
-	intMap_put(&this->intParametersByName, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	intMap_put(&this->intParametersByName, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	intMap_put(&this->intParametersByName, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	intMap_put(&this->intParametersByName, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	int ret, is_missing;
+	khiter_t k;
+	
+	kh_set(IntInt, this->intParametersByName, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	kh_set(IntInt, this->intParametersByName, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	kh_set(IntInt, this->intParametersByName, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	kh_set(IntInt, this->intParametersByName, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
 	Texture_applyParameters(this);
 	
@@ -822,10 +851,14 @@ void RenderTexture_createColor(Texture * const this, GLuint i, uint16_t width, u
 	Texture_setDimensionCount(this, GL_TEXTURE_2D);
 	Texture_setTexelFormats(this, format, GL_UNSIGNED_BYTE);
 	
-	intMap_put(&this->intParametersByName, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	intMap_put(&this->intParametersByName, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	intMap_put(&this->intParametersByName, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	intMap_put(&this->intParametersByName, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	int ret, is_missing;
+	khiter_t k;
+	
+	kh_set(IntInt, this->intParametersByName, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	kh_set(IntInt, this->intParametersByName, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	kh_set(IntInt, this->intParametersByName, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	kh_set(IntInt, this->intParametersByName, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	
 	Texture_applyParameters(this);
 	
 	this->data = malloc(sizeof(unsigned char) * this->width * this->height * this->components);
@@ -900,20 +933,20 @@ void Texture_applyParameters(Texture * this)
 	LOGI("e0 %s\n",glGetError());
 	glBindTexture(GL_TEXTURE_2D, this->id);
 	LOGI("e1 %s\n",glGetError());
-	for (uint8_t p = 0; p < this->intParametersByName.count; p++)
+
+	khiter_t k;
+	for (k = kh_begin(this->intParametersByName); k != kh_end(this->intParametersByName); ++k)
 	{
-		GLenum key = this->intParametersByName.keys[p];
-		GLint value = this->intParametersByName.entries[p];
-		LOGI("GL_TEXTURE_2D %i\n", GL_TEXTURE_2D);
-		LOGI("GL_TEXTURE_MIN_FILTER GL_NEAREST %u %i\n", GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		LOGI("GL_TEXTURE_MAG_FILTER GL_NEAREST %u %i\n", GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		LOGI("GL_TEXTURE_WRAP_S 	  GL_REPEAT  %u %i\n", GL_TEXTURE_WRAP_S, GL_REPEAT);
-		LOGI("GL_TEXTURE_WRAP_T 	  GL_REPEAT  %u %i\n", GL_TEXTURE_WRAP_T, GL_REPEAT);
-		LOGI("ber %u %u %i\n", this->dimensions, key, value);
-		LOGI("glTexParameteri == NULL? %u\n", glTexParameteri == NULL);
-		glTexParameteri(this->dimensions, key, value);
-		//LOGI("berrror %s\n",glGetError());
+		if (kh_exist(this->intParametersByName, k))
+		{
+			const char *key = kh_key(this->intParametersByName, k);
+			
+			int tval = &kh_value(this->intParametersByName, k);
+			printf("key=%s  val=%d\n", key, tval);
+			glTexParameteri(this->dimensions, key, tval);
+		}
 	}
+	
 	//TODO loop over float params
 }
 //------------------GLBuffer------------------//
@@ -1609,13 +1642,16 @@ void Engine_initialise(Engine * this)
 	//initialise collection objects
 	//TODO "this" should be "orb" instance
 	//TODO rename HH_ constants to ORB_
+	//khash_t(khStrInt) * h = kh_init(khStrInt);
+	
 	voidPtrMap_create(&this->programsByName,	HH_PROGRAMS_MAX, 	&this->programKeys, 	(void *)&this->programs, NULL);
 	voidPtrMap_create(&this->shadersByName, 	HH_SHADERS_MAX, 	&this->shaderKeys, 		(void *)&this->shaders, NULL);
 	voidPtrMap_create(&this->texturesByName, 	HH_TEXTURES_MAX, 	&this->textureKeys, 	(void *)&this->textures, NULL);
 	voidPtrMap_create(&this->materialsByName, 	HH_MATERIALS_MAX, 	&this->materialKeys, 	(void *)&this->materials, NULL);
 	voidPtrMap_create(&this->meshesByName, 		HH_MESHES_MAX, 		&this->meshKeys,	 	(void *)&this->meshes, NULL);
-	voidPtrMap_create(&this->devicesByName, 	2, 					&this->deviceKeys,	 	(void *)&this->devices, NULL);
-	
+
+	this->devicesByName 		= kh_init(StrPtr);
+
 	//reintroduce if we bring transform list back into this library.
 	//Renderable * renderable = &this->renderable;
 	//for (int i = 0; i < transformsCount; i++)
