@@ -23,6 +23,7 @@
 // shorthand way to set value in hash with single line command.  Returns value
 // returns 0=replaced existing item, 1=bucket empty (new key), 2-adding element previously deleted
 #define kh_set(kname, hash, key, val) ({int ret; k = kh_put(kname, hash,key,&ret); kh_value(hash,k) = val; ret;})
+//printf("ret?%d k?%d\n", ret, k);})
 
 static const int StrInt = 33;
 static const int IntInt = 34;
@@ -653,8 +654,8 @@ typedef struct Engine
 	
 	int inputEventCount;
 	
-	/*khash_t(StrInt)*/Map programsByName;
-	/*khash_t(StrInt)*/Map shadersByName;
+	khash_t(StrPtr) * programsByName;
+	khash_t(StrPtr) * shadersByName;
 	/*khash_t(StrInt)*/Map texturesByName;
 	/*khash_t(StrInt)*/Map materialsByName;
 	/*khash_t(StrInt)*/Map meshesByName;

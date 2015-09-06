@@ -1,18 +1,19 @@
 #include "orb.h"
 
 #define KEYPARTS 1
+//KHASH...
 /*
 KHASH_DEFINE(khStrInt, kh_cstr_t, int)
 KHASH_DEFINE(khIntInt, khint32_t, int)
 KHASH_DEFINE(khIntFloat, khint32_t, float)
 */
 //__KHASH_IMPL(name, SCOPE, khkey_t, khval_t, kh_is_map, __hash_func, __hash_equal)
-__KHASH_IMPL(StrInt, kh_inline klib_unused, kh_cstr_t, int, 1, kh_str_hash_func, kh_str_hash_equal)
-__KHASH_IMPL(IntInt, kh_inline klib_unused, khint32_t, int, 1, kh_int_hash_func, kh_int_hash_equal)
-__KHASH_IMPL(IntFloat, kh_inline klib_unused, khint32_t, float, 1, kh_int_hash_func, kh_int_hash_equal)
-__KHASH_IMPL(StrPtr, kh_inline klib_unused, kh_cstr_t, uint64_t, 1, kh_str_hash_func, kh_str_hash_equal)
+__KHASH_IMPL(StrInt, 	kh_inline klib_unused, kh_cstr_t, int, 1, kh_str_hash_func, kh_str_hash_equal)
+__KHASH_IMPL(IntInt, 	kh_inline klib_unused, khint32_t, int, 1, kh_int_hash_func, kh_int_hash_equal)
+__KHASH_IMPL(IntFloat, 	kh_inline klib_unused, khint32_t, float, 1, kh_int_hash_func, kh_int_hash_equal)
+__KHASH_IMPL(StrPtr, 	kh_inline klib_unused, kh_cstr_t, uintptr_t, 1, kh_str_hash_func, kh_str_hash_equal)
 
-
+static khiter_t k;
 //...KHASH.
 void Window_terminate(Engine * engine)
 {
@@ -131,7 +132,6 @@ int32_t Android_onInputEvent(struct android_app* app, AInputEvent* event)
 {
 	Engine * engine = (Engine *)app->userData;
 	
-	khiter_t k;
 	k = kh_get(StrPtr, engine->devicesByName, "cursor");
 	Device * device = kh_val(engine->devicesByName, k);
 	
@@ -368,7 +368,6 @@ void Loop_processInputs(Engine * engine)
 	glfwGetCursorPos(window, &p[XX], &p[YY]);
 	DeviceChannel * channel;
 	
-	khiter_t k;
 	k = kh_get(StrPtr, engine->devicesByName, "cursor");
 	Device * mouse = kh_val(engine->devicesByName, k);
 	
@@ -510,7 +509,6 @@ void Loop_run(Engine * engine)
 
 		//we must flush input to get rid of old deltas / states or they will persist
 		//do so BEFORE event loop to ensure event values don't get overridden
-		khiter_t k;
 		k = kh_get(StrPtr, engine->devicesByName, "cursor");
 		Device * device = kh_val(engine->devicesByName, k);
 	
@@ -543,7 +541,6 @@ void Loop_run(Engine * engine)
 
 		//we must flush input to get rid of old deltas / states or they will persist
 		//do so BEFORE event loop to ensure event values don't get overridden
-		khiter_t k;
 		k = kh_get(StrPtr, engine->devicesByName, "cursor");
 		Device * device = kh_val(engine->devicesByName, k);
 		
@@ -828,7 +825,6 @@ void RenderTexture_createDepth(Texture * const this, GLuint i, uint16_t width, u
 	Texture_setTexelFormats(this, GL_DEPTH_COMPONENT16, GL_FLOAT);
 	
 	int ret, is_missing;
-	khiter_t k;
 	
 	kh_set(IntInt, this->intParametersByName, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	kh_set(IntInt, this->intParametersByName, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -852,7 +848,6 @@ void RenderTexture_createColor(Texture * const this, GLuint i, uint16_t width, u
 	Texture_setTexelFormats(this, format, GL_UNSIGNED_BYTE);
 	
 	int ret, is_missing;
-	khiter_t k;
 	
 	kh_set(IntInt, this->intParametersByName, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	kh_set(IntInt, this->intParametersByName, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -934,7 +929,6 @@ void Texture_applyParameters(Texture * this)
 	glBindTexture(GL_TEXTURE_2D, this->id);
 	LOGI("e1 %s\n",glGetError());
 
-	khiter_t k;
 	for (k = kh_begin(this->intParametersByName); k != kh_end(this->intParametersByName); ++k)
 	{
 		if (kh_exist(this->intParametersByName, k))
@@ -968,8 +962,9 @@ GLuint GLBuffer_create(
 //------------------Shader------------------//
 void Shader_load(Engine * this, const char * path, const char * name)//, const char ** attributeLocations)
 {
-	Shader * vert;
-	Shader * frag;
+	LOGI("khash size=%d...\n", kh_size(this->shadersByName));
+	
+
 	Program * program;
 	LOGI("this NULL?=%d", this==NULL);
 	if (strlen(name) > KEYPARTS * 8 - 1)
@@ -977,8 +972,12 @@ void Shader_load(Engine * this, const char * path, const char * name)//, const c
 		LOGI("[Shader_load] Length of shader name must be less than or equal to KEYPARTS * 8 - 1.");
 		exit(0);
 	}
-	vert = malloc(sizeof(Shader));
-	frag = malloc(sizeof(Shader));
+	Shader * vert;
+	Shader * frag;
+	
+	vert = calloc(1, sizeof(Shader));
+	frag = calloc(1, sizeof(Shader));
+
 	vert->type = GL_VERTEX_SHADER;
 	frag->type = GL_FRAGMENT_SHADER;
 	
@@ -991,7 +990,7 @@ void Shader_load(Engine * this, const char * path, const char * name)//, const c
 	strcat(vertFilepath, ".vert");
 	LOGI("vertFilepath %s\n", vertFilepath);
 	vert->source = Text_load(vertFilepath);
-	LOGI("vert %s\n\n", vert->source);
+	//LOGI("vert %s\n\n", vert->source);
 	Shader_construct(vert);
 	
 	char fragFilepath[lengthPath+lengthName+1+4]; //5 = .frag
@@ -1000,24 +999,22 @@ void Shader_load(Engine * this, const char * path, const char * name)//, const c
 	strcat(fragFilepath, ".frag");
 	LOGI("fragFilepath %s\n", fragFilepath);
 	frag->source = Text_load(fragFilepath);
-	LOGI("frag %s\n\n", frag->source);
+	//LOGI("frag %s\n\n", frag->source);
 	Shader_construct(frag);
 	
 	int final = lengthName < 8 ? lengthName : 8 - 1;
 	
-	char vertKey[8 + 1] = {0};
+	char vertKey[64] = {0}; //63 chars long
 	strncpy(vertKey, name, 8);
 	vertKey[final] = 'v'; //set last character to distinguish. TODO should be either first null or last character.
-	LOGI("v=%s\n", vertKey);
-	//TODO check whether key exists
-	put(&this->shadersByName, *(uint64_t *) vertKey, vert); //diffusev
+	LOGI("v=%s, vptr=%p\n", vertKey, vert);
+	kh_set(StrPtr, this->shadersByName, vertKey, vert);
 	
-	char fragKey[8 + 1] = {0};
+	char fragKey[64] = {0}; //63 chars long
 	strncpy(fragKey, name, 8);
 	fragKey[final] = 'f'; //set last character to distinguish. TODO should be either first null or last character.
-	LOGI("f=%s\n", fragKey);
-	//TODO check whether key exists
-	put(&this->shadersByName, *(uint64_t *) fragKey, frag); //diffusef
+	LOGI("f=%s, fptr=%p\n", fragKey, frag);
+	kh_set(StrPtr, this->shadersByName, fragKey, frag);
 }
 
 void Shader_construct(Shader * this)//, const char* shader_str, GLenum shader_type)
@@ -1641,15 +1638,14 @@ void Engine_initialise(Engine * this)
 	
 	//initialise collection objects
 	//TODO "this" should be "orb" instance
-	//TODO rename HH_ constants to ORB_
-	//khash_t(khStrInt) * h = kh_init(khStrInt);
-	
-	voidPtrMap_create(&this->programsByName,	HH_PROGRAMS_MAX, 	&this->programKeys, 	(void *)&this->programs, NULL);
-	voidPtrMap_create(&this->shadersByName, 	HH_SHADERS_MAX, 	&this->shaderKeys, 		(void *)&this->shaders, NULL);
+
 	voidPtrMap_create(&this->texturesByName, 	HH_TEXTURES_MAX, 	&this->textureKeys, 	(void *)&this->textures, NULL);
 	voidPtrMap_create(&this->materialsByName, 	HH_MATERIALS_MAX, 	&this->materialKeys, 	(void *)&this->materials, NULL);
-	voidPtrMap_create(&this->meshesByName, 		HH_MESHES_MAX, 		&this->meshKeys,	 	(void *)&this->meshes, NULL);
+	//voidPtrMap_create(&this->meshesByName, 		HH_MESHES_MAX, 		&this->meshKeys,	 	(void *)&this->meshes, NULL);
+	//voidPtrMap_create(&this->shadersByName, 		HH_SHADERS_MAX, 		&this->meshKeys,	 	(void *)&this->meshes, NULL);
 
+	this->programsByName 		= kh_init(StrPtr);
+	this->shadersByName 		= kh_init(StrPtr);
 	this->devicesByName 		= kh_init(StrPtr);
 
 	//reintroduce if we bring transform list back into this library.
@@ -1679,7 +1675,8 @@ Program * Engine_setCurrentProgram(Engine * this, char * name)
 	}
 	else
 	{
-		this->program = (Program *)get(&this->programsByName, *(uint64_t *) pad(name));
+		k = kh_get(StrPtr, this->programsByName, name);
+		this->program = kh_val(this->programsByName, k);
 		assert (this->program != NULL);
 		glUseProgram(this->program->id);
 	}
