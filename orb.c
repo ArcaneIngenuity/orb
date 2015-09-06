@@ -960,61 +960,21 @@ GLuint GLBuffer_create(
 }
 
 //------------------Shader------------------//
-void Shader_load(Engine * this, const char * path, const char * name)//, const char ** attributeLocations)
+void Engine_loadShader(Engine * this, Shader ** shader, const char * path, const char * name, GLenum type)//, const char ** attributeLocations)
 {
-	LOGI("khash size=%d...\n", kh_size(this->shadersByName));
-	
-
-	Program * program;
-	LOGI("this NULL?=%d", this==NULL);
-	if (strlen(name) > KEYPARTS * 8 - 1)
-	{
-		LOGI("[Shader_load] Length of shader name must be less than or equal to KEYPARTS * 8 - 1.");
-		exit(0);
-	}
-	Shader * vert;
-	Shader * frag;
-	
-	vert = calloc(1, sizeof(Shader));
-	frag = calloc(1, sizeof(Shader));
-
-	vert->type = GL_VERTEX_SHADER;
-	frag->type = GL_FRAGMENT_SHADER;
+	(*shader) = calloc(1, sizeof(Shader));
 	
 	size_t lengthName = strlen(name); 
 	size_t lengthPath = strlen(path);
-	
-	char vertFilepath[lengthPath+lengthName+1+4]; //5 = .vert
-	strcpy(vertFilepath, path);
-	strcat(vertFilepath, name);
-	strcat(vertFilepath, ".vert");
-	LOGI("vertFilepath %s\n", vertFilepath);
-	vert->source = Text_load(vertFilepath);
-	//LOGI("vert %s\n\n", vert->source);
-	Shader_construct(vert);
-	
-	char fragFilepath[lengthPath+lengthName+1+4]; //5 = .frag
-	strcpy(fragFilepath, path);
-	strcat(fragFilepath, name);
-	strcat(fragFilepath, ".frag");
-	LOGI("fragFilepath %s\n", fragFilepath);
-	frag->source = Text_load(fragFilepath);
-	//LOGI("frag %s\n\n", frag->source);
-	Shader_construct(frag);
-	
-	int final = lengthName < 8 ? lengthName : 8 - 1;
-	
-	char vertKey[64] = {0}; //63 chars long
-	strncpy(vertKey, name, 8);
-	vertKey[final] = 'v'; //set last character to distinguish. TODO should be either first null or last character.
-	LOGI("v=%s, vptr=%p\n", vertKey, vert);
-	kh_set(StrPtr, this->shadersByName, vertKey, vert);
-	
-	char fragKey[64] = {0}; //63 chars long
-	strncpy(fragKey, name, 8);
-	fragKey[final] = 'f'; //set last character to distinguish. TODO should be either first null or last character.
-	LOGI("f=%s, fptr=%p\n", fragKey, frag);
-	kh_set(StrPtr, this->shadersByName, fragKey, frag);
+	char pathname[lengthPath+lengthName+1]; //1 = '\0'
+	strcpy(pathname, path);
+	strcat(pathname, name);
+	LOGI("pathname %s\n", pathname);
+	(*shader)->source = Text_load(pathname);
+	(*shader)->type = type;
+	Shader_construct(*shader);
+
+	kh_set(StrPtr, this->shadersByName, name, shader);
 }
 
 void Shader_construct(Shader * this)//, const char* shader_str, GLenum shader_type)
@@ -1222,7 +1182,7 @@ bool linkProgramSuccess(int program)
 //--------------Render-------------------//
 
 
-void Engine_clear()
+void Engine_clear() //TODO should be Render_clear?
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
@@ -1663,6 +1623,32 @@ void Engine_dispose(Engine * engine)
 	#ifdef DESKTOP
 	Window_terminate(&engine);
 	#endif//DESKTOP
+}
+
+void Engine_loadProgramFromConfig(Engine * engine, ProgramConfig programConfig, const char * path)
+{
+	//TODO check first if a given shader exists already, before loading it!
+	Shader * vert;
+	Shader * frag;
+	Engine_loadShader(engine, &vert, path, programConfig.vertexName, GL_VERTEX_SHADER);
+	Engine_loadShader(engine, &frag, path, programConfig.fragmentName, GL_FRAGMENT_SHADER);
+
+	Program * program = calloc(1, sizeof(Program));
+	Program_construct(program, 
+		vert->id,
+		frag->id,
+		programConfig.attributeLocations,
+		programConfig.attributeLocationsCount
+		);
+	program->topology = GL_TRIANGLES; //TODO place in config?
+	//TODO check whether key exists
+	kh_set(StrPtr, engine->programsByName, programConfig.programName, program);	
+}
+
+void Engine_loadProgramsFromConfig(Engine * engine, ProgramConfig programConfigs[], uint8_t programConfigsCount, const char * path)
+{	
+	for (int i = 0; i < programConfigsCount; ++i)
+		Engine_loadProgramFromConfig(engine, programConfigs[i], path);
 }
 
 Program * Engine_setCurrentProgram(Engine * this, char * name)

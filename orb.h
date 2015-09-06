@@ -530,6 +530,17 @@ typedef struct Program
 	//output (frame or render) buffer
 } Program;
 
+typedef struct ProgramConfig
+{
+	char * programName;
+	char * vertexName;
+	char * fragmentName;
+	
+	char * attributeLocations[8];
+	uint8_t attributeLocationsCount;
+	
+} ProgramConfig;
+
 
 typedef struct RenderPath
 {
@@ -727,10 +738,6 @@ typedef struct Engine
 } Engine;
 const struct Engine engineEmpty;
 
-void Engine_initialise(Engine * this);
-Program * Engine_setCurrentProgram(Engine * this, char * name);
-Program * Engine_getCurrentProgram(Engine * this);
-
 void Mesh_calculateNormals(Mesh * this);
 
 void Attribute_submitData(Attribute * attribute, Engine * engine);
@@ -769,12 +776,19 @@ GLuint GLBuffer_create(
 	GLenum usage
 );
 
-void Shader_load(Engine * this, const char * path, const char * name);
+
 void Shader_construct(Shader * this);
 
 void Program_construct(Program * this, GLuint vertex_shader, GLuint fragment_shader, const char * attributeLocations[], size_t attributeLocationsCount);
 
-void Engine_clear();
+void Engine_initialise(Engine * this);
+void Engine_dispose(Engine * engine);
+void Engine_clear(); //TODO should be Render_clear?
+Program * Engine_setCurrentProgram(Engine * this, char * name);
+Program * Engine_getCurrentProgram(Engine * this);
+void Engine_loadShader(Engine * this, Shader ** shader, const char * path, const char * name, GLenum type);
+void Engine_loadProgramFromConfig(Engine * engine, ProgramConfig programConfig, const char * path);
+void Engine_loadProgramsFromConfig(Engine * engine, ProgramConfig programConfigs[], uint8_t programConfigsCount, const char * path);
 void Engine_many(Program * program, RenderableSet * renderableSet, const GLfloat * matVP);
 void Engine_one(Engine * this, Renderable * renderable, const GLfloat * matM, const GLfloat * matVP);
 void Engine_oneUI(Engine * this, Renderable * renderable, const GLfloat * matM);
