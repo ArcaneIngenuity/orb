@@ -34,7 +34,7 @@ static const int StrPtr = 36;
 KHASH_DECLARE(StrInt, kh_cstr_t, int)
 KHASH_DECLARE(IntInt, khint32_t, int)
 KHASH_DECLARE(IntFloat, khint32_t, float)
-KHASH_DECLARE(StrPtr, kh_cstr_t, uint64_t)
+KHASH_DECLARE(StrPtr, kh_cstr_t, uintptr_t)
 
 #ifdef _WIN32
 	//define something for Windows (32-bit and 64-bit, this part is common)
