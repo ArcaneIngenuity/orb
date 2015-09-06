@@ -8,6 +8,10 @@ KHASH_DEFINE(IntFloat, 	khint32_t, float, kh_int_hash_func, kh_int_hash_equal, 1
 KHASH_DEFINE(StrPtr, 	kh_cstr_t, uintptr_t, kh_str_hash_func, kh_str_hash_equal, 1)
 
 static khiter_t k;
+
+glUniformVectorFunction glUniformVectorFunctions[4][2]; 
+glUniformMatrixFunction glUniformMatrixFunctions[4][4][2]; 
+
 //...KHASH.
 void Window_terminate(Engine * engine)
 {
@@ -1323,7 +1327,7 @@ void Engine_one(Engine * this, Renderable * renderable, const GLfloat * matM, co
 		glBindVertexArray(mesh->vao);
 	else
 	{
-		for (int i = 0; i < mesh->attributeCount; i++)
+		for (int i = 0; i < mesh->attributeCount; ++i)
 		{
 			Attribute * attribute = &mesh->attribute[i];
 			
@@ -1340,7 +1344,14 @@ void Engine_one(Engine * this, Renderable * renderable, const GLfloat * matM, co
 	//...model matrix
 	GLint mLoc = glGetUniformLocation(this->program->id, "m");
 	glUniformMatrix4fv(mLoc, 1, GL_FALSE, (GLfloat *)matM);
-
+	/*
+	for (int i = 0; i < renderable->uniforms; ++i)
+	{
+		Uniform uniform = renderable->uniforms[i];
+		
+		//TODO
+	}
+*/
 	if (mesh->index == NULL)
 		glDrawArrays(mesh->topology, 0, mesh->vertexCount);
 	else
@@ -1607,6 +1618,28 @@ void Engine_initialise(Engine * this)
 	//for (int i = 0; i < transformsCount; i++)
 	//	mat4x4_identity(renderable->matrix[i]);
 
+	//these get set here; brace initialisation not allowed due to glew not having function pointers ready yet(?)
+	glUniformVectorFunctions[1-1][0] = glUniform1fv;
+	glUniformVectorFunctions[1-1][1] = glUniform1iv;
+	glUniformVectorFunctions[2-1][0] = glUniform2fv;
+	glUniformVectorFunctions[2-1][1] = glUniform2iv;
+	glUniformVectorFunctions[3-1][0] = glUniform3fv;
+	glUniformVectorFunctions[3-1][1] = glUniform3iv;
+	glUniformVectorFunctions[4-1][0] = glUniform4fv;
+	glUniformVectorFunctions[4-1][1] = glUniform4iv;
+	
+
+	//TODO once this is encapsulated, it can easily just be a 3x3(x1) array (there are no 1's here, and only floats!)
+	glUniformMatrixFunctions[2-1][2-1][0] = glUniformMatrix2fv;
+	glUniformMatrixFunctions[3-1][3-1][0] = glUniformMatrix3fv;
+	glUniformMatrixFunctions[4-1][4-1][0] = glUniformMatrix4fv;
+	glUniformMatrixFunctions[2-1][3-1][0] = glUniformMatrix2x3fv;
+	glUniformMatrixFunctions[3-1][2-1][0] = glUniformMatrix3x2fv;
+	glUniformMatrixFunctions[2-1][4-1][0] = glUniformMatrix2x4fv;
+	glUniformMatrixFunctions[4-1][2-1][0] = glUniformMatrix4x2fv;
+	glUniformMatrixFunctions[3-1][4-1][0] = glUniformMatrix3x4fv;
+	glUniformMatrixFunctions[4-1][3-1][0] = glUniformMatrix4x3fv;
+	
 	LOGI("Engine initialised.\n");
 }
 
@@ -1761,3 +1794,32 @@ void Attribute_submitData(Attribute * attribute, Engine * engine)
     glBufferData(GL_ARRAY_BUFFER, attribute->vertexBytes, attribute->vertex, attribute->usage);
 	Attribute_tryPrepare(attribute, &engine);
 }
+/*
+void Renderable_render(Program * program, Renderable * renderable, , mat4x4 * matVP, mat4x4 * matVPInv, Chunk * chunk, World * world)
+{
+	Texture * texture;
+	GLint uniformTexture;
+
+	if (chunk->changedHeights)
+	{
+		ChunkRenderable_updateGeometry(renderable, chunk, world);
+		chunk->changedHeights = false; //TODO should be done in Ctrl.updatePost
+	}
+	if (chunk->changedSurface)
+	{
+		//TODO should be only a bounded section that is updated
+		//ChunkRenderable_updateTextureDiffuse(renderable, chunk, world);
+		chunk->changedSurface = false; //TODO should be done in Ctrl.updatePost
+	}
+	
+	GLint cellsAcrossLoc = glGetUniformLocation(program->id, "cellsAcrossChunk");
+	GLint chunksAcrossLoc = glGetUniformLocation(program->id, "chunksAcrossWorld");
+	GLint chunkCoordLoc = glGetUniformLocation(program->id, "chunkCoord");
+	glUniform1i(cellsAcrossLoc, parameters->cellsAcrossChunk);
+	glUniform1i(chunksAcrossLoc, parameters->chunksAcrossWorld);
+	glUniform2i(chunkCoordLoc, chunk->chx, chunk->chz);
+	
+	uint16_t i = Chunk_index(chunk->id);
+	Engine_one(&engine, renderable, (const GLvoid *) &world->matrix[i], (const GLvoid *) matVP);
+}
+*/

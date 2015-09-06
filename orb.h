@@ -346,19 +346,36 @@ typedef struct Attribute
 
 } Attribute;
 
+typedef void (*glUniformVectorFunction)(GLint location, GLsizei count, const GLint * value);
+extern glUniformVectorFunction glUniformVectorFunctions[4][2];
+
+typedef void (*glUniformMatrixFunction)(GLint location, GLsizei count, GLboolean transpose, const GLfloat * value);
+extern glUniformMatrixFunction glUniformMatrixFunctions[4][4][2];
+
+enum UniformTypeNumeric
+{
+	UniformFloat,
+	UniformInt
+	//UniformUInt, //not in ES 2.0
+};
+
+//TODO lists of Uniforms should stand alone, and be able to run whenever calling code sees fit,
+//whether that be once in a blue moon, once every frame for a group of renderables, or once
+//every frame for each distinct renderable (based on its state).
 typedef struct Uniform
 {
-	char name[8];
-	char type[8];
-	char typeBase[8]; //vec, mat or whatever
-	char typeNumeric[8]; //float, int or whatever
-	int components; //count
-	int elements; //count of array size
+	char * name;
+	enum UniformTypeNumeric typeNumeric; //float, int or whatever
+	GLsizei components; //count
+	GLsizei elements; //count of array size
 	//qualifiers
 	
-	void * value;
+	void * valuesPtr; //"values" since many glUniform* are non-scalar
 	
 	bool isTexture; //some special calls for textures: tex and sampler. TODO actually, this comes from reading the type
+	bool isMatrix; //allows appropriate glUniform* call
+	GLboolean matrixTranspose; //for glUniformMatrix calls
+	//GLint location; //cached from glgetUniformLocation
 } Uniform;
 
 typedef struct Texture
@@ -434,7 +451,8 @@ typedef struct Mesh
 typedef struct Renderable
 {
 	//char * id;
-	
+	Uniform * uniforms;
+	uint8_t uniformsCount;
 	//occasional upload i.e. not performance-critical, so these objects can be pointers to structs.
 	Mesh * mesh;
 	Texture * textures[HH_TEXTURES_RENDERABLE_MAX]; 
