@@ -2,16 +2,10 @@
 
 #define KEYPARTS 1
 //KHASH...
-/*
-KHASH_DEFINE(khStrInt, kh_cstr_t, int)
-KHASH_DEFINE(khIntInt, khint32_t, int)
-KHASH_DEFINE(khIntFloat, khint32_t, float)
-*/
-//__KHASH_IMPL(name, SCOPE, khkey_t, khval_t, kh_is_map, __hash_func, __hash_equal)
-__KHASH_IMPL(StrInt, 	kh_inline klib_unused, kh_cstr_t, int, 1, kh_str_hash_func, kh_str_hash_equal)
-__KHASH_IMPL(IntInt, 	kh_inline klib_unused, khint32_t, int, 1, kh_int_hash_func, kh_int_hash_equal)
-__KHASH_IMPL(IntFloat, 	kh_inline klib_unused, khint32_t, float, 1, kh_int_hash_func, kh_int_hash_equal)
-__KHASH_IMPL(StrPtr, 	kh_inline klib_unused, kh_cstr_t, uintptr_t, 1, kh_str_hash_func, kh_str_hash_equal)
+KHASH_DEFINE(StrInt, 	kh_cstr_t, int, kh_str_hash_func, kh_str_hash_equal, 1)
+KHASH_DEFINE(IntInt, 	khint32_t, int, kh_int_hash_func, kh_int_hash_equal, 1)
+KHASH_DEFINE(IntFloat, 	khint32_t, float, kh_int_hash_func, kh_int_hash_equal, 1)
+KHASH_DEFINE(StrPtr, 	kh_cstr_t, uintptr_t, kh_str_hash_func, kh_str_hash_equal, 1)
 
 static khiter_t k;
 //...KHASH.
