@@ -1337,17 +1337,7 @@ void Engine_one(Engine * this, Renderable * renderable)
 		}
 	}
 	
-	//prep uniforms...
-	UniformGroup_update(renderable->uniforms, renderable->uniformsCount, this->program);
-	
-	/*
-	//...view-projection matrix
-	GLint vpLoc = glGetUniformLocation(this->program->id, "vp");
-	glUniformMatrix4fv(vpLoc, 1, GL_FALSE, (GLfloat *)matVP);
-	//...model matrix
-	GLint mLoc = glGetUniformLocation(this->program->id, "m");
-	glUniformMatrix4fv(mLoc, 1, GL_FALSE, (GLfloat *)matM);
-	*/
+	UniformGroup_update(renderable->uniformsByName, this->program);
 
 	if (mesh->index == NULL)
 		glDrawArrays(mesh->topology, 0, mesh->vertexCount);
@@ -1773,32 +1763,14 @@ float Engine_smoothstep(float t)
 }
 
 //Updates uniforms for the current program.
-void UniformGroup_update(Uniform * uniforms, size_t uniformsCount, Program * program)
-{
-	for (size_t i = 0; i < uniformsCount; ++i)
-	{
-		Uniform * uniform = &uniforms[i];
-		GLint location = glGetUniformLocation(program->id, uniform->name);
-		
-		if (uniform->isMatrix)
-		{
-			(*(glUniformMatrixFunctions[uniform->componentsMajor-1][uniform->componentsMinor-1][uniform->typeNumeric]))
-				(location, uniform->elements, uniform->matrixTranspose, uniform->valuesPtr);
-		}
-		else
-			(*(glUniformVectorFunctions[uniform->componentsMajor-1][uniform->typeNumeric]))
-				(location, uniform->elements, uniform->valuesPtr);
-	}
-}
-
-void UniformGroup2_update(khash_t(StrPtr) * uniformsByName, Program * program)
+void UniformGroup_update(khash_t(StrPtr) * uniformsByName, Program * program)
 {
 	for (k = kh_begin(uniformsByName); k != kh_end(uniformsByName); ++k)
 	{
         if (kh_exist(uniformsByName, k))
 		{
-			const char * key = kh_key(uniformsByName,k);
-			LOGI("key=%s\n", key);
+			//const char * key = kh_key(uniformsByName,k);
+			//LOGI("key=%s\n", key);
 			Uniform * uniform = kh_value(uniformsByName, k);
 			GLint location = glGetUniformLocation(program->id, uniform->name);
 			

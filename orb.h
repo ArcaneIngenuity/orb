@@ -455,7 +455,7 @@ typedef struct Renderable
 	Uniform * uniforms;
 	uint8_t uniformsCount;
 	
-	//khash_t(StrUniform) * uniformsByName;
+	khash_t(StrPtr) * uniformsByName;
 	
 	//occasional upload i.e. not performance-critical, so these objects can be pointers to structs.
 	Mesh * mesh;
@@ -766,8 +766,7 @@ void Attribute_submitData(Attribute * attribute, Engine * engine);
 void Attribute_prepare(Attribute * attribute);
 void Attribute_tryPrepare(Attribute * attribute, Engine * engine);
 
-void UniformGroup_update(Uniform * uniforms, size_t uniformsCount, Program * program);
-void UniformGroup2_update(khash_t(StrPtr) * uniformsByName, Program * program);
+void UniformGroup_update(khash_t(StrPtr) * uniformsByName, Program * program);
 
 Texture * Texture_create();
 Texture * Texture_load(const char * filename);
