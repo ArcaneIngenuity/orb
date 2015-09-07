@@ -366,7 +366,8 @@ typedef struct Uniform
 {
 	char * name;
 	enum UniformTypeNumeric typeNumeric; //float, int or whatever
-	GLsizei components; //count
+	GLsizei componentsMajor; //count major (for matrices and vectors)
+	GLsizei componentsMinor; //count minor (for matrices only)
 	GLsizei elements; //count of array size
 	//qualifiers
 	
@@ -762,6 +763,9 @@ void Attribute_submitData(Attribute * attribute, Engine * engine);
 void Attribute_prepare(Attribute * attribute);
 void Attribute_tryPrepare(Attribute * attribute, Engine * engine);
 
+void UniformGroup_update(Uniform * uniforms, size_t uniformsCount, Program * program);
+
+
 Texture * Texture_create();
 Texture * Texture_load(const char * filename);
 Texture * Texture_loadFromMemory(const char * filename);
@@ -808,7 +812,7 @@ void Engine_loadShader(Engine * this, Shader ** shader, const char * path, const
 void Engine_loadProgramFromConfig(Engine * engine, ProgramConfig programConfig, const char * path);
 void Engine_loadProgramsFromConfig(Engine * engine, ProgramConfig programConfigs[], uint8_t programConfigsCount, const char * path);
 void Engine_many(Program * program, RenderableSet * renderableSet, const GLfloat * matVP);
-void Engine_one(Engine * this, Renderable * renderable, const GLfloat * matM, const GLfloat * matVP);
+void Engine_one(Engine * this, Renderable * renderable);
 void Engine_oneUI(Engine * this, Renderable * renderable, const GLfloat * matM);
 void Engine_createScreenQuad(Engine * this, Mesh * mesh, GLuint positionVertexAttributeIndex, GLuint texcoordVertexAttributeIndex,
 	int w, int h,

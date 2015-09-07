@@ -1319,7 +1319,7 @@ void Engine_many(Program * program, RenderableSet * renderableSet, const GLfloat
 */
 //TODO should pass Mesh instead of RenderableSet, though in same arg position.
 //TODO instead of matM, a void * arg pointing to wherever all the uniforms for this object lie. same for attributes?
-void Engine_one(Engine * this, Renderable * renderable, const GLfloat * matM, const GLfloat * matVP)
+void Engine_one(Engine * this, Renderable * renderable)//, const GLfloat * matM, const GLfloat * matVP)
 {
 	Mesh * mesh = renderable->mesh;
 	
@@ -1338,20 +1338,17 @@ void Engine_one(Engine * this, Renderable * renderable, const GLfloat * matM, co
 	}
 	
 	//prep uniforms...
+	UniformGroup_update(renderable->uniforms, renderable->uniformsCount, this->program);
+	
+	/*
 	//...view-projection matrix
 	GLint vpLoc = glGetUniformLocation(this->program->id, "vp");
 	glUniformMatrix4fv(vpLoc, 1, GL_FALSE, (GLfloat *)matVP);
 	//...model matrix
 	GLint mLoc = glGetUniformLocation(this->program->id, "m");
 	glUniformMatrix4fv(mLoc, 1, GL_FALSE, (GLfloat *)matM);
-	/*
-	for (int i = 0; i < renderable->uniforms; ++i)
-	{
-		Uniform uniform = renderable->uniforms[i];
-		
-		//TODO
-	}
-*/
+	*/
+
 	if (mesh->index == NULL)
 		glDrawArrays(mesh->topology, 0, mesh->vertexCount);
 	else
@@ -1773,6 +1770,25 @@ char* Text_load(char* filename)
 float Engine_smoothstep(float t)
 {
 	return 3 * t * t - 2 * t * t * t;
+}
+
+//Updates uniforms for the current program.
+void UniformGroup_update(Uniform * uniforms, size_t uniformsCount, Program * program)
+{
+	for (size_t i = 0; i < uniformsCount; ++i)
+	{
+		Uniform * uniform = &uniforms[i];
+		GLint location = glGetUniformLocation(program->id, uniform->name);
+		
+		if (uniform->isMatrix)
+		{
+			(*(glUniformMatrixFunctions[uniform->componentsMajor-1][uniform->componentsMinor-1][uniform->typeNumeric]))
+				(location, uniform->elements, uniform->matrixTranspose, uniform->valuesPtr);
+		}
+		else
+			(*(glUniformVectorFunctions[uniform->componentsMajor-1][uniform->typeNumeric]))
+				(location, uniform->elements, uniform->valuesPtr);
+	}
 }
 
 void Attribute_prepare(Attribute * attribute)
