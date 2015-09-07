@@ -1351,41 +1351,6 @@ void Engine_one(Engine * this, Renderable * renderable)
 	}
 }
 
-void Engine_oneUI(Engine * this, Renderable * renderable, const GLfloat * matM)
-{
-	Mesh * mesh = renderable->mesh;
-	
-	if (this->capabilities.vao)
-		glBindVertexArray(mesh->vao);
-	else
-	{
-		for (int i = 0; i < mesh->attributeCount; i++)
-		{
-			Attribute * attribute = &mesh->attribute[i];
-			
-			glBindBuffer(GL_ARRAY_BUFFER, attribute->id);
-			
-			Attribute_prepare(attribute);
-		}
-	}
-
-	//prep uniforms...
-	//...model matrix
-	GLint mLoc = glGetUniformLocation(this->program->id, "m");
-	glUniformMatrix4fv(mLoc, 1, GL_FALSE, (GLfloat *)matM);
-	
-	if (mesh->index == NULL)
-		glDrawArrays(mesh->topology, 0, mesh->vertexCount);
-	else
-		glDrawElements(mesh->topology, mesh->indexCount, GL_UNSIGNED_SHORT, mesh->index);
-
-	if (this->capabilities.vao)
-	{
-		glBindBuffer(GL_ARRAY_BUFFER, 0); //vertex attribute array target no longer bound
-		glBindVertexArray(0);
-	}
-}
-
 void Engine_initialise(Engine * this)
 {
 	LOGI("Engine initialising...\n");

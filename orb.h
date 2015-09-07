@@ -814,7 +814,6 @@ void Engine_loadProgramFromConfig(Engine * engine, ProgramConfig programConfig, 
 void Engine_loadProgramsFromConfig(Engine * engine, ProgramConfig programConfigs[], uint8_t programConfigsCount, const char * path);
 void Engine_many(Program * program, RenderableSet * renderableSet, const GLfloat * matVP);
 void Engine_one(Engine * this, Renderable * renderable);
-void Engine_oneUI(Engine * this, Renderable * renderable, const GLfloat * matM);
 void Engine_createScreenQuad(Engine * this, Mesh * mesh, GLuint positionVertexAttributeIndex, GLuint texcoordVertexAttributeIndex,
 	int w, int h,
 	int rcx, int rcy
