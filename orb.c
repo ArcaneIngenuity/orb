@@ -1319,7 +1319,7 @@ void Engine_many(Program * program, RenderableSet * renderableSet, const GLfloat
 */
 //TODO should pass Mesh instead of RenderableSet, though in same arg position.
 //TODO instead of matM, a void * arg pointing to wherever all the uniforms for this object lie. same for attributes?
-void Engine_one(Engine * this, Renderable * renderable)//, const GLfloat * matM, const GLfloat * matVP)
+void Engine_one(Engine * this, Renderable * renderable)
 {
 	Mesh * mesh = renderable->mesh;
 	
@@ -1791,6 +1791,29 @@ void UniformGroup_update(Uniform * uniforms, size_t uniformsCount, Program * pro
 	}
 }
 
+void UniformGroup2_update(khash_t(StrPtr) * uniformsByName, Program * program)
+{
+	for (k = kh_begin(uniformsByName); k != kh_end(uniformsByName); ++k)
+	{
+        if (kh_exist(uniformsByName, k))
+		{
+			const char * key = kh_key(uniformsByName,k);
+			LOGI("key=%s\n", key);
+			Uniform * uniform = kh_value(uniformsByName, k);
+			GLint location = glGetUniformLocation(program->id, uniform->name);
+			
+			if (uniform->isMatrix)
+			{
+				(*(glUniformMatrixFunctions[uniform->componentsMajor-1][uniform->componentsMinor-1][uniform->typeNumeric]))
+					(location, uniform->elements, uniform->matrixTranspose, uniform->valuesPtr);
+			}
+			else
+				(*(glUniformVectorFunctions[uniform->componentsMajor-1][uniform->typeNumeric]))
+					(location, uniform->elements, uniform->valuesPtr);
+		}
+	}
+}
+
 void Attribute_prepare(Attribute * attribute)
 {
 	//provide data / layout info; "take buffer that is bound at the time called and associates that buffer with the current VAO"
@@ -1810,32 +1833,3 @@ void Attribute_submitData(Attribute * attribute, Engine * engine)
     glBufferData(GL_ARRAY_BUFFER, attribute->vertexBytes, attribute->vertex, attribute->usage);
 	Attribute_tryPrepare(attribute, &engine);
 }
-/*
-void Renderable_render(Program * program, Renderable * renderable, , mat4x4 * matVP, mat4x4 * matVPInv, Chunk * chunk, World * world)
-{
-	Texture * texture;
-	GLint uniformTexture;
-
-	if (chunk->changedHeights)
-	{
-		ChunkRenderable_updateGeometry(renderable, chunk, world);
-		chunk->changedHeights = false; //TODO should be done in Ctrl.updatePost
-	}
-	if (chunk->changedSurface)
-	{
-		//TODO should be only a bounded section that is updated
-		//ChunkRenderable_updateTextureDiffuse(renderable, chunk, world);
-		chunk->changedSurface = false; //TODO should be done in Ctrl.updatePost
-	}
-	
-	GLint cellsAcrossLoc = glGetUniformLocation(program->id, "cellsAcrossChunk");
-	GLint chunksAcrossLoc = glGetUniformLocation(program->id, "chunksAcrossWorld");
-	GLint chunkCoordLoc = glGetUniformLocation(program->id, "chunkCoord");
-	glUniform1i(cellsAcrossLoc, parameters->cellsAcrossChunk);
-	glUniform1i(chunksAcrossLoc, parameters->chunksAcrossWorld);
-	glUniform2i(chunkCoordLoc, chunk->chx, chunk->chz);
-	
-	uint16_t i = Chunk_index(chunk->id);
-	Engine_one(&engine, renderable, (const GLvoid *) &world->matrix[i], (const GLvoid *) matVP);
-}
-*/

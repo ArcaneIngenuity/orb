@@ -454,6 +454,9 @@ typedef struct Renderable
 	//char * id;
 	Uniform * uniforms;
 	uint8_t uniformsCount;
+	
+	//khash_t(StrUniform) * uniformsByName;
+	
 	//occasional upload i.e. not performance-critical, so these objects can be pointers to structs.
 	Mesh * mesh;
 	Texture * textures[HH_TEXTURES_RENDERABLE_MAX]; 
@@ -764,7 +767,7 @@ void Attribute_prepare(Attribute * attribute);
 void Attribute_tryPrepare(Attribute * attribute, Engine * engine);
 
 void UniformGroup_update(Uniform * uniforms, size_t uniformsCount, Program * program);
-
+void UniformGroup2_update(khash_t(StrPtr) * uniformsByName, Program * program);
 
 Texture * Texture_create();
 Texture * Texture_load(const char * filename);
@@ -797,7 +800,6 @@ GLuint GLBuffer_create(
     const void *data,
 	GLenum usage
 );
-
 
 void Shader_construct(Shader * this);
 
