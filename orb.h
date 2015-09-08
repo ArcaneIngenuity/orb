@@ -719,9 +719,6 @@ typedef struct Engine
 	//Device array[2];
 	khash_t(StrPtr) * devicesByName;
 	
-	//should be in the order they are to be rendered in
-	Renderable renderables[HH_RENDERABLES_MAX];
-	
 	Program * program; //the current shader program TODO should be an index into array? then use a getter to access. 
 	
 	//Transforms may not all have associated renderables...
