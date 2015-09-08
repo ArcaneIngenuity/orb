@@ -760,23 +760,6 @@ void Transform_finalise(mat4x4 * matTrans, mat4x4 * matPos, mat4x4 * matRot)
 	mat4x4_mul(*matTrans, *matPos, *matRot);
 }
 
-void Camera_lookAt()
-{
-	//lookingAt;
-}
-/*
-//http://www.songho.ca/opengl/gl_projectionmatrix.html
-void Matrix_setProjectionPerspective(mat4x4 matrix, float near, float far, float top, float right)
-{
-	mat4x4_identity(matrix);
-	matrix[0][0] = near / right;
-	matrix[1][1] = near / top;
-	matrix[2][2] = -(far + near) / (far - near);
-	matrix[3][2] = (-2.f * far * near) / (far - near);
-	matrix[2][3] = -1.f;
-}
-*/
-
 //------------------Material-----------------//
 
 
@@ -1158,25 +1141,7 @@ void Program_construct(Program * this, GLuint vertex_shader, GLuint fragment_sha
 	else
 		LOGI("glLinkProgram() success.\n");
 }
-/*
-bool linkProgramSuccess(int program)
-{
-	int status;
-	
-	
-	if (!status)
-	{
-		GLint infoLogLength;
-		glGetProgramiv(program,GL_INFO_LOG_LENGTH,&infoLogLength);
-		GLchar infoLog[infoLogLength + 1];
-		//LOGI("info log length:%i\n", infoLogLength);
-		glGetProgramInfoLog(program, infoLogLength + 1, NULL, infoLog);
-		LOGI("glLinkProgram() failed: %s\n", infoLog);
-	}
-	LOGI("status %i %i %i\n", status, GL_TRUE, GL_FALSE);
-	return status == GL_TRUE;
-}
-*/
+
 //--------------Render-------------------//
 
 
@@ -1652,32 +1617,7 @@ Program * Engine_getCurrentProgram(Engine * this)
 {
 	return this->program;
 }
-	
-//------------------TOOLS------------------//
-/*
-bool isExtensionSupported(const char * extension)
-{
-    if ( glGetStringi != NULL ) // Use the post-3.0 core profile method for querying extensions.
-    {
-        GLint numExtensions = 0;
-        glGetIntegerv( GL_NUM_EXTENSIONS, &numExtensions );
-		const char * extensions[numExtensions];
-        for( int i = 0; i < numExtensions; ++i )
-        {
-            extensions[i] = (const char *)glGetStringi( GL_EXTENSIONS, i );
-			//LOGI("EXT: %s\n", extensions[i]); 
-			if (strstr(extensions[i], extension))
-				return true;
-        }
-    }
-    else // Fall-back to the pre-3.0 or 3.0+ compatibility profile method for querying extensions.
-    {
-		return NULL != strstr( (char const*)glGetString( GL_EXTENSIONS ), extension );
-    }
-     
-	return false;
-}
-*/
+
 char* Text_load(char* filename)
 {
 	//should be portable - http://stackoverflow.com/questions/14002954/c-programming-how-to-read-the-whole-file-contents-into-a-buffer

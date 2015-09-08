@@ -591,14 +591,6 @@ typedef struct Material
 
 } Material;
 
-typedef struct Camera
-{
-	vec3* lookingAt; //ongoing
-	vec3* movingWith; //ongoing
-	//TODO options that allow cinematic effects
-} Camera;
-const struct Camera cameraEmpty;
-
 typedef struct Color
 {
 	float r;
