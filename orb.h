@@ -446,6 +446,9 @@ typedef struct Mesh
 	bool changed;
 } Mesh;
 
+struct Renderable;
+typedef void (*RenderableUpdateFunction)(struct Renderable * renderable);
+
 //Renderable is a unique combination of some Mesh (vertex data) and some Material (shader + uniforms).
 //It is optional for grouping these related render-time aspects together. It is best used where efficiency is not of the essence, e.g. UI (where efficiency is important, rather use multiple arrays with same index into each). 
 //Materials are either treated explicitly or simply as the input interface + matching renderable information for a given ProgramPath
@@ -462,11 +465,18 @@ typedef struct Renderable
 	Texture * textures[HH_TEXTURES_RENDERABLE_MAX]; 
 	//Texture * texture; 
 	mat4x4 * matrix;
+	
+	//uint8_t updateBits; //a set of flags denoting different things to update (user specified meaning for each)
+	bool updateFlags[8];
+	RenderableUpdateFunction updateFunctions[8]; //userData acts as the sole arg
+	
 	//TODO Material (with Texture)
 	//Material materials[];
 	//A Material consists of:
 	//-a ShaderPath/Pipe, which consists of multiple shader Programs running in sequence
 	//-the parameters needed to populate that pipe at each stage
+	
+	void * userData;
 } Renderable;
 const struct Renderable renderableEmpty;
 
