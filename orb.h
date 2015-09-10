@@ -252,7 +252,6 @@ typedef struct BMFontInfo
 	unsigned short outline;
 	
 } BMFontInfo;
-const struct BMFontInfo bmFontInfoEmpty;
 
 typedef struct BMFontCommon
 {
@@ -267,7 +266,6 @@ typedef struct BMFontCommon
 	unsigned char greenChnl;
 	unsigned char blueChnl;
 } BMFontCommon;
-const struct BMFontCommon bmFontCommonEmpty;
 
 typedef struct BMFontCharacter
 {
@@ -282,8 +280,6 @@ typedef struct BMFontCharacter
 	unsigned char page;
 	unsigned char chnl;
 } BMFontCharacter;
-const struct BMFontCharacter bmFontCharacterEmpty;
-
 
 typedef struct BMFontKerning
 {
@@ -291,14 +287,12 @@ typedef struct BMFontKerning
 	unsigned short second; //id
 	unsigned short amount;
 } BMFontKerning;
-const struct BMFontKerning bmFontKerningEmpty;
 
 typedef struct BMFontPage
 {
 	unsigned char id;
 	const char * file;
 } BMFontPage;
-const struct BMFontPage bmFontPageEmpty;
 
 typedef struct BMFont
 {
@@ -310,7 +304,6 @@ typedef struct BMFont
 	BMFontKerning kerningsByFirst[256]; //index by first id, matches second array
 	BMFontKerning kerningsBySecond[256]; //index by second id, matches first array
 } BMFont;
-const struct BMFont bmFontEmpty;
 
 //instance of the abstract, non-mesh-specific concept of a vertex attribute.
 //there could be many ShaderAttributes which would work with a given Mesh Attribute, and vice versa, so no point linking these directly.
@@ -446,10 +439,6 @@ typedef struct Mesh
 	bool changed;
 } Mesh;
 
-struct Renderable;
-typedef void (*RenderableUpdateFunction)(struct Renderable * renderable);
-typedef void (*RenderableCreateFunction)(struct Renderable * renderable, mat4x4 * matrix);
-
 //Renderable is a unique combination of some Mesh (vertex data) and some Material (shader + uniforms).
 //It is optional for grouping these related render-time aspects together. It is best used where efficiency is not of the essence, e.g. UI (where efficiency is important, rather use multiple arrays with same index into each). 
 //Materials are either treated explicitly or simply as the input interface + matching renderable information for a given ProgramPath
@@ -465,14 +454,7 @@ typedef struct Renderable
 	Mesh * mesh;
 	Texture * textures[HH_TEXTURES_RENDERABLE_MAX]; 
 	//Texture * texture;
-	
-	//TODO have a single set of flags with 1 create bit and 7 update bits
-	bool createFlag;
-	RenderableCreateFunction createFunction;
-	//uint8_t updateBits; //a set of flags denoting different things to update (user specified meaning for each)
-	bool updateFlags[8];
-	RenderableUpdateFunction updateFunctions[8]; //userData acts as the sole arg
-	
+
 	//TODO Material (with Texture)
 	//Material materials[];
 	//A Material consists of:
@@ -481,7 +463,6 @@ typedef struct Renderable
 	
 	void * userData;
 } Renderable;
-const struct Renderable renderableEmpty;
 
 //TODO you will need to memcpy out the range of units used in a single instances draw call
 //TODO make it use a particular Mesh, Material (with Texture) etc.
@@ -760,7 +741,6 @@ typedef struct Engine
 	
 	float deltaSec;
 } Engine;
-const struct Engine engineEmpty;
 
 void Mesh_calculateNormals(Mesh * this);
 
