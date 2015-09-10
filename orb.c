@@ -1089,10 +1089,6 @@ void Program_construct(Program * this, GLuint vertex_shader, GLuint fragment_sha
 	for (int i = 0; i < attributeLocationsCount; i++)
 		glBindAttribLocation(id, i, attributeLocations[i]);
 	
-	//this->attributeLocationsList.entries = this->attributeLocations;
-	//this->attributeLocationsList.capacity = 16; //TODO query GL for how many max? or use sizeof(program->attributeLocations)
-	//this->attributeLocationsList.fail = NULL;
-	
 	// Link program and check success
 	glLinkProgram(id);
 	
