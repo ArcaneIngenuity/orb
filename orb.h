@@ -463,8 +463,7 @@ typedef struct Renderable
 	//occasional upload i.e. not performance-critical, so these objects can be pointers to structs.
 	Mesh * mesh;
 	Texture * textures[HH_TEXTURES_RENDERABLE_MAX]; 
-	//Texture * texture; 
-	mat4x4 * matrix;
+	//Texture * texture;
 	
 	//uint8_t updateBits; //a set of flags denoting different things to update (user specified meaning for each)
 	bool updateFlags[8];
