@@ -760,6 +760,61 @@ void Transform_finalise(mat4x4 * matTrans, mat4x4 * matPos, mat4x4 * matRot)
 	mat4x4_mul(*matTrans, *matPos, *matRot);
 }
 
+//------------------Renderable-----------------//
+
+void IndexedRenderableManager_create(
+	Renderable * const renderables,
+	uint16_tList * const indexRenderListPtr,
+	uint16_tList * const indexListPtr,
+	IndexedRenderableFunction fnc,
+	void * model)
+{
+	for (int ii = 0; ii < indexListPtr->length; ii++)
+	{
+		int i = indexListPtr->entries[ii];
+		
+		Renderable * renderable = &renderables[i]; //get our renderable.. TODO a more flexible mapping of data index to renderable index?
+		fnc(renderable, i, model); //..create it
+		
+		uint16_tList_add(indexRenderListPtr, i);
+	}
+}
+
+/// updates a Renderable that has (at any point previously) been created
+void IndexedRenderableManager_update(
+	Renderable * const renderables,
+	uint16_tList * const indexRenderListPtr, //actually unused here, but keeps the arg lists uniform between create/update/render
+	uint16_tList * const indexListPtr,
+	IndexedRenderableFunction fnc,
+	void * model)
+{
+	for (int ii = 0; ii < indexListPtr->length; ii++)
+	{
+		int i = indexListPtr->entries[ii];
+		
+		Renderable * renderable = &renderables[i]; //get our renderable.. TODO a more flexible mapping of data index to renderable index?
+		fnc(renderable, i, model); //..create it
+		
+		//exactly as createRenderables, but no list add... could we make these the same? RenderableManager_applyFunction(bool withAdd)
+	}
+}
+
+/// renders a group of Renderables from an index list
+void IndexedRenderableManager_render(
+	Renderable * const renderables,
+	uint16_tList * indexRenderListPtr,
+	Engine * enginePtr)
+{	
+	for (int ii = 0; ii < indexRenderListPtr->length; ++ii)
+	{
+		int i = indexRenderListPtr->entries[ii];
+		
+		Renderable * renderable = &renderables[i];
+		
+		Engine_one(enginePtr, renderable);
+	}
+}
+
 //------------------Material-----------------//
 
 

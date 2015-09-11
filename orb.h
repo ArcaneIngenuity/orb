@@ -11,6 +11,7 @@
 #include "linmath.h"
 #include "../pod/list_generic.h"
 #include "../pod/map_generic.h"
+#include "../pod/uint16_tList.h"
 //#include "../pod/intMap.h"
 //#include "../pod/floatMap.h"
 
@@ -741,6 +742,39 @@ typedef struct Engine
 	
 	float deltaSec;
 } Engine;
+
+typedef void (*IndexedRenderableFunction)(struct Renderable * renderable, uint16_t i, void * model);
+
+
+/*
+typedef struct IndexedRenderableManager
+{
+	Renderable * renderables; //no count needed - correct indices are user's responsibility
+	
+} IndexedRenderableManager;
+*/
+
+/// creates new Renderable%s and adds them to this View%'s list for rendering
+void IndexedRenderableManager_create(
+	Renderable * const renderables,
+	uint16_tList * const indexRenderListPtr,
+	uint16_tList * const indexListPtr,
+	IndexedRenderableFunction fnc,
+	void * model);
+
+/// updates a Renderable that has (at any point previously) been created
+void IndexedRenderableManager_update(
+	Renderable * const renderables,
+	uint16_tList * const indexRenderListPtr, //actually unused here, but keeps the arg lists uniform between create/update/render
+	uint16_tList * const indexListPtr,
+	IndexedRenderableFunction fnc,
+	void * model);
+
+/// renders a group of Renderables from an index list
+void IndexedRenderableManager_render(
+	Renderable * const renderables,
+	uint16_tList * indexRenderListPtr,
+	Engine * enginePtr);
 
 void Mesh_calculateNormals(Mesh * this);
 
