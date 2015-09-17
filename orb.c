@@ -13,6 +13,57 @@ glUniformVectorFunction glUniformVectorFunctions[4][2];
 glUniformMatrixFunction glUniformMatrixFunctions[4][4][2]; 
 
 //...KHASH.
+
+//helpers...
+// You must free the result if result is non-NULL.
+char *str_replace(char *orig, char *rep, char *with)
+{
+    char *result; // the return string
+    char *ins;    // the next insert point
+    char *tmp;    // varies
+    int len_rep;  // length of rep
+    int len_with; // length of with
+    int len_front; // distance between rep and end of last rep
+    int count;    // number of replacements
+
+    if (!orig)
+        return NULL;
+    if (!rep)
+        rep = "";
+    len_rep = strlen(rep);
+    if (!with)
+        with = "";
+    len_with = strlen(with);
+
+    ins = orig;
+    for (count = 0; tmp = strstr(ins, rep); ++count) {
+        ins = tmp + len_rep;
+    }
+
+    // first time through the loop, all the variable are set correctly
+    // from here on,
+    //    tmp points to the end of the result string
+    //    ins points to the next occurrence of rep in orig
+    //    orig points to the remainder of orig after "end of rep"
+    tmp = result = malloc(strlen(orig) + (len_with - len_rep) * count + 1);
+
+    if (!result)
+        return NULL;
+
+    while (count--) {
+        ins = strstr(orig, rep);
+        len_front = ins - orig;
+        tmp = strncpy(tmp, orig, len_front) + len_front;
+        tmp = strcpy(tmp, with) + len_with;
+        orig += len_front + len_rep; // move to next "end of rep"
+    }
+    strcpy(tmp, orig);
+	
+    return result;
+	// You must free the result if result is non-NULL.
+}
+//...helpers.
+
 void Window_terminate(Engine * engine)
 {
 	#ifdef DESKTOP
@@ -356,6 +407,95 @@ void Android_onAppCmd(struct android_app* app, int32_t cmd)
 		break;
 	}
 }
+
+void Android_ensureValidDataPath(struct android_app * app)
+{
+	if (app->activity->internalDataPath == NULL)
+		app->activity->internalDataPath = "/data/data/com.arcaneingenuity.waradventure/files"; //HACK, TODO use JNI instead! (getExternalFilesDir(null))
+	//...is it safe to set the member itself on the android activity class? Guess so.
+}
+
+void Android_extractAssetsFromAPKDirectory(struct android_app * app, const char * apkDir)
+{
+	LOGI("Android_extractAssetsFromAPKDirectory %s\n", apkDir);
+    const char * filename = (const char*)NULL;
+	char * fsDir = app->activity->internalDataPath;
+	LOGI("--- %s\n", fsDir);
+	
+	char dirInFS[strlen(fsDir)+strlen(apkDir)+1+1]; //+1 = slash, +1 = null terminator
+	strcpy(dirInFS, fsDir);
+	strcat(dirInFS, "/");
+	strcat(dirInFS, apkDir);
+	
+	LOGI("=== %s\n", dirInFS);
+	
+	int result = mkdir(dirInFS, 0770);
+	if (result != 0)
+		LOGI("failed to create directory: %s", dirInFS);
+	//TODOcheck result and act thereon
+    	
+	AAssetManager* mgr = app->activity->assetManager;
+    AAssetDir* assetDir = AAssetManager_openDir(mgr, apkDir);
+	
+	LOGI("??? %p\n", assetDir);
+	
+	//browse all files and copy them on disk one by one
+	while ((filename = AAssetDir_getNextFileName(assetDir)) != NULL)
+	{
+		char pathInAPK[strlen(apkDir)+strlen(filename)+1+1]; //+1 = slash, +1 = null terminator
+		strcpy(pathInAPK, apkDir);
+		strcat(pathInAPK, "/");
+		strcat(pathInAPK, filename);
+		
+		char pathInFS[strlen(fsDir)+strlen(pathInAPK)+1+1]; //+1 = slash, +1 = null terminator
+		strcpy(pathInFS, fsDir);
+		strcat(pathInFS, "/");
+		strcat(pathInFS, pathInAPK);
+
+		LOGI("filename =%s", filename);
+		LOGI("pathInApk=%s", pathInAPK);
+		LOGI("pathInFS =%s", pathInFS);
+		
+		const int BUFFERSIZE = 10;
+		char buffer[BUFFERSIZE];
+		int readCount = 0;
+		
+		AAsset* asset = AAssetManager_open(mgr, pathInAPK, AASSET_MODE_STREAMING);
+		FILE* out = fopen(pathInFS, "w+");
+
+		if (out)
+		{
+			while ((readCount = AAsset_read(asset, buffer, BUFFERSIZE)) > 0)
+			{
+				fwrite(&buffer, readCount, 1, out);
+			}
+			fflush(out);
+			
+			fclose(out);
+			LOGI("Created / wrote %s.", pathInFS);
+		}
+		else
+		{
+			LOGI("Could not open %s for write.", pathInFS);
+		}
+		
+		AAsset_close(asset);
+		
+	}
+	
+	AAssetDir_close(assetDir);
+}
+
+void Android_extractAssetsFromAPK(struct android_app * app, const char * apkDirs[], int apkDirsCount)
+{
+	LOGI("Android_extractAssetsFromAPK\n");
+	for (int i = 0; i < apkDirsCount; ++i)
+	{
+		LOGI("i=%d\n", i);
+		Android_extractAssetsFromAPKDirectory(app, apkDirs[i]);
+	}
+}
+
 #endif //__ANDROID__
 
 void Loop_processInputs(Engine * engine)
@@ -1601,13 +1741,14 @@ void Engine_initialise(Engine * this)
 	glUniformMatrixFunctions[2-1][2-1][0] = glUniformMatrix2fv;
 	glUniformMatrixFunctions[3-1][3-1][0] = glUniformMatrix3fv;
 	glUniformMatrixFunctions[4-1][4-1][0] = glUniformMatrix4fv;
+	#ifdef DESKTOP
 	glUniformMatrixFunctions[2-1][3-1][0] = glUniformMatrix2x3fv;
 	glUniformMatrixFunctions[3-1][2-1][0] = glUniformMatrix3x2fv;
 	glUniformMatrixFunctions[2-1][4-1][0] = glUniformMatrix2x4fv;
 	glUniformMatrixFunctions[4-1][2-1][0] = glUniformMatrix4x2fv;
 	glUniformMatrixFunctions[3-1][4-1][0] = glUniformMatrix3x4fv;
 	glUniformMatrixFunctions[4-1][3-1][0] = glUniformMatrix4x3fv;
-	
+	#endif//DESKTOP
 	LOGI("Engine initialised.\n");
 }
 
@@ -1667,6 +1808,36 @@ Program * Engine_setCurrentProgram(Engine * this, char * name)
 Program * Engine_getCurrentProgram(Engine * this)
 {
 	return this->program;
+}
+
+/// Takes Linux-canonical (single forward slash) paths.
+const char * Engine_getPath(Engine * engine, const char * path, int pathLength, const char * partial)
+{
+	//get paths ready for loading shaders
+	#if _WIN32
+	//relative path
+	strcpy(path, ".\\");
+	char * replaced = str_replace(partial, "/", "\\");
+	if (replaced)
+	{
+		strcat(path, replaced);
+		free(replaced);
+	}
+	#elif __ANDROID__
+	//absolute path
+	char * fsDir = engine->app->activity->internalDataPath;
+	strcpy(path, fsDir);
+	strcat(path, "/");
+	strcat(path, partial);
+	#elif __linux__
+	char * path = "./shd/";
+	#else //all other supported OS?
+	//relative path?
+	//chdir("/sdcard/");
+	//char * path = "./shd/";
+	#endif //OS
+	
+	LOGI("@@ %s", path);
 }
 
 char* Text_load(char* filename)
