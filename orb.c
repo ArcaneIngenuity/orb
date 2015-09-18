@@ -355,7 +355,7 @@ void Android_onAppCmd(struct android_app* app, int32_t cmd)
 		
 		if (engine->app->window != NULL)
 		{
-			LOGI("engine->app->window is NULL!");
+			LOGI("engine->app->window is valid.");
 			Engine_initialise(engine);
 			//if (!engine->userInitialised)
 			{
@@ -364,6 +364,10 @@ void Android_onAppCmd(struct android_app* app, int32_t cmd)
 			}
 			
 			LOGI("...INIT_WINDOW!");
+		}
+		else
+		{
+			LOGI("engine->app->window is NULL.");
 		}
 		
 		break;
