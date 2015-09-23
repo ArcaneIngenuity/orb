@@ -920,6 +920,8 @@ void IndexedRenderableManager_create(
 		Renderable * renderable = &renderables[i]; //get our renderable.. TODO a more flexible mapping of data index to renderable index?
 		fnc(renderable, i, model); //..create it
 		
+		//TODO only add if a custom checkAdd func returns true
+		//(allows e.g. AoI or other selectiveness about what to render)
 		uint16_tList_add(indexRenderListPtr, i);
 	}
 }
@@ -937,7 +939,7 @@ void IndexedRenderableManager_update(
 		int i = indexListPtr->entries[ii];
 		
 		Renderable * renderable = &renderables[i]; //get our renderable.. TODO a more flexible mapping of data index to renderable index?
-		fnc(renderable, i, model); //..create it
+		fnc(renderable, i, model); //..update it
 		
 		//exactly as createRenderables, but no list add... could we make these the same? RenderableManager_applyFunction(bool withAdd)
 	}
@@ -991,7 +993,10 @@ Texture * Texture_load(const char * filename)
 	//texture->name = (char *) filename;
 	#ifdef DESKTOP
 	texture->data = stbi_load(filename, &(texture->width), &(texture->height), &(texture->components), 0);
+	if (texture->data == NULL)
+		LOGI("WARNING: texture %s not loaded.\n", filename); 
 	#endif//DESKTOP
+	
 	return texture;
 }
 
@@ -1048,6 +1053,7 @@ void Texture_prepare(Texture * this, Program * program)
 	glActiveTexture(GL_TEXTURE0 + this->unit); //"glActiveTexture specifies which texture unit a texture object is bound to when glBindTexture is called."
 	glBindTexture(GL_TEXTURE_2D, this->id); //ensure the correct texture is bound to the texture unit that the shader will use (?)
 	GLint uniformTexture = glGetUniformLocation(program->id, this->name);
+	LOGI("tex name=%s loc=%d unit=%d\n", this->name, uniformTexture, this->unit);
 	glUniform1i(uniformTexture, this->unit); //let shader's sampler bind to appropriate texture unit
 }
 
@@ -1097,26 +1103,21 @@ void Texture_setTexelFormats(Texture * this, GLenum arranged, GLenum atomTypeExt
 
 void Texture_setDimensionCount(Texture * this, GLenum dimensions)
 {
-	LOGI("set dimensiosn to %d\n", dimensions);
 	this->dimensions = dimensions;
 }
 
 void Texture_applyParameters(Texture * this)
 {
-	LOGI("unit %u\n",this->unit);
 	glActiveTexture(GL_TEXTURE0 + this->unit);
-	LOGI("e0 %s\n",glGetError());
 	glBindTexture(GL_TEXTURE_2D, this->id);
-	LOGI("e1 %s\n",glGetError());
 
 	for (k = kh_begin(this->intParametersByName); k != kh_end(this->intParametersByName); ++k)
 	{
 		if (kh_exist(this->intParametersByName, k))
 		{
-			const char *key = kh_key(this->intParametersByName, k);
+			int key = kh_key(this->intParametersByName, k);
+			int tval = kh_value(this->intParametersByName, k);
 			
-			int tval = &kh_value(this->intParametersByName, k);
-			printf("key=%s  val=%d\n", key, tval);
 			glTexParameteri(this->dimensions, key, tval);
 		}
 	}
@@ -1834,7 +1835,11 @@ const char * Engine_getPath(Engine * engine, const char * path, int pathLength, 
 	strcat(path, "/");
 	strcat(path, partial);
 	#elif __linux__
-	char * path = "./shd/";
+	char * prefix = "./";
+	//char * pathTemp = malloc(sizeof(char) * (strlen(prefix) + strlen(partial)));
+	strcpy(path, prefix); 
+	strcat(path, partial); 
+	///path = pathTemp;
 	#else //all other supported OS?
 	//relative path?
 	//chdir("/sdcard/");
@@ -1905,6 +1910,14 @@ void UniformGroup_update(khash_t(StrPtr) * uniformsByName, Program * program)
 			Uniform * uniform = kh_value(uniformsByName, k);
 			GLint location = glGetUniformLocation(program->id, uniform->name);
 			
+			if (uniform->isTexture)
+			{
+				//TODO only update if a flag is set
+				
+			}
+			else
+			{
+			
 			if (uniform->isMatrix)
 			{
 				(*(glUniformMatrixFunctions[uniform->componentsMajor-1][uniform->componentsMinor-1][uniform->typeNumeric]))
@@ -1913,6 +1926,7 @@ void UniformGroup_update(khash_t(StrPtr) * uniformsByName, Program * program)
 			else
 				(*(glUniformVectorFunctions[uniform->componentsMajor-1][uniform->typeNumeric]))
 					(location, uniform->elements, uniform->valuesPtr);
+			}
 		}
 	}
 }

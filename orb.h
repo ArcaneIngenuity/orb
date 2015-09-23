@@ -375,7 +375,7 @@ typedef struct Uniform
 
 typedef struct Texture
 {
-	char name[32]; //or as key?
+	char name[64]; //or as key?
     
     /** The byte buffer representing the decoded image data. */
 	uint8_t * data;
