@@ -457,9 +457,7 @@ typedef struct Renderable
 	
 	//occasional upload i.e. not performance-critical, so these objects can be pointers to structs.
 	Mesh * mesh;
-	Texture * textures[HH_TEXTURES_RENDERABLE_MAX]; 
-	//Texture * texture;
-
+	
 	//TODO Material (with Texture)
 	//Material materials[];
 	//A Material consists of:
