@@ -353,23 +353,27 @@ enum UniformTypeNumeric
 	//UniformUInt, //not in ES 2.0
 };
 
+enum UniformType
+{
+	UniformVector,
+	UniformMatrix,
+	UniformTexture
+};
+
 //TODO lists of Uniforms should stand alone, and be able to run whenever calling code sees fit,
 //whether that be once in a blue moon, once every frame for a group of renderables, or once
 //every frame for each distinct renderable (based on its state).
 typedef struct Uniform
 {
 	char * name;
-	enum UniformTypeNumeric typeNumeric; //float, int or whatever
+	enum UniformType type;
+	enum UniformTypeNumeric typeNumeric; //float, int or whatever - applies only if type != texture
 	GLsizei componentsMajor; //count major (for matrices and vectors)
 	GLsizei componentsMinor; //count minor (for matrices only)
 	GLsizei elements; //count of array size
-	//qualifiers
 	
 	void * valuesPtr; //"values" since many glUniform* are non-scalar
-	
-	bool isTexture; //some special calls for textures: tex and sampler. TODO actually, this comes from reading the type
-	bool isMatrix; //allows appropriate glUniform* call
-	GLboolean matrixTranspose; //for glUniformMatrix calls
+	GLboolean matrixTranspose; //for glUniformMatrix calls - applies only if type == matrix
 	//GLint location; //cached from glgetUniformLocation
 } Uniform;
 
@@ -449,7 +453,7 @@ typedef struct Renderable
 	Uniform * uniforms;
 	uint8_t uniformsCount;
 	
-	khash_t(StrPtr) * uniformsByName;
+	khash_t(StrPtr) * uniformPtrsByName;
 	
 	//occasional upload i.e. not performance-critical, so these objects can be pointers to structs.
 	Mesh * mesh;
@@ -502,7 +506,7 @@ typedef struct Shader
 	
 	//inputs:
 	khash_t(StrInt) attributesByName;
-	khash_t(StrInt) uniformsByName;
+	khash_t(StrInt) uniformPtrsByName;
 	
 	//shader version
 } Shader;
@@ -782,7 +786,7 @@ void Attribute_submitData(Attribute * attribute, Engine * engine);
 void Attribute_prepare(Attribute * attribute);
 void Attribute_tryPrepare(Attribute * attribute, Engine * engine);
 
-void UniformGroup_update(khash_t(StrPtr) * uniformsByName, Program * program);
+void UniformGroup_update(khash_t(StrPtr) * uniformPtrsByName, Program * program);
 
 Texture * Texture_create();
 Texture * Texture_load(const char * filename);

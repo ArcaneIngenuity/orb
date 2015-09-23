@@ -1498,7 +1498,7 @@ void Engine_one(Engine * this, Renderable * renderable)
 		}
 	}
 	
-	UniformGroup_update(renderable->uniformsByName, this->program);
+	UniformGroup_update(renderable->uniformPtrsByName, this->program);
 
 	if (mesh->index == NULL)
 		glDrawArrays(mesh->topology, 0, mesh->vertexCount);
@@ -1899,33 +1899,40 @@ float Engine_smoothstep(float t)
 }
 
 //Updates uniforms for the current program.
-void UniformGroup_update(khash_t(StrPtr) * uniformsByName, Program * program)
+void UniformGroup_update(khash_t(StrPtr) * uniformPtrsByName, Program * programPtr)
 {
-	for (k = kh_begin(uniformsByName); k != kh_end(uniformsByName); ++k)
+	for (k = kh_begin(uniformPtrsByName); k != kh_end(uniformPtrsByName); ++k)
 	{
-        if (kh_exist(uniformsByName, k))
+        if (kh_exist(uniformPtrsByName, k))
 		{
-			//const char * key = kh_key(uniformsByName,k);
+			//const char * key = kh_key(uniformPtrsByName,k);
 			//LOGI("key=%s\n", key);
-			Uniform * uniform = kh_value(uniformsByName, k);
-			GLint location = glGetUniformLocation(program->id, uniform->name);
+			Uniform * uniform = kh_value(uniformPtrsByName, k);
+			GLint location = glGetUniformLocation(programPtr->id, uniform->name);
 			
-			if (uniform->isTexture)
+			switch (uniform->type)
 			{
-				//TODO only update if a flag is set
-				
-			}
-			else
-			{
-			
-			if (uniform->isMatrix)
-			{
-				(*(glUniformMatrixFunctions[uniform->componentsMajor-1][uniform->componentsMinor-1][uniform->typeNumeric]))
-					(location, uniform->elements, uniform->matrixTranspose, uniform->valuesPtr);
-			}
-			else
-				(*(glUniformVectorFunctions[uniform->componentsMajor-1][uniform->typeNumeric]))
-					(location, uniform->elements, uniform->valuesPtr);
+				case UniformTexture:
+				{
+					Texture * texturePtr = uniform->valuesPtr;
+					//TODO optimise: if needs refresh!
+					Texture_refresh(texturePtr);
+					Texture_prepare(texturePtr, programPtr);
+				}
+				break;
+				case UniformVector:
+				{
+					(*(glUniformVectorFunctions[uniform->componentsMajor-1][uniform->typeNumeric]))
+						(location, uniform->elements, uniform->valuesPtr);
+				}
+				break;
+				case UniformMatrix:
+				{
+					(*(glUniformMatrixFunctions[uniform->componentsMajor-1][uniform->componentsMinor-1][uniform->typeNumeric]))
+						(location, uniform->elements, uniform->matrixTranspose, uniform->valuesPtr);
+				}
+				break;
+				default: break;
 			}
 		}
 	}
