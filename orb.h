@@ -788,7 +788,8 @@ void UniformGroup_update(khash_t(StrPtr) * uniformPtrsByName, Program * program)
 
 Texture * Texture_create();
 void Texture_loadData(Texture * texture, const char * filename);
-void Texture_zeroData(Texture * texture, bool alphaFull);
+void Texture_createData(Texture * texture);
+void Texture_clearData(Texture * texture, bool alphaFull);
 //Texture * Texture_loadFromMemory(const char * filename);
 
 GLenum Texture_getTextureUnitConstant(Texture * this);

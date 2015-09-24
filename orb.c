@@ -987,9 +987,14 @@ Texture * Texture_create()
 	return texture;
 }
 
-void Texture_zeroData(Texture * texture, bool alphaFull)
+void Texture_createData(Texture * texture)
 {
 	texture->data = calloc(1, texture->width*texture->height*texture->components*sizeof(GLubyte));
+}
+
+void Texture_clearData(Texture * texture, bool alphaFull)
+{
+	memset(texture->data, 0, texture->width*texture->height*texture->components*sizeof(GLubyte));
 	if (alphaFull)
 	{
 		for (int i = 3; i < texture->width*texture->height*texture->components*sizeof(GLubyte); i+=4)
