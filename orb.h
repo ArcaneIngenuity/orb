@@ -787,8 +787,9 @@ void Attribute_tryPrepare(Attribute * attribute, Engine * engine);
 void UniformGroup_update(khash_t(StrPtr) * uniformPtrsByName, Program * program);
 
 Texture * Texture_create();
-Texture * Texture_load(const char * filename);
-Texture * Texture_loadFromMemory(const char * filename);
+void Texture_loadData(Texture * texture, const char * filename);
+void Texture_zeroData(Texture * texture, bool alphaFull);
+//Texture * Texture_loadFromMemory(const char * filename);
 
 GLenum Texture_getTextureUnitConstant(Texture * this);
 void Texture_fresh(Texture * this);

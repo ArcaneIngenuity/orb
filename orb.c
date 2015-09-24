@@ -987,9 +987,29 @@ Texture * Texture_create()
 	return texture;
 }
 
-Texture * Texture_load(const char * filename)
+void Texture_zeroData(Texture * texture, bool alphaFull)
 {
-	Texture * texture = Texture_create();
+	texture->data = calloc(1, texture->width*texture->height*texture->components*sizeof(GLubyte));
+	if (alphaFull)
+	{
+		for (int i = 3; i < texture->width*texture->height*texture->components*sizeof(GLubyte); i+=4)
+		{
+			texture->data[i] = 255;
+		}
+	}	
+}
+
+void Texture_setRGBA(Texture * texture, uint16_t x, uint16_t y, uint8_t r, uint8_t g, uint8_t b, uint8_t a)
+{
+	int i = x + y * texture->width;
+	texture->data[0+4*i] = r;
+	texture->data[1+4*i] = g;
+	texture->data[2+4*i] = b;
+	texture->data[3+4*i] = a;
+}
+void Texture_loadData(Texture * texture, const char * filename)
+{
+	//Texture * texture = Texture_create();
 	//texture->name = (char *) filename;
 	#ifdef DESKTOP
 	texture->data = stbi_load(filename, &(texture->width), &(texture->height), &(texture->components), 0);
