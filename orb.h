@@ -24,18 +24,21 @@
 // shorthand way to set value in hash with single line command.  Returns value
 // returns 0=replaced existing item, 1=bucket empty (new key), 2-adding element previously deleted
 #define kh_set(kname, hash, key, val) ({int ret; k = kh_put(kname, hash,key,&ret); kh_value(hash,k) = val; ret;})
-//printf("ret?%d k?%d\n", ret, k);})
 
 static const int StrInt = 33;
 static const int IntInt = 34;
 static const int IntFloat = 35;
-static const int StrPtr = 36;
+
 
 //KHASH_DECLARE
 KHASH_DECLARE(StrInt, kh_cstr_t, int)
 KHASH_DECLARE(IntInt, khint32_t, int)
 KHASH_DECLARE(IntFloat, khint32_t, float)
+#ifndef KH_DECL_STRPTR
+#define KH_DECL_STRPTR
+static const int StrPtr = 36;
 KHASH_DECLARE(StrPtr, kh_cstr_t, uintptr_t)
+#endif//KH_DECL_STRPTR
 
 #ifdef _WIN32
 	//define something for Windows (32-bit and 64-bit, this part is common)

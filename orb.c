@@ -5,7 +5,10 @@
 KHASH_DEFINE(StrInt, 	kh_cstr_t, int, kh_str_hash_func, kh_str_hash_equal, 1)
 KHASH_DEFINE(IntInt, 	khint32_t, int, kh_int_hash_func, kh_int_hash_equal, 1)
 KHASH_DEFINE(IntFloat, 	khint32_t, float, kh_int_hash_func, kh_int_hash_equal, 1)
+
+#ifndef ORB_KHASH_TYPES_OFF
 KHASH_DEFINE(StrPtr, 	kh_cstr_t, uintptr_t, kh_str_hash_func, kh_str_hash_equal, 1)
+#endif//ORB_KHASH_TYPES_OFF
 
 static khiter_t k;
 
