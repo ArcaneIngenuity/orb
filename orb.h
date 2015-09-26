@@ -659,7 +659,7 @@ const struct Input inputEmpty;
 
 #define CURT_ELEMENT_STRUCT
 #define CURT_ELEMENT_TYPE Input
-#include "pod/list.h"
+#include "../pod/list.h"
 #undef  CURT_ELEMENT_TYPE
 #undef  CURT_ELEMENT_STRUCT
 
