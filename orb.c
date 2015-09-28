@@ -114,23 +114,13 @@ void DeviceChannel_setPreviousState(DeviceChannel * this)
 	this->state[PREVIOUS] = this->state[CURRENT];
 }
 
-#define CURT_SOURCE
-
-#define CURT_ELEMENT_STRUCT
-#define CURT_ELEMENT_TYPE Input
-#include "../pod/list.h"
-#undef  CURT_ELEMENT_TYPE
-#undef  CURT_ELEMENT_STRUCT
-
-#undef  CURT_SOURCE
-
 void Input_executeList(InputList * list, void * target, bool debug)
 {
 	float pos = 0, neg = 0;
 
-	for (int i = 0; i < list->length; i++)
+	for (int i = 0; i < kv_size(*list); i++)
 	{
-		Input * input = &list->entries[i];
+		Input * input = &kv_A(*list, i);
 
 		if (!input->channelPos && !input->channelNeg) //"always-run" response
 			input->response(target, 0, 0);
@@ -911,35 +901,35 @@ void Transform_finalise(mat4x4 * matTrans, mat4x4 * matPos, mat4x4 * matRot)
 
 void IndexedRenderableManager_create(
 	Renderable * const renderables,
-	uint16_tList * const indexRenderListPtr,
-	uint16_tList * const indexListPtr,
+	IndexList * const indexRenderListPtr,
+	IndexList * const indexListPtr,
 	IndexedRenderableFunction fnc,
 	void * model)
 {
-	for (int ii = 0; ii < indexListPtr->length; ii++)
+	for (int ii = 0; ii < kv_size(*indexListPtr); ii++)
 	{
-		int i = indexListPtr->entries[ii];
+		int i = kv_A(*indexListPtr, ii);
 		
 		Renderable * renderable = &renderables[i]; //get our renderable.. TODO a more flexible mapping of data index to renderable index?
 		fnc(renderable, i, model); //..create it
 		
 		//TODO only add if a custom checkAdd func returns true
 		//(allows e.g. AoI or other selectiveness about what to render)
-		uint16_tList_add(indexRenderListPtr, i);
+		kv_push(uint16_t, *indexRenderListPtr, i);
 	}
 }
 
 /// updates a Renderable that has (at any point previously) been created
 void IndexedRenderableManager_update(
 	Renderable * const renderables,
-	uint16_tList * const indexRenderListPtr, //actually unused here, but keeps the arg lists uniform between create/update/render
-	uint16_tList * const indexListPtr,
+	IndexList * const indexRenderListPtr, //actually unused here, but keeps the arg lists uniform between create/update/render
+	IndexList * const indexListPtr,
 	IndexedRenderableFunction fnc,
 	void * model)
 {
-	for (int ii = 0; ii < indexListPtr->length; ii++)
+	for (int ii = 0; ii < kv_size(*indexListPtr); ii++)
 	{
-		int i = indexListPtr->entries[ii];
+		int i = kv_A(*indexListPtr, ii);
 		
 		Renderable * renderable = &renderables[i]; //get our renderable.. TODO a more flexible mapping of data index to renderable index?
 		fnc(renderable, i, model); //..update it
@@ -951,12 +941,12 @@ void IndexedRenderableManager_update(
 /// renders a group of Renderables from an index list
 void IndexedRenderableManager_render(
 	Renderable * const renderables,
-	uint16_tList * indexRenderListPtr,
+	IndexList * indexRenderListPtr,
 	Engine * enginePtr)
 {	
-	for (int ii = 0; ii < indexRenderListPtr->length; ++ii)
+	for (int ii = 0; ii < kv_size(*indexRenderListPtr); ++ii)
 	{
-		int i = indexRenderListPtr->entries[ii];
+		int i = kv_A(*indexRenderListPtr, ii);
 		
 		Renderable * renderable = &renderables[i];
 		

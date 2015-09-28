@@ -14,6 +14,7 @@
 #include "../pod/uint16_tList.h"
 //#include "../pod/intMap.h"
 //#include "../pod/floatMap.h"
+#include "klib/kvec.h"
 
 //KHASH...
 #include "klib/khash.h"
@@ -655,15 +656,7 @@ typedef struct Input
 } Input;
 const struct Input inputEmpty;
 
-#define CURT_HEADER
-
-#define CURT_ELEMENT_STRUCT
-#define CURT_ELEMENT_TYPE Input
-#include "../pod/list.h"
-#undef  CURT_ELEMENT_TYPE
-#undef  CURT_ELEMENT_STRUCT
-
-#undef  CURT_HEADER
+typedef kvec_t(Input) InputList;
 
 void Input_executeList(InputList * list, void * model, bool debug);
 bool Input_equals(Input a, Input b); //TODO make equals a function pointer in list.h
@@ -759,26 +752,28 @@ typedef struct IndexedRenderableManager
 } IndexedRenderableManager;
 */
 
+typedef kvec_t(uint16_t) IndexList;
+
 /// creates new Renderable%s and adds them to this View%'s list for rendering
 void IndexedRenderableManager_create(
 	Renderable * const renderables,
-	uint16_tList * const indexRenderListPtr,
-	uint16_tList * const indexListPtr,
+	IndexList * const indexRenderListPtr,
+	IndexList * const indexListPtr,
 	IndexedRenderableFunction fnc,
 	void * model);
 
 /// updates a Renderable that has (at any point previously) been created
 void IndexedRenderableManager_update(
 	Renderable * const renderables,
-	uint16_tList * const indexRenderListPtr, //actually unused here, but keeps the arg lists uniform between create/update/render
-	uint16_tList * const indexListPtr,
+	IndexList * const indexRenderListPtr, //actually unused here, but keeps the arg lists uniform between create/update/render
+	IndexList * const indexListPtr,
 	IndexedRenderableFunction fnc,
 	void * model);
 
 /// renders a group of Renderables from an index list
 void IndexedRenderableManager_render(
 	Renderable * const renderables,
-	uint16_tList * indexRenderListPtr,
+	IndexList * indexRenderListPtr,
 	Engine * enginePtr);
 
 void Mesh_calculateNormals(Mesh * this);
