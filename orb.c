@@ -1735,11 +1735,6 @@ void Engine_initialise(Engine * this)
 	//initialise collection objects
 	//TODO "this" should be "orb" instance
 
-	Map_create(&this->texturesByName, 	HH_TEXTURES_MAX, 	&this->textureKeys, 	(void *)&this->textures, NULL);
-	Map_create(&this->materialsByName, 	HH_MATERIALS_MAX, 	&this->materialKeys, 	(void *)&this->materials, NULL);
-	//Map_create(&this->meshesByName, 		HH_MESHES_MAX, 		&this->meshKeys,	 	(void *)&this->meshes, NULL);
-	//Map_create(&this->shadersByName, 		HH_SHADERS_MAX, 		&this->meshKeys,	 	(void *)&this->meshes, NULL);
-
 	this->programsByName 		= kh_init(StrPtr);
 	this->shadersByName 		= kh_init(StrPtr);
 	this->devicesByName 		= kh_init(StrPtr);

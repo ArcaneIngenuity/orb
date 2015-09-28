@@ -9,11 +9,6 @@
 
 #include "log/log.h"
 #include "linmath.h"
-#include "../pod/list_generic.h"
-#include "../pod/map_generic.h"
-#include "../pod/uint16_tList.h"
-//#include "../pod/intMap.h"
-//#include "../pod/floatMap.h"
 #include "klib/kvec.h"
 
 //KHASH...
@@ -582,8 +577,8 @@ typedef struct Material
 {
 	Program program;
 	Texture * texture;
-	/*khash_t(StrInt)*/Map uniforms; //for referencing uniforms by name
-	/*khash_t(StrInt)*/Map attributes; //ref attribs by name
+	khash_t(StrInt) uniforms; //for referencing uniforms by name
+	khash_t(StrInt) attributes; //ref attribs by name
 	
 	//root of the graph from which we determine the assembled code for each class of shader.
 	char * vertexShader;
@@ -674,12 +669,11 @@ typedef struct Engine
 	
 	khash_t(StrPtr) * programsByName;
 	khash_t(StrPtr) * shadersByName;
-	/*khash_t(StrInt)*/Map texturesByName;
-	/*khash_t(StrInt)*/Map materialsByName;
-	/*khash_t(StrInt)*/Map meshesByName;
-	/*khash_t(StrInt)*/Map renderPathsByName;
-	
-	/*khash_t(StrInt)*/Map renderTexturesByName;
+	khash_t(StrPtr) * texturesByName;
+	khash_t(StrPtr) * materialsByName;
+	khash_t(StrPtr) * meshesByName;
+	khash_t(StrPtr) * renderPathsByName;
+	khash_t(StrPtr) * renderTexturesByName;
 	
 	//until we create merged map and list that contain not only pointers to arrays but also the arrays themselves... use these as backing arrays
 	Shader   	shaders[HH_SHADERS_MAX];
