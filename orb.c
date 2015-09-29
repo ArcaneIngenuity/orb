@@ -1412,10 +1412,10 @@ void Engine_createScreenQuad(Engine * this, Mesh * mesh, GLuint positionVertexAt
 	
 	GLfloat _texcoord[8] = {
 		//y-inverted due to texture space flip
-		0.0, 0.0,
-		1.0, 0.0,
+		0.0, 1.0,
 		1.0, 1.0,
-		0.0, 1.0
+		1.0, 0.0,
+		0.0, 0.0
 	};
 
 	memcpy(mesh->index, _index, sizeof(_index));
