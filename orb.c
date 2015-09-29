@@ -1738,6 +1738,7 @@ void Engine_initialise(Engine * this)
 	this->programsByName 		= kh_init(StrPtr);
 	this->shadersByName 		= kh_init(StrPtr);
 	this->devicesByName 		= kh_init(StrPtr);
+	this->texturesByName 		= kh_init(StrPtr);
 
 	//reintroduce if we bring transform list back into this library.
 	//Renderable * renderable = &this->renderable;
