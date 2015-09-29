@@ -1071,7 +1071,7 @@ void Texture_prepare(Texture * this, Program * program)
 	glActiveTexture(GL_TEXTURE0 + this->unit); //"glActiveTexture specifies which texture unit a texture object is bound to when glBindTexture is called."
 	glBindTexture(GL_TEXTURE_2D, this->id); //ensure the correct texture is bound to the texture unit that the shader will use (?)
 	GLint uniformTexture = glGetUniformLocation(program->id, this->name);
-	LOGI("tex name=%s loc=%d unit=%d\n", this->name, uniformTexture, this->unit);
+	//LOGI("tex name=%s loc=%d unit=%d\n", this->name, uniformTexture, this->unit);
 	glUniform1i(uniformTexture, this->unit); //let shader's sampler bind to appropriate texture unit
 }
 
