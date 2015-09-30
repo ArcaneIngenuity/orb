@@ -585,6 +585,18 @@ void Loop_processInputs(Engine * engine)
 	channel->state[CURRENT] = glfwGetKey(window, GLFW_KEY_EQUAL) == GLFW_PRESS;
 	DeviceChannel_setCurrentDelta(channel);
 	
+	//[
+	channel = &keyboard->channels[11];
+	DeviceChannel_setPreviousState(channel);
+	channel->state[CURRENT] = glfwGetKey(window, GLFW_KEY_LEFT_BRACKET) == GLFW_PRESS;
+	DeviceChannel_setCurrentDelta(channel);
+	
+	//]
+	channel = &keyboard->channels[12];
+	DeviceChannel_setPreviousState(channel);
+	channel->state[CURRENT] = glfwGetKey(window, GLFW_KEY_RIGHT_BRACKET) == GLFW_PRESS;
+	DeviceChannel_setCurrentDelta(channel);
+	
 	#endif//DESKTOP
 }
 void Loop_initialise(Engine * engine)
