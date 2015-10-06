@@ -655,7 +655,7 @@ const struct Input inputEmpty;
 typedef kvec_t(Input) InputList;
 
 void Input_executeList(InputList * list, void * model, bool debug);
-bool Input_equals(Input a, Input b); //TODO make equals a function pointer in list.h
+void Input_add(InputList * list, Input input);
 typedef struct Capabilities
 {
 	bool vao;

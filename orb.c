@@ -163,9 +163,9 @@ void Input_executeList(InputList * list, void * target, bool debug)
 	}
 }
 
-bool Input_equals(Input a, Input b) //TODO make equals a function pointer in list.h
+void Input_add(InputList * list, Input input)
 {
-	return false; //DEV no members yet
+	kv_push(Input, *list, input);
 }
 
 #ifdef __ANDROID__
@@ -595,6 +595,18 @@ void Loop_processInputs(Engine * engine)
 	channel = &keyboard->channels[12];
 	DeviceChannel_setPreviousState(channel);
 	channel->state[CURRENT] = glfwGetKey(window, GLFW_KEY_RIGHT_BRACKET) == GLFW_PRESS;
+	DeviceChannel_setCurrentDelta(channel);
+	
+	//,
+	channel = &keyboard->channels[13];
+	DeviceChannel_setPreviousState(channel);
+	channel->state[CURRENT] = glfwGetKey(window, GLFW_KEY_COMMA) == GLFW_PRESS;
+	DeviceChannel_setCurrentDelta(channel);
+	
+	//.
+	channel = &keyboard->channels[14];
+	DeviceChannel_setPreviousState(channel);
+	channel->state[CURRENT] = glfwGetKey(window, GLFW_KEY_PERIOD) == GLFW_PRESS;
 	DeviceChannel_setCurrentDelta(channel);
 	
 	#endif//DESKTOP
