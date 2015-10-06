@@ -495,9 +495,152 @@ void Android_extractAssetsFromAPK(struct android_app * app, const char * apkDirs
 
 #endif //__ANDROID__
 
+#ifdef DESKTOP //glfw!
+static short keyOrbToGlfw[] =
+{
+	GLFW_KEY_UNKNOWN,
+	GLFW_KEY_0,
+	GLFW_KEY_1,
+	GLFW_KEY_2,
+	GLFW_KEY_3,
+	GLFW_KEY_4,
+	GLFW_KEY_5,
+	GLFW_KEY_6,
+	GLFW_KEY_7,
+	GLFW_KEY_8,
+	GLFW_KEY_9,
+	
+	GLFW_KEY_KP_0,
+	GLFW_KEY_KP_1,
+	GLFW_KEY_KP_2,
+	GLFW_KEY_KP_3,
+	GLFW_KEY_KP_4,
+	GLFW_KEY_KP_5,
+	GLFW_KEY_KP_6,
+	GLFW_KEY_KP_7,
+	GLFW_KEY_KP_8,
+	GLFW_KEY_KP_9,
+	
+	GLFW_KEY_A,
+	GLFW_KEY_B,
+	GLFW_KEY_C,
+	GLFW_KEY_D,
+	GLFW_KEY_E,
+	GLFW_KEY_F,
+	GLFW_KEY_G,
+	GLFW_KEY_H,
+	GLFW_KEY_I,
+	GLFW_KEY_J,
+	GLFW_KEY_K,
+	GLFW_KEY_L,
+	GLFW_KEY_M,
+	GLFW_KEY_N,
+	GLFW_KEY_O,
+	GLFW_KEY_P,
+	GLFW_KEY_Q,
+	GLFW_KEY_R,
+	GLFW_KEY_S,
+	GLFW_KEY_T,
+	GLFW_KEY_U,
+	GLFW_KEY_V,
+	GLFW_KEY_W,
+	GLFW_KEY_X,
+	GLFW_KEY_Y,
+	GLFW_KEY_Z,
+	
+	GLFW_KEY_F1,
+	GLFW_KEY_F2,
+	GLFW_KEY_F3,
+	GLFW_KEY_F4,
+	GLFW_KEY_F5,
+	GLFW_KEY_F6,
+	GLFW_KEY_F7,
+	GLFW_KEY_F8,
+	GLFW_KEY_F9,
+	GLFW_KEY_F10,
+	GLFW_KEY_F11,
+	GLFW_KEY_F12,
+	GLFW_KEY_F13,
+	GLFW_KEY_F14,
+	GLFW_KEY_F15,
+	GLFW_KEY_F16,
+	GLFW_KEY_F17,
+	GLFW_KEY_F18,
+	GLFW_KEY_F19,
+	GLFW_KEY_F20,
+	GLFW_KEY_F21,
+	GLFW_KEY_F22,
+	GLFW_KEY_F23,
+	GLFW_KEY_F24,
+	GLFW_KEY_F25,
+	
+	GLFW_KEY_RIGHT,
+	GLFW_KEY_LEFT,
+	GLFW_KEY_DOWN,
+	GLFW_KEY_UP,
+	
+	GLFW_KEY_LEFT_SHIFT,
+	GLFW_KEY_LEFT_CONTROL,
+	GLFW_KEY_LEFT_ALT,
+	GLFW_KEY_LEFT_SUPER,
+	GLFW_KEY_RIGHT_SHIFT,
+	GLFW_KEY_RIGHT_CONTROL,
+	GLFW_KEY_RIGHT_ALT,
+	GLFW_KEY_RIGHT_SUPER,
+	
+	GLFW_KEY_SPACE,
+	GLFW_KEY_APOSTROPHE,
+	GLFW_KEY_COMMA,
+	GLFW_KEY_MINUS,
+	GLFW_KEY_PERIOD,
+	GLFW_KEY_SLASH,
+	GLFW_KEY_SEMICOLON,
+	GLFW_KEY_EQUAL,
+	GLFW_KEY_BACKSLASH,
+	GLFW_KEY_LEFT_BRACKET,
+	GLFW_KEY_RIGHT_BRACKET,
+	GLFW_KEY_GRAVE_ACCENT,
+	GLFW_KEY_WORLD_1, //non-US #1
+	GLFW_KEY_WORLD_2, //non-US #2
+	GLFW_KEY_ESCAPE,
+	GLFW_KEY_ENTER,
+	GLFW_KEY_TAB,
+	GLFW_KEY_BACKSPACE,
+	GLFW_KEY_INSERT,
+	GLFW_KEY_DELETE,
+	GLFW_KEY_PAGE_UP,
+	GLFW_KEY_PAGE_DOWN,
+	GLFW_KEY_HOME,
+	GLFW_KEY_END,
+	GLFW_KEY_CAPS_LOCK,
+	GLFW_KEY_SCROLL_LOCK,
+	GLFW_KEY_NUM_LOCK,
+	GLFW_KEY_PRINT_SCREEN,
+	GLFW_KEY_PAUSE,
+	GLFW_KEY_KP_DECIMAL,
+	GLFW_KEY_KP_DIVIDE,
+	GLFW_KEY_KP_MULTIPLY,
+	GLFW_KEY_KP_SUBTRACT,
+	GLFW_KEY_KP_ADD,
+	GLFW_KEY_KP_ENTER,
+	GLFW_KEY_KP_EQUAL,
+	GLFW_KEY_MENU
+};
+
+
+void GLFW_updateKey(int i, Device * keyboard)
+{
+	DeviceChannel * channel = &keyboard->channels[i]; //orb index as from enum Key
+	DeviceChannel_setPreviousState(channel);
+	channel->state[CURRENT] = (float)glfwGetKey(window, keyOrbToGlfw[i]) == GLFW_PRESS;
+	DeviceChannel_setCurrentDelta(channel);
+}
+#endif// DESKTOP //glfw!
+
 void Loop_processInputs(Engine * engine)
 {
 	#ifdef DESKTOP //glfw!
+	//TODO if USE_GLFW
 	//relative to mouse start point: For FPS
 	double p[2];
 	glfwGetCursorPos(window, &p[XX], &p[YY]);
@@ -518,96 +661,10 @@ void Loop_processInputs(Engine * engine)
 	k = kh_get(StrPtr, engine->devicesByName, "keyboard");
 	Device * keyboard = kh_val(engine->devicesByName, k);	
 	
-	//space
-	channel = &keyboard->channels[0];
-	DeviceChannel_setPreviousState(channel);
-	channel->state[CURRENT] = (float)glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS;
-	DeviceChannel_setCurrentDelta(channel);
-	
-	//LOGI("sc=%.3f sp=%.3f sd=%.3f\n", channel->state[CURRENT], channel->state[PREVIOUS], channel->delta[CURRENT]);
-	//S
-	channel = &keyboard->channels[1];
-	DeviceChannel_setPreviousState(channel);
-	channel->state[CURRENT] = glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS;
-	DeviceChannel_setCurrentDelta(channel);
-	
-	//W
-	channel = &keyboard->channels[2];
-	DeviceChannel_setPreviousState(channel);
-	channel->state[CURRENT] = glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS;
-	DeviceChannel_setCurrentDelta(channel);
-	
-	//D
-	channel = &keyboard->channels[3];
-	DeviceChannel_setPreviousState(channel);
-	channel->state[CURRENT] = glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS;
-	DeviceChannel_setCurrentDelta(channel);
-	
-	//A
-	channel = &keyboard->channels[4];
-	DeviceChannel_setPreviousState(channel);
-	channel->state[CURRENT] = glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS;
-	DeviceChannel_setCurrentDelta(channel);
-	
-	//K
-	channel = &keyboard->channels[5];
-	DeviceChannel_setPreviousState(channel);
-	channel->state[CURRENT] = glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS;
-	DeviceChannel_setCurrentDelta(channel);
-	
-	//I
-	channel = &keyboard->channels[6];
-	DeviceChannel_setPreviousState(channel);
-	channel->state[CURRENT] = glfwGetKey(window, GLFW_KEY_I) == GLFW_PRESS;
-	DeviceChannel_setCurrentDelta(channel);
-	
-	//L
-	channel = &keyboard->channels[7];
-	DeviceChannel_setPreviousState(channel);
-	channel->state[CURRENT] = glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS;
-	DeviceChannel_setCurrentDelta(channel);
-	
-	//J
-	channel = &keyboard->channels[8];
-	DeviceChannel_setPreviousState(channel);
-	channel->state[CURRENT] = glfwGetKey(window, GLFW_KEY_J) == GLFW_PRESS;
-	DeviceChannel_setCurrentDelta(channel);
-
-	//-
-	channel = &keyboard->channels[9];
-	DeviceChannel_setPreviousState(channel);
-	channel->state[CURRENT] = glfwGetKey(window, GLFW_KEY_MINUS) == GLFW_PRESS;
-	DeviceChannel_setCurrentDelta(channel);
-	
-	//=
-	channel = &keyboard->channels[10];
-	DeviceChannel_setPreviousState(channel);
-	channel->state[CURRENT] = glfwGetKey(window, GLFW_KEY_EQUAL) == GLFW_PRESS;
-	DeviceChannel_setCurrentDelta(channel);
-	
-	//[
-	channel = &keyboard->channels[11];
-	DeviceChannel_setPreviousState(channel);
-	channel->state[CURRENT] = glfwGetKey(window, GLFW_KEY_LEFT_BRACKET) == GLFW_PRESS;
-	DeviceChannel_setCurrentDelta(channel);
-	
-	//]
-	channel = &keyboard->channels[12];
-	DeviceChannel_setPreviousState(channel);
-	channel->state[CURRENT] = glfwGetKey(window, GLFW_KEY_RIGHT_BRACKET) == GLFW_PRESS;
-	DeviceChannel_setCurrentDelta(channel);
-	
-	//,
-	channel = &keyboard->channels[13];
-	DeviceChannel_setPreviousState(channel);
-	channel->state[CURRENT] = glfwGetKey(window, GLFW_KEY_COMMA) == GLFW_PRESS;
-	DeviceChannel_setCurrentDelta(channel);
-	
-	//.
-	channel = &keyboard->channels[14];
-	DeviceChannel_setPreviousState(channel);
-	channel->state[CURRENT] = glfwGetKey(window, GLFW_KEY_PERIOD) == GLFW_PRESS;
-	DeviceChannel_setCurrentDelta(channel);
+	for (int i = 0; i < ORB_KEYS_COUNT; ++i)
+	{
+		GLFW_updateKey(i, keyboard); //TODO should be some generic function pointer that has been preset to the GLFW function
+	}
 	
 	#endif//DESKTOP
 }

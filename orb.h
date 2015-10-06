@@ -596,6 +596,140 @@ typedef struct Color
 	float a;
 } Color;
 
+//unlike e.g. GLFW, these are ordered zero-based, compact so they may be used as indices into an packed array
+typedef enum Key
+{
+	ORB_KEY_UNKNOWN,
+	ORB_KEY_0,
+	ORB_KEY_1,
+	ORB_KEY_2,
+	ORB_KEY_3,
+	ORB_KEY_4,
+	ORB_KEY_5,
+	ORB_KEY_6,
+	ORB_KEY_7,
+	ORB_KEY_8,
+	ORB_KEY_9,
+	
+	ORB_KEY_KP_0,
+	ORB_KEY_KP_1,
+	ORB_KEY_KP_2,
+	ORB_KEY_KP_3,
+	ORB_KEY_KP_4,
+	ORB_KEY_KP_5,
+	ORB_KEY_KP_6,
+	ORB_KEY_KP_7,
+	ORB_KEY_KP_8,
+	ORB_KEY_KP_9,
+	
+	ORB_KEY_A,
+	ORB_KEY_B,
+	ORB_KEY_C,
+	ORB_KEY_D,
+	ORB_KEY_E,
+	ORB_KEY_F,
+	ORB_KEY_G,
+	ORB_KEY_H,
+	ORB_KEY_I,
+	ORB_KEY_J,
+	ORB_KEY_K,
+	ORB_KEY_L,
+	ORB_KEY_M,
+	ORB_KEY_N,
+	ORB_KEY_O,
+	ORB_KEY_P,
+	ORB_KEY_Q,
+	ORB_KEY_R,
+	ORB_KEY_S,
+	ORB_KEY_T,
+	ORB_KEY_U,
+	ORB_KEY_V,
+	ORB_KEY_W,
+	ORB_KEY_X,
+	ORB_KEY_Y,
+	ORB_KEY_Z,
+	
+	ORB_KEY_F1,
+	ORB_KEY_F2,
+	ORB_KEY_F3,
+	ORB_KEY_F4,
+	ORB_KEY_F5,
+	ORB_KEY_F6,
+	ORB_KEY_F7,
+	ORB_KEY_F8,
+	ORB_KEY_F9,
+	ORB_KEY_F10,
+	ORB_KEY_F11,
+	ORB_KEY_F12,
+	ORB_KEY_F13,
+	ORB_KEY_F14,
+	ORB_KEY_F15,
+	ORB_KEY_F16,
+	ORB_KEY_F17,
+	ORB_KEY_F18,
+	ORB_KEY_F19,
+	ORB_KEY_F20,
+	ORB_KEY_F21,
+	ORB_KEY_F22,
+	ORB_KEY_F23,
+	ORB_KEY_F24,
+	ORB_KEY_F25,
+	
+	ORB_KEY_RIGHT,
+	ORB_KEY_LEFT,
+	ORB_KEY_DOWN,
+	ORB_KEY_UP,
+	
+	ORB_KEY_LEFT_SHIFT,
+	ORB_KEY_LEFT_CONTROL,
+	ORB_KEY_LEFT_ALT,
+	ORB_KEY_LEFT_SUPER,
+	ORB_KEY_RIGHT_SHIFT,
+	ORB_KEY_RIGHT_CONTROL,
+	ORB_KEY_RIGHT_ALT,
+	ORB_KEY_RIGHT_SUPER,
+	
+	ORB_KEY_SPACE,
+	ORB_KEY_APOSTROPHE,
+	ORB_KEY_COMMA,
+	ORB_KEY_MINUS,
+	ORB_KEY_PERIOD,
+	ORB_KEY_SLASH,
+	ORB_KEY_SEMICOLON,
+	ORB_KEY_EQUAL,
+	ORB_KEY_BACKSLASH,
+	ORB_KEY_LEFT_BRACKET,
+	ORB_KEY_RIGHT_BRACKET,
+	ORB_KEY_GRAVE_ACCENT,
+	ORB_KEY_WORLD_1, //non-US #1
+	ORB_KEY_WORLD_2, //non-US #2
+	ORB_KEY_ESCAPE,
+	ORB_KEY_ENTER,
+	ORB_KEY_TAB,
+	ORB_KEY_BACKSPACE,
+	ORB_KEY_INSERT,
+	ORB_KEY_DELETE,
+	ORB_KEY_PAGE_UP,
+	ORB_KEY_PAGE_DOWN,
+	ORB_KEY_HOME,
+	ORB_KEY_END,
+	ORB_KEY_CAPS_LOCK,
+	ORB_KEY_SCROLL_LOCK,
+	ORB_KEY_NUM_LOCK,
+	ORB_KEY_PRINT_SCREEN,
+	ORB_KEY_PAUSE,
+	ORB_KEY_KP_DECIMAL,
+	ORB_KEY_KP_DIVIDE,
+	ORB_KEY_KP_MULTIPLY,
+	ORB_KEY_KP_SUBTRACT,
+	ORB_KEY_KP_ADD,
+	ORB_KEY_KP_ENTER,
+	ORB_KEY_KP_EQUAL,
+	ORB_KEY_MENU,
+	
+	ORB_KEYS_COUNT
+} Key;
+
 typedef enum InputBasis
 {
 	STATE, //default
@@ -614,7 +748,7 @@ typedef struct DeviceChannel
 
 typedef struct Device
 {
-	DeviceChannel channels[16];
+	DeviceChannel channels[ORB_KEYS_COUNT];
 	//void * other; //special reference to other information, e.g. an array of fingers for a touch device.
 	//TODO Finger fingers[]; //or rather, a pointer to an array elsewhere, if touchscreen device.
 	uint64_t channelsActiveMask;
