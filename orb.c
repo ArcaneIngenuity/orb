@@ -11,11 +11,13 @@ KHASH_DEFINE(StrPtr, 	kh_cstr_t, uintptr_t, kh_str_hash_func, kh_str_hash_equal,
 #endif//ORB_KHASH_TYPES_OFF
 
 static khiter_t k;
+//...KHASH.
 
 glUniformVectorFunction glUniformVectorFunctions[4][2]; 
-glUniformMatrixFunction glUniformMatrixFunctions[4][4][2]; 
+glUniformMatrixFunction glUniformMatrixFunctions[4][4][2];
 
-//...KHASH.
+khash_t(StrInt) * stringToKey;
+
 
 //helpers...
 // You must free the result if result is non-NULL.
@@ -1625,9 +1627,19 @@ void Engine_one(Engine * this, Renderable * renderable)
 	}
 }
 
+void Key_setupStringToKey()
+{
+	stringToKey = kh_init(StrInt);
+	khiter_t k; int ret; int c = 0;
+	FOREACH_KEY(GENERATE_KH)
+}
+
 void Engine_initialise(Engine * this)
 {
 	LOGI("Engine initialising...\n");
+	
+	Key_setupStringToKey();
+	
 	#ifdef DESKTOP
 	//WINDOW, CONTEXT & INPUT
 	//glfwSetErrorCallback(GLFW_errorCallback);
