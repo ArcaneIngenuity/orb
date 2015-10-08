@@ -142,6 +142,8 @@ KHASH_DECLARE(StrPtr, kh_cstr_t, uintptr_t)
 //#define GL_MAX_COLOR_ATTACHMENTS 0x8CDF
 
 //FIXED CONSTANTS
+#define NEG 0
+#define POS 1
 
 #define XX 0
 #define YY 1
@@ -220,6 +222,8 @@ KHASH_DECLARE(StrPtr, kh_cstr_t, uintptr_t)
 #ifndef	HH_ATTRIBUTES_MAX
 #define HH_ATTRIBUTES_MAX 8
 #endif
+
+#define STRLEN_MAX 64
 
 typedef struct Window
 {
@@ -770,25 +774,39 @@ typedef struct TouchDevice
 typedef float (*InputFunction) ();
 typedef void  (*ResponseFunction) (void * model, float value, float valueLast);
 
+
 //abstracts raw channel inputs into game logic inputs, provides a response for same, and stores recent values
 typedef struct Input
 {
-	//InputFunction inputPos;
-	//InputFunction inputNeg;
-	DeviceChannel * channelPos;
-	DeviceChannel * channelNeg;
-	ResponseFunction response;
-	InputBasis basis;
+	Device * device;
+	uint16_t code; //index of channel in device
+	bool negate; //if true, flip the sign on the incoming value
 	//TODO optional custom function for combining raw channel values?
-		
-	float state[2];
-	float delta[2];
 } Input;
 const struct Input inputEmpty;
 
-typedef kvec_t(Input) InputList;
+/// A mapping of some raw input (via a DeviceChannel) to an action.
 
-void Input_executeList(InputList * list, void * model, bool debug);
+/// One such mapping may have many contributing inputs, but their results are not cumulative;
+/// instead, all "negated" values are combined and all "non-negated" values are combined,
+/// and the results of these two are added. This means that even if five "positive" keys
+/// and only one "negative" key for an axis are being held down, the result is still zero.
+typedef struct InputMapping
+{
+	char name[STRLEN_MAX]; //same as key into khash holding all InputMappings
+	ResponseFunction func;
+	InputBasis basis;
+	kvec_t(Input) inputsList; //the inputs which can trigger a function call
+	
+	float state[2];
+	float delta[2];
+} InputMapping;
+
+
+typedef kvec_t(Input) InputList;
+typedef kvec_t(InputMapping) InputMappingList;
+
+void InputMappingList_process(InputMappingList * inputMappingList, void * model, bool debug);
 void Input_add(InputList * list, Input input);
 typedef struct Capabilities
 {

@@ -114,51 +114,65 @@ void DeviceChannel_setPreviousState(DeviceChannel * this)
 	this->state[PREVIOUS] = this->state[CURRENT];
 }
 
-void Input_executeList(InputList * list, void * target, bool debug)
+void InputMappingList_process(InputMappingList * inputMappingList, void * target, bool debug)
 {
-	float pos = 0, neg = 0;
-
-	for (int i = 0; i < kv_size(*list); i++)
+	for (int i = 0; i < kv_size(*inputMappingList); ++i) //for every mapping (user function)
 	{
-		Input * input = &kv_A(*list, i);
-
-		if (!input->channelPos && !input->channelNeg) //"always-run" response
-			input->response(target, 0, 0);
-		else
+		LOGI("mapping %d\n", i);
+		InputMapping * inputMapping = &kv_A(*inputMappingList, i);
+		
+		//array indices: NEG = 0, POS = 1 - see orb.h
+		float value[2];
+		int hasInputs; //otherwise, it's an "always run" response
+		
+		for (int j = 0; j < kv_size(inputMapping->inputsList); ++j) //for every raw input that may trigger said mapping
 		{
-			switch (input->basis)
+			LOGI("input %d\n", j);
+			++hasInputs;
+			
+			Input * input = &kv_A(inputMapping->inputsList, j);
+			Device * device = input->device;
+			DeviceChannel * channel = &device->channels[input->code];
+			
+			//get into pos or neg respectively (this form is used so we avoid conditionals)
+			float raw = channel->state[CURRENT] * channel->active;
+			value[!input->negate] = value[!input->negate] < raw ? raw : value[!input->negate];
+			//...due to iteration, pos & neg will get the values of the final Input that contributes to each of pos and neg, respectively
+		}
+
+		if (hasInputs) 
+		{
+			switch (inputMapping->basis)
 			{
 			case STATE: //only call response when channel state [CURRENT] is non-zero
-				
-				if (input->channelPos)
-					pos = input->channelPos->state[CURRENT] * input->channelPos->active;
-				
-				if (input->channelNeg) //optional negative input contributor
-					neg = input->channelNeg->state[CURRENT] * input->channelNeg->active;
 
-				input->state[PREVIOUS] = input->state[CURRENT];
-				input->state[CURRENT]  = pos - neg; //assumes both are abs magnitudes
+				inputMapping->state[PREVIOUS] = inputMapping->state[CURRENT];
+				inputMapping->state[CURRENT]  = value[POS] - value[NEG]; //assumes both are abs magnitudes
 				
-				if (input->state[CURRENT] != 0)
-					input->response(target, input->state[CURRENT], input->state[PREVIOUS]);
+				if (inputMapping->state[CURRENT] != 0)
+				{
+					inputMapping->func(target, inputMapping->state[CURRENT], inputMapping->state[PREVIOUS]);
+					LOGI("state\n");
+				}
 				break;
 				
 			case DELTA: //only call response when channel delta [CURRENT] is non-zero
+
+				inputMapping->delta[PREVIOUS] = inputMapping->delta[CURRENT];
+				inputMapping->delta[CURRENT]  = value[POS] - value[NEG]; //assumes both are abs magnitudes
 				
-				if (input->channelPos)
-					pos = input->channelPos->delta[CURRENT] * input->channelPos->active;
-				
-				if (input->channelNeg) //optional negative input contributor
-					neg = input->channelNeg->delta[CURRENT] * input->channelNeg->active;
-				
-				//if (debug) LOGI("p=%f c=%f act=%d d=%f\n", input->delta[PREVIOUS], input->delta[CURRENT], input->channelPos->active, pos - neg);
-				input->delta[PREVIOUS] = input->delta[CURRENT];
-				input->delta[CURRENT]  = pos - neg; //assumes both are abs magnitudes
-				
-				if (input->delta[CURRENT] != 0)
-					input->response(target, input->delta[CURRENT], input->delta[PREVIOUS]);
+				if (inputMapping->delta[CURRENT] != 0)
+				{
+					inputMapping->func(target, inputMapping->delta[CURRENT], inputMapping->delta[PREVIOUS]);
+					LOGI("delta\n");
+				}
 				break;
 			}
+		}
+		else //"always-run" response
+		{
+			inputMapping->func(target, 0, 0); 
+			LOGI("always\n");
 		}
 	}
 }
