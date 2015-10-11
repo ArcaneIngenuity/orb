@@ -116,74 +116,6 @@ void DeviceChannel_setPreviousState(DeviceChannel * this)
 	this->state[PREVIOUS] = this->state[CURRENT];
 }
 
-void InputMappingList_process(InputMappingList * inputMappingList, void * target, bool debug)
-{
-	for (int i = 0; i < kv_size(*inputMappingList); ++i) //for every mapping (user function)
-	{
-		LOGI("mapping %d\n", i);
-		InputMapping * inputMapping = &kv_A(*inputMappingList, i);
-		
-		//array indices: NEG = 0, POS = 1 - see orb.h
-		float value[2];
-		int hasInputs; //otherwise, it's an "always run" response
-		
-		for (int j = 0; j < kv_size(inputMapping->inputsList); ++j) //for every raw input that may trigger said mapping
-		{
-			LOGI("input %d\n", j);
-			++hasInputs;
-			
-			Input * input = &kv_A(inputMapping->inputsList, j);
-			Device * device = input->device;
-			DeviceChannel * channel = &device->channels[input->code];
-			
-			//get into pos or neg respectively (this form is used so we avoid conditionals)
-			float raw = channel->state[CURRENT] * channel->active;
-			value[!input->negate] = value[!input->negate] < raw ? raw : value[!input->negate];
-			//...due to iteration, pos & neg will get the values of the final Input that contributes to each of pos and neg, respectively
-		}
-
-		if (hasInputs) 
-		{
-			switch (inputMapping->basis)
-			{
-			case STATE: //only call response when channel state [CURRENT] is non-zero
-
-				inputMapping->state[PREVIOUS] = inputMapping->state[CURRENT];
-				inputMapping->state[CURRENT]  = value[POS] - value[NEG]; //assumes both are abs magnitudes
-				
-				if (inputMapping->state[CURRENT] != 0)
-				{
-					inputMapping->func(target, inputMapping->state[CURRENT], inputMapping->state[PREVIOUS]);
-					LOGI("state\n");
-				}
-				break;
-				
-			case DELTA: //only call response when channel delta [CURRENT] is non-zero
-
-				inputMapping->delta[PREVIOUS] = inputMapping->delta[CURRENT];
-				inputMapping->delta[CURRENT]  = value[POS] - value[NEG]; //assumes both are abs magnitudes
-				
-				if (inputMapping->delta[CURRENT] != 0)
-				{
-					inputMapping->func(target, inputMapping->delta[CURRENT], inputMapping->delta[PREVIOUS]);
-					LOGI("delta\n");
-				}
-				break;
-			}
-		}
-		else //"always-run" response
-		{
-			inputMapping->func(target, 0, 0); 
-			LOGI("always\n");
-		}
-	}
-}
-
-void Input_add(InputList * list, Input input)
-{
-	kv_push(Input, *list, input);
-}
-
 #ifdef __ANDROID__
 //PRIVATE
 int32_t Android_onInputEvent(struct android_app* app, AInputEvent* event)
@@ -646,7 +578,7 @@ static short keyOrbToGlfw[] =
 
 void GLFW_updateKey(int i, Device * keyboard)
 {
-	DeviceChannel * channel = &keyboard->channels[i]; //orb index as from enum Key
+	DeviceChannel * channel = &keyboard->channels.a[i]; //orb index as from enum Key
 	DeviceChannel_setPreviousState(channel);
 	channel->state[CURRENT] = (float)glfwGetKey(window, keyOrbToGlfw[i]) == GLFW_PRESS;
 	DeviceChannel_setCurrentDelta(channel);
@@ -667,7 +599,7 @@ void Loop_processInputs(Engine * engine)
 	
 	for (int i = 0; i < 2; i++) //x & y
 	{
-		channel = &mouse->channels[i];
+		channel = &mouse->channels.a[i];
 		DeviceChannel_setPreviousState(channel);
 		channel->state[CURRENT] = p[i];
 		DeviceChannel_setCurrentDelta(channel);

@@ -762,7 +762,7 @@ typedef struct DeviceChannel
 
 typedef struct Device
 {
-	DeviceChannel channels[ORB_KEYS_COUNT];
+	kvec_t(DeviceChannel) channels;
 	//void * other; //special reference to other information, e.g. an array of fingers for a touch device.
 	//TODO Finger fingers[]; //or rather, a pointer to an array elsewhere, if touchscreen device.
 	uint64_t channelsActiveMask;
@@ -795,7 +795,7 @@ typedef struct Input
 } Input;
 const struct Input inputEmpty;
 
-/// A mapping of some raw input (via a DeviceChannel) to an action.
+/// A mapping of some raw input (via a DeviceChannel) to an user-defined response.
 
 /// One such mapping may have many contributing inputs, but their results are not cumulative;
 /// instead, all "negated" values are combined and all "non-negated" values are combined,
@@ -816,8 +816,13 @@ typedef struct InputMapping
 typedef kvec_t(Input) InputList;
 typedef kvec_t(InputMapping) InputMappingList;
 
-void InputMappingList_process(InputMappingList * inputMappingList, void * model, bool debug);
-void Input_add(InputList * list, Input input);
+
+//void Input_add(InputList * list, Input input);
+
+
+//typedef void * (*BuildFunction) (ezxml_t xml);
+
+
 typedef struct Capabilities
 {
 	bool vao;
@@ -860,6 +865,8 @@ typedef struct Engine
 	//DeviceHub deviceHub;
 	//Device array[2];
 	khash_t(StrPtr) * devicesByName;
+	
+	//khash_t(StrPtr) * inputMappingsByName;
 	
 	Program * program; //the current shader program TODO should be an index into array? then use a getter to access. 
 	
