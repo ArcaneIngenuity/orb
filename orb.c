@@ -5,6 +5,7 @@
 KHASH_DEFINE(StrInt, 	kh_cstr_t, int, kh_str_hash_func, kh_str_hash_equal, 1)
 KHASH_DEFINE(IntInt, 	khint32_t, int, kh_int_hash_func, kh_int_hash_equal, 1)
 KHASH_DEFINE(IntFloat, 	khint32_t, float, kh_int_hash_func, kh_int_hash_equal, 1)
+KHASH_DEFINE(Str_AttributeLocation, kh_cstr_t, AttributeLocation, kh_str_hash_func, kh_str_hash_equal, 1)
 
 #ifndef ORB_KHASH_TYPES_OFF
 KHASH_DEFINE(StrPtr, 	kh_cstr_t, uintptr_t, kh_str_hash_func, kh_str_hash_equal, 1)
@@ -1188,27 +1189,28 @@ GLuint GLBuffer_create(
 }
 
 //------------------Shader------------------//
-void Engine_loadShader(Engine * this, Shader ** shader, const char * path, const char * name, GLenum type)//, const char ** attributeLocations)
+Shader * Shader_load(const char * path, const char * name, GLenum type)//, const char ** attributeLocations)
 {
-	(*shader) = calloc(1, sizeof(Shader));
-	
+	Shader * shader = calloc(1, sizeof(Shader));
+	strcpy(shader->name, name);//, STRLEN_MAX);
 	size_t lengthName = strlen(name); 
 	size_t lengthPath = strlen(path);
 	char pathname[lengthPath+lengthName+1]; //1 = '\0'
 	strcpy(pathname, path);
 	strcat(pathname, name);
 	LOGI("pathname %s\n", pathname);
-	(*shader)->source = Text_load(pathname);
-	(*shader)->type = type;
-	Shader_construct(*shader);
-
-	kh_set(StrPtr, this->shadersByName, name, shader);
+	shader->source = Text_load(pathname);
+	shader->type = type;
+	shader->id = glCreateShader(shader->type);
+	Shader_initialiseFromSource(shader);
+	LOGI("name %s\n", shader->name);
+	return shader;
 }
 
-void Shader_construct(Shader * this)//, const char* shader_str, GLenum shader_type)
+void Shader_initialiseFromSource(Shader * this)//, const char* shader_str, GLenum shader_type)
 {
 	// Compile the shader
-	GLuint id = this->id = glCreateShader(this->type);
+	GLuint id = this->id;
 	//TODO check for errors
 	glShaderSource(id, 1, &this->source, NULL);
 	//TODO check for errors
@@ -1323,9 +1325,19 @@ void Shader_validateAttributeInterface(Shader * out, Shader * in)
 
 //------------------Program------------------//
 
-void Program_construct(Program * this, GLuint vertex_shader, GLuint fragment_shader, const char * attributeLocations[], size_t attributeLocationsCount)
+Program * Program_construct()
 {
-	GLuint id = this->id = glCreateProgram();
+	Program * this = calloc(1, sizeof(Program));
+	
+	this->id = glCreateProgram();
+	
+	this->attributeLocationsByName = kh_init(StrPtr);
+	//kv_init(this->attributeLocationsByIndex);
+}
+
+void Program_initialiseFromShaders(Program * this, GLuint vertex_shader, GLuint fragment_shader)
+{
+	GLuint id = this->id;
 	
 	// Attach the shaders to the program
 	glAttachShader(id, vertex_shader);
@@ -1333,9 +1345,17 @@ void Program_construct(Program * this, GLuint vertex_shader, GLuint fragment_sha
 	LOGI("gl error %i\n", glGetError());
 	
 	//TODO should these be stored in a list or something, then applied from there? this allows flexibility if re-specifying (unlikely)
-	for (int i = 0; i < attributeLocationsCount; i++)
-		glBindAttribLocation(id, i, attributeLocations[i]);
+	//note this must occur before link, see glBindAttribLocation docs
+	//for (int i = 0; i < kv_size(*attributeLocations); i++)
 	
+	for (k = kh_begin(this->attributeLocationsByName); k != kh_end(this->attributeLocationsByName); ++k)	
+	{
+		if (kh_exist(this->attributeLocationsByName, k))
+		{
+			AttributeLocation * attributeLocation = &kh_value(this->attributeLocationsByName, k);
+			glBindAttribLocation(id, attributeLocation->index, attributeLocation->name);
+		}
+	}
 	// Link program and check success
 	glLinkProgram(id);
 	
@@ -1819,32 +1839,6 @@ void Engine_dispose(Engine * engine)
 	#endif//DESKTOP
 }
 
-void Engine_loadProgramFromConfig(Engine * engine, ProgramConfig programConfig, const char * path)
-{
-	//TODO check first if a given shader exists already, before loading it!
-	Shader * vert;
-	Shader * frag;
-	Engine_loadShader(engine, &vert, path, programConfig.vertexName, GL_VERTEX_SHADER);
-	Engine_loadShader(engine, &frag, path, programConfig.fragmentName, GL_FRAGMENT_SHADER);
-
-	Program * program = calloc(1, sizeof(Program));
-	Program_construct(program, 
-		vert->id,
-		frag->id,
-		programConfig.attributeLocations,
-		programConfig.attributeLocationsCount
-		);
-	program->topology = GL_TRIANGLES; //TODO place in config?
-	//TODO check whether key exists
-	kh_set(StrPtr, engine->programsByName, programConfig.programName, program);	
-}
-
-void Engine_loadProgramsFromConfig(Engine * engine, ProgramConfig programConfigs[], uint8_t programConfigsCount, const char * path)
-{	
-	for (int i = 0; i < programConfigsCount; ++i)
-		Engine_loadProgramFromConfig(engine, programConfigs[i], path);
-}
-
 Program * Engine_setCurrentProgram(Engine * this, char * name)
 {
 	//LOGI("name=%s\n", name);
@@ -1899,7 +1893,7 @@ const char * Engine_getPath(Engine * engine, const char * path, int pathLength, 
 	//char * path = "./shd/";
 	#endif //OS
 	
-	LOGI("@@ %s", path);
+	//LOGI("@@ %s", path);
 }
 
 char* Text_load(char* filename)

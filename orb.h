@@ -36,6 +36,12 @@ KHASH_DECLARE(IntFloat, khint32_t, float)
 static const int StrPtr = 36;
 KHASH_DECLARE(StrPtr, kh_cstr_t, uintptr_t)
 #endif//KH_DECL_STRPTR
+#ifndef KH_DECL_STR_ATTRIBUTELOCATION
+#define KH_DECL_STR_ATTRIBUTELOCATION
+struct AttributeLocation;
+static const int Str_AttributeLocation = 40;
+KHASH_DECLARE(Str_AttributeLocation, kh_cstr_t, struct AttributeLocation)
+#endif//KH_DECL_STR_ATTRIBUTELOCATION
 
 #ifdef _WIN32
 	//define something for Windows (32-bit and 64-bit, this part is common)
@@ -310,23 +316,6 @@ typedef struct BMFont
 	BMFontKerning kerningsBySecond[256]; //index by second id, matches first array
 } BMFont;
 
-//instance of the abstract, non-mesh-specific concept of a vertex attribute.
-//there could be many ShaderAttributes which would work with a given Mesh Attribute, and vice versa, so no point linking these directly.
-//the shader
-typedef struct ShaderAttribute 
-{
-	char name[8]; //or instead, as key or numeric constant index?
-	char type[8]; //vec2, mat4 etc.
-	char typeCompound[8]; //vec, mat etc.
-	char typeNumeric[8]; //float, int etc.
-	int components; //2, 3, 16 etc.void * 
-
-	//qualifiers
-	bool polarity; //in/out/inout
-	GLuint location; //layout, e.g. layout(location = 3)
-	GLuint index; //layout, e.g. layout(location = 3, index = 1) UNUSED
-} ShaderAttribute;
-
 //Mesh Attribute is just raw data. It is up to ShaderPrograms (ShaderAttributes) to know what to do with it.
 typedef struct Attribute 
 {
@@ -500,8 +489,27 @@ typedef struct ShaderComponent
 	ShaderVariable * outputs;//one shader's output is another's input - this is how they're linked
 } ShaderComponent;
 
+//instance of the abstract, non-mesh-specific concept of a vertex attribute.
+//there could be many ShaderAttributes which would work with a given Mesh Attribute, and vice versa, so no point linking these directly.
+//the shader
+typedef struct ShaderAttribute 
+{
+	char name[8]; //or instead, as key or numeric constant index?
+	char type[8]; //vec2, mat4 etc.
+	char typeCompound[8]; //vec, mat etc.
+	char typeNumeric[8]; //float, int etc.
+	int components; //2, 3, 16 etc.void * 
+
+	//qualifiers
+	bool polarity; //in/out/inout
+	GLuint location; //layout, e.g. layout(location = 3)
+	GLuint index; //layout, e.g. layout(location = 3, index = 1) UNUSED
+} ShaderAttribute;
+
+
 typedef struct Shader
 {
+	char name[STRLEN_MAX];
 	GLuint id;
 	GLenum type; //(NOPE!) SHADER_VERTEX, _FRAGMENT, _GEOMETRY, _TESSELATION_CONTROL, _TESSELATION_EVALULATION
 	const char * source;
@@ -532,11 +540,17 @@ typedef struct ShaderPipe
 } ShaderPipe;
 */
 
+typedef struct AttributeLocation
+{
+	char name[STRLEN_MAX];
+	GLuint index;
+} AttributeLocation;
+
 typedef struct Program
 {
 	//contains information on a single shader pass
 	//batching & instancing require *exactly* the same state per instance - this includes uniforms & attributes
-	char * name;
+	char name[STRLEN_MAX];
 	//char * version (copied from shaders' version, or later used to dictate this)
 	
 	GLuint id;
@@ -546,24 +560,12 @@ typedef struct Program
 	Shader geometry;
 	Shader fragment;
 	
-	//const char * attributeLocations[16]; //TODO see Program_construct() for similar quandary WRT size.
-	//List attributeLocationsList;
 	//inputs: as vertex shader's inputs?
-
 	//output (frame or render) buffer
+	
+	khash_t(Str_AttributeLocation) * attributeLocationsByName;
+	//khash_t(IntStr) attributeLocationsByIndex; //can't be a list, must be a map since indices are not compact
 } Program;
-
-typedef struct ProgramConfig
-{
-	char * programName;
-	char * vertexName;
-	char * fragmentName;
-	
-	char * attributeLocations[8];
-	uint8_t attributeLocationsCount;
-	
-} ProgramConfig;
-
 
 typedef struct RenderPath
 {
@@ -982,18 +984,19 @@ GLuint GLBuffer_create(
 	GLenum usage
 );
 
-void Shader_construct(Shader * this);
 
-void Program_construct(Program * this, GLuint vertex_shader, GLuint fragment_shader, const char * attributeLocations[], size_t attributeLocationsCount);
+Shader * 	Shader_load(const char * path, const char * name, GLenum type);
+void 		Shader_initialiseFromSource(Shader * this);
+
+typedef kvec_t(char *) StrList;
+Program * 	Program_construct();
+void 		Program_initialiseFromShaders(Program * this, GLuint vertex_shader, GLuint fragment_shader);
 
 void Engine_initialise(Engine * this);
 void Engine_dispose(Engine * engine);
 void Engine_clear(); //TODO should be Render_clear?
 Program * Engine_setCurrentProgram(Engine * this, char * name);
 Program * Engine_getCurrentProgram(Engine * this);
-void Engine_loadShader(Engine * this, Shader ** shader, const char * path, const char * name, GLenum type);
-void Engine_loadProgramFromConfig(Engine * engine, ProgramConfig programConfig, const char * path);
-void Engine_loadProgramsFromConfig(Engine * engine, ProgramConfig programConfigs[], uint8_t programConfigsCount, const char * path);
 void Engine_many(Program * program, RenderableSet * renderableSet, const GLfloat * matVP);
 void Engine_one(Engine * this, Renderable * renderable);
 void Engine_createScreenQuad(Engine * this, Mesh * mesh, GLuint positionVertexAttributeIndex, GLuint texcoordVertexAttributeIndex,
