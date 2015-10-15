@@ -551,10 +551,9 @@ typedef struct Program
 	//contains information on a single shader pass
 	//batching & instancing require *exactly* the same state per instance - this includes uniforms & attributes
 	char name[STRLEN_MAX];
-	//char * version (copied from shaders' version, or later used to dictate this)
+	//char * version //shader language version (copied from shaders' version, or later used to dictate this)
 	
 	GLuint id;
-	GLuint topology; //GL_TRIANGLES or whatever (see also Mesh)
 	
 	Shader vertex;
 	Shader geometry;
