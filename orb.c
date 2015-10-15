@@ -1344,10 +1344,7 @@ void Program_initialiseFromShaders(Program * this, GLuint vertex_shader, GLuint 
 	glAttachShader(id, fragment_shader);
 	LOGI("gl error %i\n", glGetError());
 	
-	//TODO should these be stored in a list or something, then applied from there? this allows flexibility if re-specifying (unlikely)
-	//note this must occur before link, see glBindAttribLocation docs
-	//for (int i = 0; i < kv_size(*attributeLocations); i++)
-	
+	//note this must occur before link, see glBindAttribLocation docs	
 	for (k = kh_begin(this->attributeLocationsByName); k != kh_end(this->attributeLocationsByName); ++k)	
 	{
 		if (kh_exist(this->attributeLocationsByName, k))
@@ -1841,7 +1838,6 @@ void Engine_dispose(Engine * engine)
 
 Program * Engine_setCurrentProgram(Engine * this, char * name)
 {
-	//LOGI("name=%s\n", name);
 	if (name == NULL)
 	{
 		this->program = NULL;

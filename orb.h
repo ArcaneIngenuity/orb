@@ -563,6 +563,7 @@ typedef struct Program
 	//inputs: as vertex shader's inputs?
 	//output (frame or render) buffer
 	
+	//attribute locations are a specification by the program - to which vertex shaders must conform.
 	khash_t(Str_AttributeLocation) * attributeLocationsByName;
 	//khash_t(IntStr) attributeLocationsByIndex; //can't be a list, must be a map since indices are not compact
 } Program;
@@ -818,13 +819,6 @@ typedef struct InputMapping
 typedef kvec_t(Input) InputList;
 typedef kvec_t(InputMapping) InputMappingList;
 
-
-//void Input_add(InputList * list, Input input);
-
-
-//typedef void * (*BuildFunction) (ezxml_t xml);
-
-
 typedef struct Capabilities
 {
 	bool vao;
@@ -908,15 +902,6 @@ typedef struct Engine
 } Engine;
 
 typedef void (*IndexedRenderableFunction)(struct Renderable * renderable, uint16_t i, void * model);
-
-
-/*
-typedef struct IndexedRenderableManager
-{
-	Renderable * renderables; //no count needed - correct indices are user's responsibility
-	
-} IndexedRenderableManager;
-*/
 
 typedef kvec_t(uint16_t) IndexList;
 
