@@ -697,7 +697,7 @@ void Loop_run(Engine * engine)
 			{
 				Window_terminate(engine);
 				LOGI("state destroy has been req");
-				//exit(0);
+				//exit(EXIT_FAILURE);
 			}
 		}
 		
@@ -1145,7 +1145,7 @@ void Texture_setTexelFormats(Texture * this, GLenum arranged, GLenum atomTypeExt
 		case GL_BGRA: 				this->components = 4; break;
 		default:
 			LOGI("Error: can accept only GL_RED, GL_RG, GL_RGB, GL_BGR, GL_RGBA or GL_BGRA.\n");
-			exit(0);
+			exit(EXIT_FAILURE);
 	}
 }
 
@@ -1239,7 +1239,7 @@ void Shader_initialiseFromSource(Shader * this)//, const char* shader_str, GLenu
 			#ifdef DESKTOP
 			glfwTerminate();
 			#endif//DESKTOP
-			exit(-1);
+			exit(EXIT_FAILURE);
 			
 			glDeleteShader(id);
 			
@@ -1377,7 +1377,7 @@ void Program_initialiseFromShaders(Program * this, GLuint vertex_shader, GLuint 
 			#ifdef DESKTOP
 			glfwTerminate();
 			#endif//DESKTOP
-			exit(-1);
+			exit(EXIT_FAILURE);
 			
 			//TODO do these atexit
 			//Delete shaders; won't take effect unless they are detached first.
