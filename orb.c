@@ -1562,7 +1562,7 @@ void Engine_one(Engine * this, Renderable * renderable)
 		}
 	}
 	
-	UniformGroup_update(renderable->uniformPtrsByName, this->program);
+	UniformGroup_update(renderable->uniformsByName, this->program);
 
 	if (mesh->index == NULL)
 		glDrawArrays(mesh->topology, 0, mesh->vertexCount);
@@ -1942,22 +1942,22 @@ float Engine_smoothstep(float t)
 }
 
 //Updates uniforms for the current program.
-void UniformGroup_update(khash_t(StrPtr) * uniformPtrsByName, Program * programPtr)
+void UniformGroup_update(khash_t(StrPtr) * uniformsByName, Program * programPtr)
 {
-	for (k = kh_begin(uniformPtrsByName); k != kh_end(uniformPtrsByName); ++k)
+	for (k = kh_begin(uniformsByName); k != kh_end(uniformsByName); ++k)
 	{
-        if (kh_exist(uniformPtrsByName, k))
+        if (kh_exist(uniformsByName, k))
 		{
-			//const char * key = kh_key(uniformPtrsByName,k);
+			//const char * key = kh_key(uniformsByName,k);
 			//LOGI("key=%s\n", key);
-			Uniform * uniform = kh_value(uniformPtrsByName, k);
+			Uniform * uniform = kh_value(uniformsByName, k);
 			GLint location = glGetUniformLocation(programPtr->id, uniform->name);
 			
 			switch (uniform->type)
 			{
 				case UniformTexture:
 				{
-					Texture * texturePtr = uniform->valuesPtr;
+					Texture * texturePtr = uniform->values;
 					//TODO optimise: if needs refresh!
 					Texture_refresh(texturePtr);
 					Texture_prepare(texturePtr, programPtr);
@@ -1966,13 +1966,13 @@ void UniformGroup_update(khash_t(StrPtr) * uniformPtrsByName, Program * programP
 				case UniformVector:
 				{
 					(*(glUniformVectorFunctions[uniform->componentsMajor-1][uniform->typeNumeric]))
-						(location, uniform->elements, uniform->valuesPtr);
+						(location, uniform->elements, uniform->values);
 				}
 				break;
 				case UniformMatrix:
 				{
 					(*(glUniformMatrixFunctions[uniform->componentsMajor-1][uniform->componentsMinor-1][uniform->typeNumeric]))
-						(location, uniform->elements, uniform->matrixTranspose, uniform->valuesPtr);
+						(location, uniform->elements, uniform->matrixTranspose, uniform->values);
 				}
 				break;
 				default: break;

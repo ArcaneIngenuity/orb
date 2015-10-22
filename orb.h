@@ -365,7 +365,7 @@ typedef struct Uniform
 	GLsizei componentsMinor; //count minor (for matrices only)
 	GLsizei elements; //count of array size
 	
-	void * valuesPtr; //"values" since many glUniform* are non-scalar
+	void * values; //"values" since many glUniform* are non-scalar
 	GLboolean matrixTranspose; //for glUniformMatrix calls - applies only if type == matrix
 	//GLint location; //cached from glgetUniformLocation
 } Uniform;
@@ -446,7 +446,7 @@ typedef struct Renderable
 	Uniform * uniforms;
 	uint8_t uniformsCount;
 	
-	khash_t(StrPtr) * uniformPtrsByName;
+	khash_t(StrPtr) * uniformsByName;
 	
 	//occasional upload i.e. not performance-critical, so these objects can be pointers to structs.
 	Mesh * mesh;
@@ -516,7 +516,7 @@ typedef struct Shader
 	
 	//inputs:
 	khash_t(StrInt) attributesByName;
-	khash_t(StrInt) uniformPtrsByName;
+	khash_t(StrInt) uniformsByName;
 	
 	//shader version
 } Shader;
@@ -932,7 +932,7 @@ void Attribute_submitData(Attribute * attribute, Engine * engine);
 void Attribute_prepare(Attribute * attribute);
 void Attribute_tryPrepare(Attribute * attribute, Engine * engine);
 
-void UniformGroup_update(khash_t(StrPtr) * uniformPtrsByName, Program * program);
+void UniformGroup_update(khash_t(StrPtr) * uniformsByName, Program * program);
 
 Texture * Texture_create();
 void Texture_loadData(Texture * texture, const char * filename);
