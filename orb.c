@@ -596,23 +596,28 @@ void Loop_processInputs(Engine * engine)
 	DeviceChannel * channel;
 	
 	k = kh_get(StrPtr, engine->devicesByName, "cursor");
-	Device * mouse = kh_val(engine->devicesByName, k);
-	
-	for (int i = 0; i < 2; i++) //x & y
+	if (k != kh_end(engine->devicesByName))
 	{
-		channel = &mouse->channels.a[i];
-		DeviceChannel_setPreviousState(channel);
-		channel->state[CURRENT] = p[i];
-		DeviceChannel_setCurrentDelta(channel);
+		Device * mouse = kh_val(engine->devicesByName, k);
+		
+		for (int i = 0; i < 2; i++) //x & y
+		{
+			channel = &mouse->channels.a[i];
+			DeviceChannel_setPreviousState(channel);
+			channel->state[CURRENT] = p[i];
+			DeviceChannel_setCurrentDelta(channel);
+		}
 	}
 	//LOGI("x=%.3f y=%.3f\n", p[XX], p[YY]);
-
 	k = kh_get(StrPtr, engine->devicesByName, "keyboard");
-	Device * keyboard = kh_val(engine->devicesByName, k);	
-	
-	for (int i = 0; i < ORB_KEYS_COUNT; ++i)
+	if (k != kh_end(engine->devicesByName))
 	{
-		GLFW_updateKey(i, keyboard); //TODO should be some generic function pointer that has been preset to the GLFW function
+		Device * keyboard = kh_val(engine->devicesByName, k);	
+		
+		for (int i = 0; i < ORB_KEYS_COUNT; ++i)
+		{
+			GLFW_updateKey(i, keyboard); //TODO should be some generic function pointer that has been preset to the GLFW function
+		}
 	}
 	
 	#endif//DESKTOP
