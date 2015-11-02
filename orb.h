@@ -602,6 +602,11 @@ typedef struct Color
 	float a;
 } Color;
 
+#define FOREACH_MOUSE_BUTTON(HANDLER) \
+	HANDLER(ORB_MOUSE_BUTTON_LEFT) \
+	HANDLER(ORB_MOUSE_BUTTON_RIGHT) \
+	HANDLER(ORB_MOUSE_BUTTON_MIDDLE)
+
 #define FOREACH_KEY(HANDLER) \
 	HANDLER(ORB_KEY_UNKNOWN) \
 	HANDLER(ORB_KEY_0) \
@@ -739,10 +744,21 @@ typedef enum Key
     FOREACH_KEY(GENERATE_ENUM)
 } Key;
 
+typedef enum Button
+{
+    FOREACH_MOUSE_BUTTON(GENERATE_ENUM)
+} Button;
+
 static const char * KeyString[] =
 {
 	FOREACH_KEY(GENERATE_STRING)
 };
+
+static const char * MouseButtonString[] =
+{
+	FOREACH_MOUSE_BUTTON(GENERATE_STRING)
+};
+
 
 typedef enum Mouse
 {

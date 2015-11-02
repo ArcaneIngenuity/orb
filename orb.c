@@ -2032,8 +2032,10 @@ Device * Keyboard_construct()
 
 void Mouse_initialise(Device * device)
 {
-	//device->indexToName = MouseButtonString;
-	//device->nameToIndex = ;
+	device->indexToName = MouseButtonString;
+	device->nameToIndex = kh_init(StrInt);
+	khiter_t k; int ret; int c = 0;
+	FOREACH_MOUSE_BUTTON(GENERATE_KH)
 	
 	for (int i = 0; i < ORB_MOUSE_BUTTONS_COUNT; ++i)
 	{
