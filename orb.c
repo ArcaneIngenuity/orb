@@ -17,10 +17,6 @@ static khiter_t k;
 glUniformVectorFunction glUniformVectorFunctions[4][2]; 
 glUniformMatrixFunction glUniformMatrixFunctions[4][4][2];
 
-khash_t(StrInt) * stringToKey;
-khash_t(StrInt) * stringToButton;
-
-
 //helpers...
 // You must free the result if result is non-NULL.
 char *str_replace(char *orig, char *rep, char *with)
@@ -71,22 +67,6 @@ char *str_replace(char *orig, char *rep, char *with)
 }
 //...helpers.
 
-void Key_setupStringToKey()
-{
-	stringToKey = kh_init(StrInt);
-	khiter_t k; int ret; int c = 0;
-	FOREACH_KEY(GENERATE_KH)
-}
-
-/*
-void Mouse_setupStringToButton()
-{
-	stringToButton = kh_init(StrInt);
-	khiter_t k; int ret; int c = 0;
-	FOREACH_KEY(GENERATE_KH)
-}
-*/
-
 void Window_terminate(Engine * engine)
 {
 	#ifdef DESKTOP
@@ -112,6 +92,13 @@ void Window_terminate(Engine * engine)
 	engine->surface = EGL_NO_SURFACE;
 	#endif//__ANDROID__
 	#endif//DESKTOP/MOBILE
+}
+
+Device * Device_construct()
+{
+	Device * device = calloc(1, sizeof(Device));
+	device->nameToIndex = kh_init(StrInt);
+	return device;
 }
 
 void DeviceChannel_setCurrentDelta(DeviceChannel * this)
@@ -1593,9 +1580,6 @@ void Engine_initialise(Engine * this)
 {
 	LOGI("Engine initialising...\n");
 	
-	Key_setupStringToKey();
-	//Mouse_setupStringToKey();
-	
 	#ifdef DESKTOP
 	//WINDOW, CONTEXT & INPUT
 	//glfwSetErrorCallback(GLFW_errorCallback);
@@ -2015,6 +1999,11 @@ void Attribute_submitData(Attribute * attribute, Engine * engine)
 
 void Keyboard_initialise(Device * device)
 {
+	device->indexToName = KeyString;
+	device->nameToIndex = kh_init(StrInt);
+	khiter_t k; int ret; int c = 0;
+	FOREACH_KEY(GENERATE_KH)
+	
 	for (int i = 0; i < ORB_KEYS_COUNT; ++i)
 	{
 		DeviceChannel channel;
@@ -2033,15 +2022,19 @@ void Keyboard_update(Device * device)
 
 Device * Keyboard_construct()
 {
-	Device * device = calloc(1, sizeof(Device));
+	Device * device = Device_construct();
 	device->initialise = Keyboard_initialise;
 	device->update = Keyboard_update;
+	return device;
 }
 
 //MOUSE
 
 void Mouse_initialise(Device * device)
 {
+	//device->indexToName = MouseButtonString;
+	//device->nameToIndex = ;
+	
 	for (int i = 0; i < ORB_MOUSE_BUTTONS_COUNT; ++i)
 	{
 		DeviceChannel channel;
@@ -2067,7 +2060,8 @@ void Mouse_update(Device * device)
 
 Device * Mouse_construct()
 {
-	Device * device = calloc(1, sizeof(Device));
+	Device * device = Device_construct();
 	device->initialise = Mouse_initialise;
 	device->update = Mouse_update;
+	return device;
 }

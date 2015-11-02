@@ -729,7 +729,7 @@ typedef struct Color
 
 #define GENERATE_ENUM(value) value,
 #define GENERATE_STRING(value) #value,
-#define GENERATE_KH(value) k = kh_put(StrInt,stringToKey,#value,&ret); kh_value(stringToKey,k) = c; c++;
+#define GENERATE_KH(value) k = kh_put(StrInt,device->nameToIndex,#value,&ret); kh_value(device->nameToIndex,k) = c; c++;
 
 #define ORB_MOUSE_BUTTONS_COUNT 2
 
@@ -739,9 +739,9 @@ typedef enum Key
     FOREACH_KEY(GENERATE_ENUM)
 } Key;
 
-static const char *keyToString[] =
+static const char * KeyString[] =
 {
-    FOREACH_KEY(GENERATE_STRING)
+	FOREACH_KEY(GENERATE_STRING)
 };
 
 typedef enum Mouse
@@ -776,7 +776,8 @@ typedef struct Device
 	//void * other; //special reference to other information, e.g. an array of fingers for a touch device.
 	//TODO Finger fingers[]; //or rather, a pointer to an array elsewhere, if touchscreen device.
 	uint64_t channelsActiveMask;
-	khash_t(StrInt) * nameToIndex; ///< Maps string name to index, e.g. "ORB_KEY_SPACE" to enum index of same name ORB_KEY_SPACE.
+	khash_t(StrInt) * nameToIndex; ///< Maps string name to numeric index, e.g. "ORB_KEY_SPACE" to enum index of same name ORB_KEY_SPACE.
+	char ** indexToName; ///< Maps numeric index to string name, e.g. "ORB_KEY_SPACE" to enum index of same name ORB_KEY_SPACE.
 	void (*initialise)	(struct Device * const this);
 	void (*update)		(struct Device * const this);
 } Device;
