@@ -18,6 +18,7 @@ glUniformVectorFunction glUniformVectorFunctions[4][2];
 glUniformMatrixFunction glUniformMatrixFunctions[4][4][2];
 
 khash_t(StrInt) * stringToKey;
+khash_t(StrInt) * stringToButton;
 
 
 //helpers...
@@ -69,6 +70,22 @@ char *str_replace(char *orig, char *rep, char *with)
 	// You must free the result if result is non-NULL.
 }
 //...helpers.
+
+void Key_setupStringToKey()
+{
+	stringToKey = kh_init(StrInt);
+	khiter_t k; int ret; int c = 0;
+	FOREACH_KEY(GENERATE_KH)
+}
+
+/*
+void Mouse_setupStringToButton()
+{
+	stringToButton = kh_init(StrInt);
+	khiter_t k; int ret; int c = 0;
+	FOREACH_KEY(GENERATE_KH)
+}
+*/
 
 void Window_terminate(Engine * engine)
 {
@@ -589,37 +606,21 @@ void GLFW_updateKey(int i, Device * keyboard)
 void Loop_processInputs(Engine * engine)
 {
 	#ifdef DESKTOP //glfw!
-	//TODO if USE_GLFW
-	//relative to mouse start point: For FPS
-	double p[2];
-	glfwGetCursorPos(window, &p[XX], &p[YY]);
+	
+	Device * device;
 	DeviceChannel * channel;
 	
-	k = kh_get(StrPtr, engine->devicesByName, "cursor");
-	if (k != kh_end(engine->devicesByName))
+	for (k = kh_begin(engine->devicesByName); k != kh_end(engine->devicesByName); ++k)
 	{
-		Device * mouse = kh_val(engine->devicesByName, k);
-		
-		for (int i = 0; i < 2; i++) //x & y
+		if (kh_exist(engine->devicesByName, k))
 		{
-			channel = &mouse->channels.a[i];
-			DeviceChannel_setPreviousState(channel);
-			channel->state[CURRENT] = p[i];
-			DeviceChannel_setCurrentDelta(channel);
+			//char * key = kh_key(engine->devicesByName, k);
+			Device * device = kh_val(engine->devicesByName, k);
+			if (device->update)
+				device->update(device);
 		}
 	}
-	//LOGI("x=%.3f y=%.3f\n", p[XX], p[YY]);
-	k = kh_get(StrPtr, engine->devicesByName, "keyboard");
-	if (k != kh_end(engine->devicesByName))
-	{
-		Device * keyboard = kh_val(engine->devicesByName, k);	
-		
-		for (int i = 0; i < ORB_KEYS_COUNT; ++i)
-		{
-			GLFW_updateKey(i, keyboard); //TODO should be some generic function pointer that has been preset to the GLFW function
-		}
-	}
-	
+
 	#endif//DESKTOP
 }
 void Loop_initialise(Engine * engine)
@@ -1588,18 +1589,12 @@ void Engine_one(Engine * this, Renderable * renderable)
 	}
 }
 
-void Key_setupStringToKey()
-{
-	stringToKey = kh_init(StrInt);
-	khiter_t k; int ret; int c = 0;
-	FOREACH_KEY(GENERATE_KH)
-}
-
 void Engine_initialise(Engine * this)
 {
 	LOGI("Engine initialising...\n");
 	
 	Key_setupStringToKey();
+	//Mouse_setupStringToKey();
 	
 	#ifdef DESKTOP
 	//WINDOW, CONTEXT & INPUT
@@ -2011,4 +2006,68 @@ void Attribute_submitData(Attribute * attribute, Engine * engine)
 	glBindBuffer(GL_ARRAY_BUFFER, attribute->id);
     glBufferData(GL_ARRAY_BUFFER, attribute->vertexBytes, attribute->vertex, attribute->usage);
 	Attribute_tryPrepare(attribute, &engine);
+}
+
+
+///////////// DEVICE TYPES //////////////
+
+//KEYBOARD
+
+void Keyboard_initialise(Device * device)
+{
+	for (int i = 0; i < ORB_KEYS_COUNT; ++i)
+	{
+		DeviceChannel channel;
+		channel.active = true;	
+		kv_push(DeviceChannel, device->channels, channel);		
+	}
+}
+
+void Keyboard_update(Device * device)
+{
+	for (int i = 0; i < ORB_KEYS_COUNT; ++i)
+	{
+		GLFW_updateKey(i, device); //TODO should be some generic function pointer that has been preset to the GLFW function
+	}
+}
+
+Device * Keyboard_construct()
+{
+	Device * device = calloc(1, sizeof(Device));
+	device->initialise = Keyboard_initialise;
+	device->update = Keyboard_update;
+}
+
+//MOUSE
+
+void Mouse_initialise(Device * device)
+{
+	for (int i = 0; i < ORB_MOUSE_BUTTONS_COUNT; ++i)
+	{
+		DeviceChannel channel;
+		channel.active = true;	
+		kv_push(DeviceChannel, device->channels, channel);		
+	}
+}
+
+void Mouse_update(Device * device)
+{
+	//TODO if USE_GLFW
+	//relative to mouse start point: For FPS
+	double p[2];
+	glfwGetCursorPos(window, &p[XX], &p[YY]);
+	for (int i = 0; i < ORB_MOUSE_BUTTONS_COUNT; i++) //x & y
+	{
+		DeviceChannel * channel = &device->channels.a[i];
+		DeviceChannel_setPreviousState(channel);
+		channel->state[CURRENT] = p[i];
+		DeviceChannel_setCurrentDelta(channel);
+	}
+}
+
+Device * Mouse_construct()
+{
+	Device * device = calloc(1, sizeof(Device));
+	device->initialise = Mouse_initialise;
+	device->update = Mouse_update;
 }

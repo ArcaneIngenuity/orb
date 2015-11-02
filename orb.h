@@ -731,6 +731,8 @@ typedef struct Color
 #define GENERATE_STRING(value) #value,
 #define GENERATE_KH(value) k = kh_put(StrInt,stringToKey,#value,&ret); kh_value(stringToKey,k) = c; c++;
 
+#define ORB_MOUSE_BUTTONS_COUNT 2
+
 //unlike e.g. GLFW, these are ordered zero-based, compact so they may be used as indices into an packed array
 typedef enum Key
 {
@@ -742,6 +744,12 @@ static const char *keyToString[] =
     FOREACH_KEY(GENERATE_STRING)
 };
 
+typedef enum Mouse
+{
+    ORB_BUTTON_LEFT,
+	ORB_BUTTON_RIGHT,
+	ORB_BUTTON_MIDDLE
+} Mouse;
 
 
 void Key_setupStringToKey();
@@ -768,7 +776,14 @@ typedef struct Device
 	//void * other; //special reference to other information, e.g. an array of fingers for a touch device.
 	//TODO Finger fingers[]; //or rather, a pointer to an array elsewhere, if touchscreen device.
 	uint64_t channelsActiveMask;
+	khash_t(StrInt) * nameToIndex; ///< Maps string name to index, e.g. "ORB_KEY_SPACE" to enum index of same name ORB_KEY_SPACE.
+	void (*initialise)	(struct Device * const this);
+	void (*update)		(struct Device * const this);
 } Device;
+
+typedef void (*DeviceUpdate)	(Device * device);
+typedef void (*DeviceInitialise)(Device * device);
+
 /*
 typedef struct Finger
 {
@@ -994,6 +1009,16 @@ char* Text_load(char* filename);
 
 void GLFW_errorCallback(int error, const char * description);
 bool GLTool_isExtensionSupported(const char * extension); //redundant, see GLFW
+
+///////////// DEVICE TYPES //////////////
+
+typedef struct Keyboard
+{
+	Device base;
+} Keyboard;
+
+
+///////////// PLATFORM SPECIFIC FUNCTIONS //////////////
 
 /*
 //Private:
