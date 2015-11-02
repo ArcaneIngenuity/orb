@@ -1425,9 +1425,11 @@ void Engine_clearDepth()
 	 glClear(GL_DEPTH_BUFFER_BIT);
 }
 
-void Engine_createScreenQuad(Engine * this, Mesh * mesh, GLuint positionVertexAttributeIndex, GLuint texcoordVertexAttributeIndex,
-	int w, int h,
-	int rcx, int rcy
+void Engine_createQuadPixels(Engine * this, Mesh * mesh,
+	GLuint positionVertexAttributeIndex, GLuint texcoordVertexAttributeIndex,
+	int dx, int dy,
+	int hx, int hy,
+	int sx, int sy
 )
 {
 	mesh->topology = GL_TRIANGLES;
@@ -1451,14 +1453,19 @@ void Engine_createScreenQuad(Engine * this, Mesh * mesh, GLuint positionVertexAt
 		2, 3, 0
 	};
 	
-	float wabs = (float)w/1024;
-	float habs = (float)h/768;
+	//we double for correct pixel dimensions because OpenGL screen space runs -1.0 to 1.0 - range of 2.0
+	//dimensions
+	float rdx = 2.0f * (dx) / sx;
+	float rdy = 2.0f * (dy) / sy;
+	//handle
+	float rhx = 2.0f * (hx) / sx;
+	float rhy = 2.0f * (hy) / sy;
 	
 	GLfloat _position[8] = {
-		-wabs, -habs,
-		+wabs, -habs,
-		+wabs, +habs,
-		-wabs, +habs
+		0 	+ rhx, 0	+ rhy,
+		rdx + rhx, 0	+ rhy,
+		rdx + rhx, rdy 	+ rhy,
+		0 	+ rhx, rdy	+ rhy
 	};
 	
 	GLfloat _texcoord[8] = {
