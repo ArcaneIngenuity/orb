@@ -603,9 +603,17 @@ typedef struct Color
 } Color;
 
 #define FOREACH_MOUSE_BUTTON(HANDLER) \
-	HANDLER(ORB_MOUSE_BUTTON_LEFT) \
-	HANDLER(ORB_MOUSE_BUTTON_RIGHT) \
-	HANDLER(ORB_MOUSE_BUTTON_MIDDLE)
+	HANDLER(ORB_MOUSE_X) \
+	HANDLER(ORB_MOUSE_Y) \
+	HANDLER(ORB_MOUSE_BUTTON_1) \
+	HANDLER(ORB_MOUSE_BUTTON_2) \
+	HANDLER(ORB_MOUSE_BUTTON_3) \
+	HANDLER(ORB_MOUSE_BUTTON_4) \
+	HANDLER(ORB_MOUSE_BUTTON_5) \
+	HANDLER(ORB_MOUSE_BUTTON_6) \
+	HANDLER(ORB_MOUSE_BUTTON_7) \
+	HANDLER(ORB_MOUSE_BUTTON_8) \
+	HANDLER(ORB_MOUSE_BUTTONS_COUNT)
 
 #define FOREACH_KEY(HANDLER) \
 	HANDLER(ORB_KEY_UNKNOWN) \
@@ -735,8 +743,6 @@ typedef struct Color
 #define GENERATE_ENUM(value) value,
 #define GENERATE_STRING(value) #value,
 #define GENERATE_KH(value) k = kh_put(StrInt,device->nameToIndex,#value,&ret); kh_value(device->nameToIndex,k) = c; c++;
-
-#define ORB_MOUSE_BUTTONS_COUNT 2
 
 //unlike e.g. GLFW, these are ordered zero-based, compact so they may be used as indices into an packed array
 typedef enum Key

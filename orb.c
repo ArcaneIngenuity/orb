@@ -449,6 +449,24 @@ void Android_extractAssetsFromAPK(struct android_app * app, const char * apkDirs
 #endif //__ANDROID__
 
 #ifdef DESKTOP //glfw!
+static short buttonOrbToGlfw[] =
+{
+	XX,
+	YY,
+	GLFW_MOUSE_BUTTON_1,
+	GLFW_MOUSE_BUTTON_2,
+	GLFW_MOUSE_BUTTON_3,
+	GLFW_MOUSE_BUTTON_4,
+	GLFW_MOUSE_BUTTON_5,
+	GLFW_MOUSE_BUTTON_6,
+	GLFW_MOUSE_BUTTON_7,
+	GLFW_MOUSE_BUTTON_8
+};
+#define GLFW_MOUSE_BUTTON_LEFT   GLFW_MOUSE_BUTTON_1
+#define GLFW_MOUSE_BUTTON_RIGHT   GLFW_MOUSE_BUTTON_2
+#define GLFW_MOUSE_BUTTON_MIDDLE   GLFW_MOUSE_BUTTON_3
+#define GLFW_MOUSE_BUTTON_LAST   GLFW_MOUSE_BUTTON_8
+
 static short keyOrbToGlfw[] =
 {
 	GLFW_KEY_UNKNOWN,
@@ -2004,9 +2022,10 @@ void Keyboard_initialise(Device * device)
 	khiter_t k; int ret; int c = 0;
 	FOREACH_KEY(GENERATE_KH)
 	
+	kv_init(device->channels);
 	for (int i = 0; i < ORB_KEYS_COUNT; ++i)
 	{
-		DeviceChannel channel;
+		DeviceChannel channel = {0};
 		channel.active = true;	
 		kv_push(DeviceChannel, device->channels, channel);		
 	}
@@ -2037,9 +2056,10 @@ void Mouse_initialise(Device * device)
 	khiter_t k; int ret; int c = 0;
 	FOREACH_MOUSE_BUTTON(GENERATE_KH)
 	
+	kv_init(device->channels);
 	for (int i = 0; i < ORB_MOUSE_BUTTONS_COUNT; ++i)
 	{
-		DeviceChannel channel;
+		DeviceChannel channel = {0};
 		channel.active = true;	
 		kv_push(DeviceChannel, device->channels, channel);		
 	}
@@ -2047,16 +2067,28 @@ void Mouse_initialise(Device * device)
 
 void Mouse_update(Device * device)
 {
-	//TODO if USE_GLFW
-	//relative to mouse start point: For FPS
-	double p[2];
-	glfwGetCursorPos(window, &p[XX], &p[YY]);
-	for (int i = 0; i < ORB_MOUSE_BUTTONS_COUNT; i++) //x & y
+	//LOGI("ORB_MOUSE_BUTTONS_COUNT=%d\n", ORB_MOUSE_BUTTONS_COUNT);
+	for (int i = 0; i < ORB_MOUSE_BUTTONS_COUNT; ++i) //x & y
 	{
 		DeviceChannel * channel = &device->channels.a[i];
-		DeviceChannel_setPreviousState(channel);
-		channel->state[CURRENT] = p[i];
-		DeviceChannel_setCurrentDelta(channel);
+		
+		//if (i < 2) //first 2 are motion axes
+		{
+			//TODO if USE_GLFW
+			//relative to mouse start point: For FPS
+			//double p[2];
+			//glfwGetCursorPos(window, &p[XX], &p[YY]);
+			//DeviceChannel_setPreviousState(channel);
+			//channel->state[CURRENT] = p[i];
+			//DeviceChannel_setCurrentDelta(channel);
+		}
+		//else
+		{
+			DeviceChannel_setPreviousState(channel);
+			//LOGI("buttonOrbToGlfw[i]=%d\n", buttonOrbToGlfw[i]);
+			channel->state[CURRENT] = (float)glfwGetMouseButton(window, 0) == GLFW_PRESS;
+			DeviceChannel_setCurrentDelta(channel);
+		}
 	}
 }
 
