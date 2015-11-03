@@ -2072,21 +2072,21 @@ void Mouse_update(Device * device)
 	{
 		DeviceChannel * channel = &device->channels.a[i];
 		
-		//if (i < 2) //first 2 are motion axes
+		if (i < 2) //first 2 are motion axes
 		{
 			//TODO if USE_GLFW
 			//relative to mouse start point: For FPS
-			//double p[2];
-			//glfwGetCursorPos(window, &p[XX], &p[YY]);
-			//DeviceChannel_setPreviousState(channel);
-			//channel->state[CURRENT] = p[i];
-			//DeviceChannel_setCurrentDelta(channel);
+			double p[2];
+			glfwGetCursorPos(window, &p[XX], &p[YY]);
+			DeviceChannel_setPreviousState(channel);
+			channel->state[CURRENT] = p[i];
+			DeviceChannel_setCurrentDelta(channel);
 		}
-		//else
+		else
 		{
 			DeviceChannel_setPreviousState(channel);
 			//LOGI("buttonOrbToGlfw[i]=%d\n", buttonOrbToGlfw[i]);
-			channel->state[CURRENT] = (float)glfwGetMouseButton(window, 0) == GLFW_PRESS;
+			channel->state[CURRENT] = (float)glfwGetMouseButton(window, buttonOrbToGlfw[i]) == GLFW_PRESS;
 			DeviceChannel_setCurrentDelta(channel);
 		}
 	}
