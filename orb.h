@@ -1021,11 +1021,7 @@ Program * Engine_setCurrentProgram(Engine * this, char * name);
 Program * Engine_getCurrentProgram(Engine * this);
 void Engine_many(Program * program, RenderableSet * renderableSet, const GLfloat * matVP);
 void Engine_one(Engine * this, Renderable * renderable);
-void Engine_createQuadPixels(Engine * this, Mesh * mesh, GLuint positionVertexAttributeIndex, GLuint texcoordVertexAttributeIndex,
-	int dx, int dy,
-	int hx, int hy,
-	int sx, int sy
-);
+
 float Engine_smoothstep(float t);
 
 char* Text_load(char* filename);
