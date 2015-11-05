@@ -1014,7 +1014,7 @@ typedef kvec_t(char *) StrList;
 Program * 	Program_construct();
 void 		Program_initialiseFromShaders(Program * this, GLuint vertex_shader, GLuint fragment_shader);
 
-void Engine_initialise(Engine * this);
+void Engine_initialise(Engine * this, int width, int height, const char * windowTitle);
 void Engine_dispose(Engine * engine);
 void Engine_clear(); //TODO should be Render_clear?
 Program * Engine_setCurrentProgram(Engine * this, char * name);
@@ -1025,6 +1025,12 @@ void Engine_one(Engine * this, Renderable * renderable);
 float Engine_smoothstep(float t);
 
 char* Text_load(char* filename);
+
+void Loop_initialise(Engine * engine,
+	int windowWidth, //ignored for Android
+	int windowHeight, //ignored for Android
+	int windowTitle); //ignored for Android
+void Loop_run(Engine * engine);
 
 void GLFW_errorCallback(int error, const char * description);
 bool GLTool_isExtensionSupported(const char * extension); //redundant, see GLFW

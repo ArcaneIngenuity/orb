@@ -302,7 +302,7 @@ void Android_onAppCmd(struct android_app* app, int32_t cmd)
 		if (engine->app->window != NULL)
 		{
 			LOGI("engine->app->window is valid.");
-			Engine_initialise(engine);
+			Engine_initialise(engine, this->width, this->height, NULL); //no window title!
 			//if (!engine->userInitialised)
 			{
 				engine->userInitialiseFunc(); //TODO - call from within Engine_initialise()?
@@ -628,7 +628,7 @@ void Loop_processInputs(Engine * engine)
 
 	#endif//DESKTOP
 }
-void Loop_initialise(Engine * engine)
+void Loop_initialise(Engine * engine, int windowWidth, int windowHeight, int windowTitle)
 {
 	#ifdef __ANDROID__
 	//app_dummy();
@@ -641,7 +641,7 @@ void Loop_initialise(Engine * engine)
 
 	#endif//__ANDROID__
 	#ifdef DESKTOP
-	Engine_initialise(engine); 
+	Engine_initialise(engine, windowWidth, windowHeight, windowTitle); 
 	engine->userInitialiseFunc(); //!!! For now, Ctrl_init must go after Engine_initialise(), because it still relies on glfw for input AND glReadPixels
 	engine->userInitialised = true;
 	#endif//DESKTOP
@@ -1499,7 +1499,7 @@ void Engine_one(Engine * this, Renderable * renderable)
 	}
 }
 
-void Engine_initialise(Engine * this)
+void Engine_initialise(Engine * this, int width, int height, const char * windowTitle)
 {
 	LOGI("Engine initialising...\n");
 	
@@ -1517,7 +1517,9 @@ void Engine_initialise(Engine * this)
 	glfwWindowHint(GLFW_SAMPLES, 4); //HW AA
 	//glfwWindowHint(GLFW_REFRESH_RATE, 10);
 	
-	window = glfwCreateWindow(1024, 768, "War & Adventure Pre-Alpha", NULL, NULL);
+	this->width = width;
+	this->height = height;
+	window = glfwCreateWindow(this->width, this->height, windowTitle, NULL, NULL);
 
 	if (!window)
 	{
