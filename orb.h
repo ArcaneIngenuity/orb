@@ -22,6 +22,8 @@
 // returns 0=replaced existing item, 1=bucket empty (new key), 2-adding element previously deleted
 #define kh_set(kname, hash, key, val) ({int ret; k = kh_put(kname, hash,key,&ret); kh_value(hash,k) = val; ret;})
 
+#include "ezxml/ezxml.h"
+
 static const int StrInt = 33;
 static const int IntInt = 34;
 static const int IntFloat = 35;
@@ -407,6 +409,42 @@ typedef struct Texture
 	khash_t(IntInt) * intParametersByName;
 
 } Texture;
+
+
+typedef struct TextureAtlasEntry
+{
+	//char name[STRLEN_MAX];
+	char * name;
+	uint16_t x;
+	uint16_t y;
+	uint16_t w;
+	uint16_t h;
+	
+	//if trimmed / cropped
+	uint16_t xTrim; ///< The offset from x at which the sprite *actually* begins.
+	uint16_t yTrim; ///< The offset from y at which the sprite *actually* begins.
+	uint16_t wPreTrim; ///< The width before trim.
+	uint16_t hPreTrim; ///< The height before trim.
+	
+	float xPivot; ///< x pivot as alpha value (0.0->1.0) across width
+	float yPivot; ///< y pivot as alpha value (0.0->1.0) across height
+	
+} TextureAtlasEntry;
+
+#ifndef KH_DECL_Str_TextureAtlasEntry
+#define KH_DECL_Str_TextureAtlasEntry
+static const int Str_TextureAtlasEntry = 1000;
+KHASH_DECLARE(Str_TextureAtlasEntry, kh_cstr_t, TextureAtlasEntry)
+#endif//KH_DECL_Str_TextureAtlasEntry
+
+typedef struct TextureAtlas
+{
+	khash_t(Str_TextureAtlasEntry) * entriesByName;
+	uint16_t w;
+	uint16_t h;
+	
+} TextureAtlas;
+
 
 typedef struct Face
 {
@@ -802,6 +840,7 @@ typedef struct Device
 	char ** indexToName; ///< Maps numeric index to string name, e.g. "ORB_KEY_SPACE" to enum index of same name ORB_KEY_SPACE.
 	void (*initialise)	(struct Device * const this);
 	void (*update)		(struct Device * const this);
+	bool consumed; ///< Has input from this device already been consumed during this Hub_update()? (prevents a device being used twice)
 } Device;
 
 typedef void (*DeviceUpdate)	(Device * device);
@@ -991,6 +1030,12 @@ void * Texture_read2(int x, int y, void * texel);
 void Texture_write2(int x, int y, void * texel);
 void * Texture_read3(int x, int y, int z);
 void Texture_write3(int x, int y, int z);
+
+#define TextureAtlas_put(atlas, entry) kh_set(Str_TextureAtlasEntry, atlas->entriesByName, entry.name, entry) 
+#define TextureAtlas_get(atlas, name)  kh_get_val(Str_TextureAtlasEntry, atlas->entriesByName, name, (TextureAtlasEntry){0})
+//#define TextureAtlas_initialise(atlas) atlas = kh_init(Str_TextureAtlasEntry)
+TextureAtlas * TextureAtlas_construct();
+void TextureAtlas_load(TextureAtlas * atlas, const char * filename);
 
 void Transform_finalise(mat4x4 * matTrans, mat4x4 * matPos, mat4x4 * matRot);
 void Transform_rotate(mat4x4 * matRot, vec3 * rotation, vec3 delta);

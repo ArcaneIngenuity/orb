@@ -621,6 +621,7 @@ void Loop_processInputs(Engine * engine)
 		{
 			//char * key = kh_key(engine->devicesByName, k);
 			Device * device = kh_val(engine->devicesByName, k);
+			device->consumed = false; //reset this each global update
 			if (device->update)
 				device->update(device);
 		}
@@ -1183,6 +1184,60 @@ void Texture_applyParameters(Texture * this)
 	
 	//TODO loop over float params
 }
+
+//------------------TextureAtlas/Entry------------------//
+KHASH_DEFINE(Str_TextureAtlasEntry, kh_cstr_t, TextureAtlasEntry, kh_str_hash_func, kh_str_hash_equal, 1)
+
+static khiter_t k;
+
+TextureAtlas * TextureAtlas_construct()
+{
+	TextureAtlas * atlas = calloc(1, sizeof(TextureAtlas));
+	atlas->entriesByName = kh_init(Str_TextureAtlasEntry);
+	return atlas;
+}
+
+void TextureAtlas_load(TextureAtlas * atlas, const char * filename)
+{
+	ezxml_t atlasXml = ezxml_parse_file(filename);
+	if (atlasXml)
+		LOGI("ATLAS LOADED.\n");
+	
+	TextureAtlas_parse(atlas, atlasXml);
+}
+
+void TextureAtlas_parse(TextureAtlas * atlas, ezxml_t atlasXml)
+{
+	LOGI("vRoot->atlas=%p\n", atlas);
+	LOGI("*********************************\n");
+	
+	atlas->w = (uint16_t)atoi(ezxml_attr(atlasXml, "width"));
+	atlas->h = (uint16_t)atoi(ezxml_attr(atlasXml, "height"));
+	
+	for (ezxml_t xml = ezxml_child(atlasXml, "sprite"); xml; xml = xml->next)
+	{
+		TextureAtlasEntry entry = {0};
+		//strcpy(entry.name, ezxml_attr(xml, "n"));
+		entry.name = ezxml_attr(xml, "n");
+		LOGI("*********************************name=%s\n", entry.name);
+
+		entry.x = (uint16_t)atoi(ezxml_attr(xml, "x"));
+		entry.y = (uint16_t)atoi(ezxml_attr(xml, "y"));
+		entry.w = (uint16_t)atoi(ezxml_attr(xml, "w"));
+		entry.h = (uint16_t)atoi(ezxml_attr(xml, "h"));
+		
+		entry.xTrim = atoi(ezxml_attr(xml, "oX"));
+		entry.yTrim = atoi(ezxml_attr(xml, "oY"));
+		entry.wPreTrim = atoi(ezxml_attr(xml, "oW"));
+		entry.hPreTrim = atoi(ezxml_attr(xml, "oH"));
+		
+		entry.xPivot = atof(ezxml_attr(xml, "pX"));
+		entry.yPivot = atof(ezxml_attr(xml, "pY"));
+		TextureAtlas_put(atlas, entry);
+	}
+}
+
+
 //------------------GLBuffer------------------//
 
 GLuint GLBuffer_create(
