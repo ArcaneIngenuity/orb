@@ -1226,13 +1226,20 @@ void TextureAtlas_parse(TextureAtlas * atlas, ezxml_t atlasXml)
 		entry.w = (uint16_t)atoi(ezxml_attr(xml, "w"));
 		entry.h = (uint16_t)atoi(ezxml_attr(xml, "h"));
 		
-		entry.xTrim = atoi(ezxml_attr(xml, "oX"));
-		entry.yTrim = atoi(ezxml_attr(xml, "oY"));
-		entry.wPreTrim = atoi(ezxml_attr(xml, "oW"));
-		entry.hPreTrim = atoi(ezxml_attr(xml, "oH"));
+		//optionals...
+		const char * oX = ezxml_attr(xml, "oX");
+		if (oX) entry.xTrim = atoi(oX);
+		const char * oY = ezxml_attr(xml, "oY");
+		if (oY) entry.yTrim = atoi(oY);
+		const char * oW = ezxml_attr(xml, "oW");
+		if (oW) entry.wPreTrim = atoi(oW);
+		const char * oH = ezxml_attr(xml, "oH");
+		if (oH) entry.hPreTrim = atoi(oH);
+		const char * pX = ezxml_attr(xml, "pX");
+		if (pX) entry.xPivot = atoi(pX);
+		const char * pY = ezxml_attr(xml, "pY");
+		if (pY) entry.yPivot = atoi(pY);
 		
-		entry.xPivot = atof(ezxml_attr(xml, "pX"));
-		entry.yPivot = atof(ezxml_attr(xml, "pY"));
 		TextureAtlas_put(atlas, entry);
 	}
 }
