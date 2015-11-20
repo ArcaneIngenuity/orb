@@ -22,6 +22,8 @@
 // returns 0=replaced existing item, 1=bucket empty (new key), 2-adding element previously deleted
 #define kh_set(kname, hash, key, val) ({int ret; k = kh_put(kname, hash,key,&ret); kh_value(hash,k) = val; ret;})
 
+#define glSizeof(key) _glSizeof(key)
+
 #include "ezxml/ezxml.h"
 
 static const int StrInt = 33;
@@ -182,7 +184,7 @@ KHASH_DECLARE(Str_AttributeLocation, kh_cstr_t, struct AttributeLocation)
 #define BITS_IN_BYTE 8
 
 #ifndef MESH_VERTICES_SHORT_MAX
-#define MESH_VERTICES_SHORT_MAX 65536
+#define MESH_VERTICES_SHORT_MAX 65536 - 1 //-1 = compatibility for primitive restart, although only available in 3.0/ES 3.0
 #endif
 
 #ifndef M_PI
@@ -321,18 +323,10 @@ typedef struct BMFont
 //Mesh Attribute is just raw data. It is up to ShaderPrograms (ShaderAttributes) to know what to do with it.
 typedef struct Attribute 
 {
-	//count is in the Mesh holding the Attribute.
-	void * vertex; //ShaderAttribute will know how to read it, depending on which attribute it is.
-	GLuint id; //buffer id
     GLuint index; //attribute location
 	GLint components; //"size" in glVertexAttribPointer 
 	GLenum type; //as glVertexAttribPointer
 	GLboolean normalized; //as glVertexAttribPointer
-	GLsizei stride; //as glVertexAttribPointer
-	const GLvoid * pointer;
-	GLsizeiptr vertexBytes; //"size" in glBufferData
-	GLenum  usage; //as glBufferData
-
 } Attribute;
 
 typedef void (*glUniformVectorFunction)(GLint location, GLsizei count, const GLint * value);
@@ -453,26 +447,35 @@ typedef struct Face
 } Face;
 
 typedef struct Mesh
-{
+{	
+	GLuint id; //buffer id
 	GLuint topology; //GL_TRIANGLES or whatever (see also Program)
-
+	GLenum usage; //as  used by glBufferData for all Attributes
+	GLsizei stride; //as glVertexAttribPointer - unified for the interleaved array
 	//TODO bounds only require a single attribute. Maybe we should make this a pointer to an array? But Attribute is really small, points to data elsewhere.
 	Attribute attribute[HH_ATTRIBUTES_MAX]; //also contains positions needed for faces
-	uint8_t attributeCount;
+	kvec_t(Attribute *) attributeActive; //we could of course als just have a null pointer for non-active attributes
 	
 	GLushort * index; //what we send to GPU.... TODO generate from face
-	
 	GLsizei indexCount;
-	GLsizei vertexCount; //to be applied to each attribute
+	
+	void * vertexArray; //ShaderAttribute will know how to read it, depending on which attribute it is.
+	GLsizeiptr vertexBytes; //"size" in glBufferData
+	GLsizei vertexCount; //per each attribute
+	
 	GLsizei faceCount;
 	
 	GLuint vao;
 	GLuint sampler;
 	
-	Face * face;
+	//size_t _offsetIntoVertex;
+	
+	//Face * face;
 	
 	/** Did vertices get modified / need upload? */
 	bool changed;
+	
+	
 } Mesh;
 
 //Renderable is a unique combination of some Mesh (vertex data) and some Material (shader + uniforms).
@@ -1003,11 +1006,14 @@ void IndexedRenderableManager_render(
 	IndexList * indexRenderListPtr,
 	Engine * enginePtr);
 
+Attribute * Mesh_activateAttributeAt(Mesh * this, size_t i);
+void Mesh_submit(Mesh * mesh, Engine * engine);
 void Mesh_calculateNormals(Mesh * this);
+void Mesh_appendTri(Mesh * mesh, GLushort a, GLushort b, GLushort c);
+#define Mesh_appendFace(mesh, a, b, c) Mesh_appendTri(mesh, a, b, c)
 
-void Attribute_submitData(Attribute * attribute, Engine * engine);
-void Attribute_prepare(Attribute * attribute);
-void Attribute_tryPrepare(Attribute * attribute, Engine * engine);
+void Attribute_submitData(Attribute * attribute, Mesh * mesh, Engine * engine);
+void Attribute_prepare(Attribute * attribute, Mesh * mesh);
 
 void UniformGroup_update(khash_t(StrPtr) * uniformsByName, Program * program);
 

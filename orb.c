@@ -17,6 +17,8 @@ static khiter_t k;
 glUniformVectorFunction glUniformVectorFunctions[4][2]; 
 glUniformMatrixFunction glUniformMatrixFunctions[4][4][2];
 
+static khash_t(IntInt) * glSizesByName;
+
 //helpers...
 // You must free the result if result is non-NULL.
 char *str_replace(char *orig, char *rep, char *with)
@@ -745,12 +747,165 @@ void GLFW_errorCallback(int error, const char * description)
 }
 #endif//DESKTOP
 
+
+//Updates uniforms for the current program.
+void UniformGroup_update(khash_t(StrPtr) * uniformsByName, Program * programPtr)
+{
+	for (k = kh_begin(uniformsByName); k != kh_end(uniformsByName); ++k)
+	{
+        if (kh_exist(uniformsByName, k))
+		{
+			//const char * key = kh_key(uniformsByName,k);
+			//LOGI("key=%s\n", key);
+			Uniform * uniform = kh_value(uniformsByName, k);
+			GLint location = glGetUniformLocation(programPtr->id, uniform->name);
+			
+			switch (uniform->type)
+			{
+				case UniformTexture:
+				{
+					Texture * texturePtr = uniform->values;
+					//TODO optimise: if needs refresh!
+					Texture_refresh(texturePtr);
+					Texture_prepare(texturePtr, programPtr);
+				}
+				break;
+				case UniformVector:
+				{
+					(*(glUniformVectorFunctions[uniform->componentsMajor-1][uniform->typeNumeric]))
+						(location, uniform->elements, uniform->values);
+				}
+				break;
+				case UniformMatrix:
+				{
+					(*(glUniformMatrixFunctions[uniform->componentsMajor-1][uniform->componentsMinor-1][uniform->typeNumeric]))
+						(location, uniform->elements, uniform->matrixTranspose, uniform->values);
+				}
+				break;
+				default: break;
+			}
+		}
+	}
+}
+
+void Attribute_initialise(Attribute * attribute, GLuint index, GLint components, GLenum type, GLboolean normalized)
+{
+	attribute->index = index;
+	attribute->components = components;
+	attribute->type = type;
+	attribute->normalized = normalized;
+}
+
+//must be called in order of vertex struct members representing each attribute!
+Attribute * Mesh_addAttribute(Mesh * this, GLuint index, GLint components, GLenum type, GLboolean normalized)
+{
+	Attribute * attribute = &this->attribute[index];
+	Attribute_initialise(attribute, index, components, type, normalized);
+	kv_push(Attribute *, this->attributeActive, attribute);
+	
+	//this->_offsetIntoVertex = attribute->components * sizeof(GL_FLOAT);
+	
+	return attribute;
+}
+
+void Mesh_initialise(Mesh * this, 
+	GLuint topology,
+	GLenum usage,
+	size_t stride)
+{
+	this->topology = topology;
+	this->usage = usage;
+	
+	glGenBuffers(1, &this->id);
+	kv_init(this->attributeActive);
+
+	this->stride = stride;
+	
+	//tetrahedron: 4 verts, 4 tris (1:1) - most compact; discrete tris: 3 verts, 1 tri (3:1) - least compact
+	//so we know vertex count max, and worst case for index count is 1 tri per vertex, so make it the same. 
+	this->indexCount = 0;
+	this->index = malloc(sizeof(GLushort) * MESH_VERTICES_SHORT_MAX);
+	
+	this->vertexCount = 0;
+	this->vertexArray = malloc(stride * MESH_VERTICES_SHORT_MAX);
+}
+
+//TODO use size-doubling, and do this dynamically? - last step 2^16 will have to have a special case in it however to restrict.
+//TODO then just use addVertex to modify? - as continuous allocations will not happen.
+//TODO addFace?
+void Mesh_resize(Mesh * this, size_t size)
+{
+	if (size > MESH_VERTICES_SHORT_MAX)
+	{
+		LOGI("[ORB] Error: Cannot exceeed mesh vertex maximum.\n");
+		exit(EXIT_FAILURE);
+	}
+	else
+	{
+		//for every attribute, resize
+		
+		this->vertexCount = size;
+	}
+}
+
+void Mesh_appendFace(Mesh * mesh, GLushort a, GLushort b, GLushort c)
+{
+	mesh->index[mesh->indexCount + 0] = a;
+	mesh->index[mesh->indexCount + 1] = b;
+	mesh->index[mesh->indexCount + 2] = c;
+
+	mesh->indexCount+=3;
+	//TODO reallocate array if indexCount > size
+}
+
+void Mesh_appendVertex(Mesh * mesh, void * vertex)
+{
+	LOGI("TEST");
+	memcpy(((char *)mesh->vertexArray) + mesh->vertexCount * mesh->stride, vertex, mesh->stride);
+	
+	++mesh->vertexCount;
+	mesh->vertexBytes += mesh->stride;
+}
+
+void Mesh_submit(Mesh * mesh, Engine * engine)
+{
+	if (engine->capabilities.vao || engine->debugDesktopNoVAO)
+	{
+		//gen & bind
+		glGenVertexArrays(1, &(mesh->vao)); //VAO de-necessitates glGetAttribLocation & glVertexAttribPointer on each modify op
+		glBindVertexArray(mesh->vao);
+	}
+	
+	//submit interleaved mesh data
+	glBindBuffer(GL_ARRAY_BUFFER, mesh->id);
+	glBufferData(GL_ARRAY_BUFFER, mesh->vertexBytes, mesh->vertexArray, mesh->usage);
+	
+	//set up attribute pointers / arrays
+	if (engine->capabilities.vao)
+	{
+		Attribute * attribute;
+		
+		size_t offset = 0;
+		//ORDER HERE *MUST* MATCH THAT OF VERTEX STRUCT MEMBERS! - set via Mesh_initialise()
+		for (int i = 0; i < kv_size(mesh->attributeActive); ++i)
+		{
+			Attribute * attribute = kv_A(mesh->attributeActive, i);
+			glVertexAttribPointer(attribute->index, attribute->components, attribute->type, attribute->normalized, mesh->stride, offset); 
+			glEnableVertexAttribArray(attribute->index);
+			
+			offset += attribute->components * glSizeof(attribute->type);//sizeof(float);
+		}
+	}
+
+	if (engine->capabilities.vao)
+		glBindVertexArray(0); //unbind
+}
+
+/*
 void Mesh_calculateNormals(Mesh * this)
 {
-	
-	//this->normals
-
 }
+*/
 
 void Axes_create(float radius, float bodyLength, float headLength, GLushort * index, GLfloat * position) {
 /*
@@ -1536,14 +1691,17 @@ void Engine_one(Engine * this, Renderable * renderable)
 	if (this->capabilities.vao)
 		glBindVertexArray(mesh->vao);
 	else
-	{
-		for (int i = 0; i < mesh->attributeCount; ++i)
+	{				
+		glBindBuffer(GL_ARRAY_BUFFER, mesh->id);
+		//glBufferData(GL_ARRAY_BUFFER, mesh->vertexBytes, mesh->vertexArray, mesh->usage);
+		size_t offset = 0;
+		for (int i = 0; i < kv_size(mesh->attributeActive); ++i)
 		{
-			Attribute * attribute = &mesh->attribute[i];
+			Attribute * attribute = kv_A(mesh->attributeActive, i);
+			glVertexAttribPointer(attribute->index, attribute->components, attribute->type, attribute->normalized, mesh->stride, offset); 
+			glEnableVertexAttribArray(attribute->index); //enable attribute for use
 			
-			glBindBuffer(GL_ARRAY_BUFFER, attribute->id);
-			
-			Attribute_prepare(attribute);
+			offset += attribute->components * glSizeof(attribute->type);//sizeof(float);
 		}
 	}
 	
@@ -1773,7 +1931,19 @@ void Engine_initialise(Engine * this, int width, int height, const char * window
 	this->shadersByName 		= kh_init(StrPtr);
 	this->devicesByName 		= kh_init(StrPtr);
 	this->texturesByName 		= kh_init(StrPtr);
-
+	
+	glSizesByName			= kh_init(IntInt);
+	kh_set(IntInt, glSizesByName, GL_BYTE, sizeof(char));
+	kh_set(IntInt, glSizesByName, GL_UNSIGNED_BYTE, sizeof(GLubyte));
+	kh_set(IntInt, glSizesByName, GL_FLOAT, sizeof(GLfloat));
+	kh_set(IntInt, glSizesByName, GL_HALF_FLOAT, sizeof(GLfloat) / 2);
+	kh_set(IntInt, glSizesByName, GL_INT, sizeof(GLint));
+	kh_set(IntInt, glSizesByName, GL_UNSIGNED_INT, sizeof(GLuint));
+	kh_set(IntInt, glSizesByName, GL_SHORT, sizeof(GLint));
+	kh_set(IntInt, glSizesByName, GL_UNSIGNED_SHORT, sizeof(GLuint));
+	
+	//TODO include others under https://www.opengl.org/sdk/docs/man/html/glVertexAttribPointer.xhtml ->type
+	
 	//reintroduce if we bring transform list back into this library.
 	//Renderable * renderable = &this->renderable;
 	//for (int i = 0; i < transformsCount; i++)
@@ -1812,6 +1982,11 @@ void Engine_dispose(Engine * engine)
 	#ifdef DESKTOP
 	Window_terminate(&engine);
 	#endif//DESKTOP
+}
+
+int _glSizeof(const int key)
+{
+	return kh_get_val(IntInt, glSizesByName, key, INT_MIN);	
 }
 
 Program * Engine_setCurrentProgram(Engine * this, char * name)
@@ -1917,66 +2092,6 @@ char* Text_load(char* filename)
 float Engine_smoothstep(float t)
 {
 	return 3 * t * t - 2 * t * t * t;
-}
-
-//Updates uniforms for the current program.
-void UniformGroup_update(khash_t(StrPtr) * uniformsByName, Program * programPtr)
-{
-	for (k = kh_begin(uniformsByName); k != kh_end(uniformsByName); ++k)
-	{
-        if (kh_exist(uniformsByName, k))
-		{
-			//const char * key = kh_key(uniformsByName,k);
-			//LOGI("key=%s\n", key);
-			Uniform * uniform = kh_value(uniformsByName, k);
-			GLint location = glGetUniformLocation(programPtr->id, uniform->name);
-			
-			switch (uniform->type)
-			{
-				case UniformTexture:
-				{
-					Texture * texturePtr = uniform->values;
-					//TODO optimise: if needs refresh!
-					Texture_refresh(texturePtr);
-					Texture_prepare(texturePtr, programPtr);
-				}
-				break;
-				case UniformVector:
-				{
-					(*(glUniformVectorFunctions[uniform->componentsMajor-1][uniform->typeNumeric]))
-						(location, uniform->elements, uniform->values);
-				}
-				break;
-				case UniformMatrix:
-				{
-					(*(glUniformMatrixFunctions[uniform->componentsMajor-1][uniform->componentsMinor-1][uniform->typeNumeric]))
-						(location, uniform->elements, uniform->matrixTranspose, uniform->values);
-				}
-				break;
-				default: break;
-			}
-		}
-	}
-}
-
-void Attribute_prepare(Attribute * attribute)
-{
-	//provide data / layout info; "take buffer that is bound at the time called and associates that buffer with the current VAO"
-	glVertexAttribPointer(attribute->index, attribute->components, attribute->type, attribute->normalized, attribute->stride, attribute->pointer); 
-	glEnableVertexAttribArray(attribute->index); //enable attribute for use
-}
-
-void Attribute_tryPrepare(Attribute * attribute, Engine * engine)
-{
-	if (engine->capabilities.vao)
-		Attribute_prepare(attribute);
-}
-
-void Attribute_submitData(Attribute * attribute, Engine * engine)
-{
-	glBindBuffer(GL_ARRAY_BUFFER, attribute->id);
-    glBufferData(GL_ARRAY_BUFFER, attribute->vertexBytes, attribute->vertex, attribute->usage);
-	Attribute_tryPrepare(attribute, &engine);
 }
 
 
