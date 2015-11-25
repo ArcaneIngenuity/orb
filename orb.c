@@ -909,6 +909,8 @@ void Mesh_clear(Mesh * this)
 {
 	this->indexCount = 0;
 	this->vertexCount = 0;
+	this->vertexBytes = 0;
+	memset(this->vertexArray, 0, sizeof(this->vertexArray));
 }
 
 void Mesh_merge(Mesh * this, Mesh * other)
