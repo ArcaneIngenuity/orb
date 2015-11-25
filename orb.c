@@ -1065,29 +1065,27 @@ void Transforms_allocate(Transforms * this, size_t capacity)
 
 void Transforms_clear(Transforms * this)
 {
-	memset(this->matrix, SIZE_MAX, this->capacity);
-	memset(this->posLclPx, SIZE_MAX, this->capacity);
-	memset(this->posWldPx, SIZE_MAX, this->capacity);
-	memset(this->posNdc, SIZE_MAX, this->capacity);
+	memset(this->matrix, 0, this->capacity);
+	memset(this->posLclPx, 0, this->capacity);
+	memset(this->posWldPx, 0, this->capacity);
+	memset(this->posNdc, 0, this->capacity);
 	memset(this->parent, SIZE_MAX, this->capacity);
 }
 
 void Transforms_updateOne(Transforms * this, size_t index)
 {
-	//TODO OPTIMISE only climb the tree to root if a position in this chain has changed!
-
 	//clear position world in order to build it up.
-	for (int i = 0; i < 3; ++i) //TODO maybe i should iterate discrete axis list?
+	for (int a = 0; a < 3; ++a) //TODO maybe i should iterate discrete axis list?
 	{
-		this->posWldPx[index][i] = this->posLclPx[index][i];
+		this->posWldPx[index][a] = this->posLclPx[index][a];
 	}
 	size_t ancestorIndex = this->parent[index];
 
 	while (ancestorIndex != SIZE_MAX)
 	{
-		for (int i = 0; i < 3; ++i) //TODO maybe i should iterate discrete axis list?
+		for (int a = 0; a < 3; ++a) //TODO maybe a should iterate discrete axis list?
 		{
-			this->posWldPx[index][i] += this->posLclPx[ancestorIndex][i];
+			this->posWldPx[index][a] += this->posLclPx[ancestorIndex][a];
 		}
 		ancestorIndex = this->parent[ancestorIndex];
 	}
