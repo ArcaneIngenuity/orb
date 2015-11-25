@@ -850,6 +850,7 @@ void Mesh_resize(Mesh * this, size_t size)
 
 void Mesh_appendFace(Mesh * mesh, GLushort a, GLushort b, GLushort c)
 {
+	//LOGI("MESH index count=%d a=%u b=%u c=%u\n", mesh->indexCount, a, b, c);
 	mesh->index[mesh->indexCount + 0] = a;
 	mesh->index[mesh->indexCount + 1] = b;
 	mesh->index[mesh->indexCount + 2] = c;
@@ -858,13 +859,15 @@ void Mesh_appendFace(Mesh * mesh, GLushort a, GLushort b, GLushort c)
 	//TODO reallocate array if indexCount > size
 }
 
-void Mesh_appendVertex(Mesh * mesh, void * vertex)
+Index Mesh_appendVertex(Mesh * mesh, void * vertex)
 {
-	LOGI("TEST");
+	//LOGI("MESH vertex count=%d\n", mesh->vertexCount);
 	memcpy(((char *)mesh->vertexArray) + mesh->vertexCount * mesh->stride, vertex, mesh->stride);
 	
-	++mesh->vertexCount;
 	mesh->vertexBytes += mesh->stride;
+	Index index = mesh->vertexCount;
+	++mesh->vertexCount;
+	return index;
 }
 
 void Mesh_submit(Mesh * mesh, Engine * engine)
@@ -878,6 +881,7 @@ void Mesh_submit(Mesh * mesh, Engine * engine)
 	
 	//submit interleaved mesh data
 	glBindBuffer(GL_ARRAY_BUFFER, mesh->id);
+	glBufferData(GL_ARRAY_BUFFER, mesh->vertexBytes, NULL, mesh->usage); //orphan first
 	glBufferData(GL_ARRAY_BUFFER, mesh->vertexBytes, mesh->vertexArray, mesh->usage);
 	
 	//set up attribute pointers / arrays
@@ -899,6 +903,28 @@ void Mesh_submit(Mesh * mesh, Engine * engine)
 
 	if (engine->capabilities.vao)
 		glBindVertexArray(0); //unbind
+}
+
+void Mesh_clear(Mesh * this)
+{
+	this->indexCount = 0;
+	this->vertexCount = 0;
+}
+
+void Mesh_merge(Mesh * this, Mesh * other)
+{
+	int vertexCount = this->vertexCount;
+	for (int v = 0; v < other->vertexCount; ++v)
+	{
+		Mesh_appendVertex(this, ((char *)other->vertexArray) + v * other->stride);		
+	}
+	for (int i = 0; i < other->indexCount; i+=3)
+	{
+		Mesh_appendFace(this, 	vertexCount + other->index[i+0],
+								vertexCount + other->index[i+1],
+								vertexCount + other->index[i+2]);
+		//LOGI("index other: %d %d %d\n", other->index[i+0], other->index[i+1], other->index[i+2]);
+	}
 }
 
 /*
@@ -1010,6 +1036,65 @@ void Axes_create(float radius, float bodyLength, float headLength, GLushort * in
 	};
 	*/
 }
+
+/// Passes index to the next available Transform in Transforms, and increments the count.
+size_t Transforms_assign(Transforms * this)
+{
+	if (this->count < this->capacity)
+		return this->count++;
+	else //DEV - til we have Transforms_reallocate()
+	{
+		
+		LOGI("[ORB] Error: Transforms count cannot exceed capacity.\n");
+		exit(EXIT_FAILURE);
+	}
+}
+
+//TODO should in fact do the usual realloc-to-twice-current-size
+void Transforms_allocate(Transforms * this, size_t capacity)
+{
+	this->count = 0;
+	this->capacity = capacity;
+	
+	this->matrix 	= malloc(sizeof(mat4x4) 	* capacity);
+	this->posLclPx 	= malloc(sizeof(vec3) 		* capacity);
+	this->posWldPx 	= malloc(sizeof(vec3) 		* capacity);
+	this->posNdc 	= malloc(sizeof(vec3) 		* capacity);
+	this->parent	= malloc(sizeof(uint16_t)	* capacity);
+}
+
+void Transforms_clear(Transforms * this)
+{
+	memset(this->matrix, SIZE_MAX, this->capacity);
+	memset(this->posLclPx, SIZE_MAX, this->capacity);
+	memset(this->posWldPx, SIZE_MAX, this->capacity);
+	memset(this->posNdc, SIZE_MAX, this->capacity);
+	memset(this->parent, SIZE_MAX, this->capacity);
+}
+
+void Transforms_updateOne(Transforms * this, size_t index)
+{
+	//TODO OPTIMISE only climb the tree to root if a position in this chain has changed!
+
+	//clear position world in order to build it up.
+	for (int i = 0; i < 3; ++i) //TODO maybe i should iterate discrete axis list?
+	{
+		this->posWldPx[index][i] = this->posLclPx[index][i];
+	}
+	size_t ancestorIndex = this->parent[index];
+
+	while (ancestorIndex != SIZE_MAX)
+	{
+		for (int i = 0; i < 3; ++i) //TODO maybe i should iterate discrete axis list?
+		{
+			this->posWldPx[index][i] += this->posLclPx[ancestorIndex][i];
+		}
+		ancestorIndex = this->parent[ancestorIndex];
+	}
+
+	//LOGI("vorb->posWldPx=%.3f\n", this->posNdc[XX]);
+}
+
 /*
 void Transform_update(Transform* this)
 {
@@ -1363,8 +1448,7 @@ void TextureAtlas_load(TextureAtlas * atlas, const char * filename)
 
 void TextureAtlas_parse(TextureAtlas * atlas, ezxml_t atlasXml)
 {
-	LOGI("vRoot->atlas=%p\n", atlas);
-	LOGI("*********************************\n");
+	//LOGI("*********************************\n");
 	
 	atlas->w = (uint16_t)atoi(ezxml_attr(atlasXml, "width"));
 	atlas->h = (uint16_t)atoi(ezxml_attr(atlasXml, "height"));
@@ -1374,7 +1458,7 @@ void TextureAtlas_parse(TextureAtlas * atlas, ezxml_t atlasXml)
 		TextureAtlasEntry entry = {0};
 		//strcpy(entry.name, ezxml_attr(xml, "n"));
 		entry.name = ezxml_attr(xml, "n");
-		LOGI("*********************************name=%s\n", entry.name);
+		//LOGI("*********************************name=%s\n", entry.name);
 
 		entry.x = (uint16_t)atoi(ezxml_attr(xml, "x"));
 		entry.y = (uint16_t)atoi(ezxml_attr(xml, "y"));

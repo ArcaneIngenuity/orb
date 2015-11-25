@@ -30,6 +30,7 @@ static const int StrInt = 33;
 static const int IntInt = 34;
 static const int IntFloat = 35;
 
+typedef uint16_t Index;
 
 //KHASH_DECLARE
 KHASH_DECLARE(StrInt, kh_cstr_t, int)
