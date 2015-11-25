@@ -894,9 +894,37 @@ typedef struct InputMapping
 	float delta[2];
 } InputMapping;
 
-
 typedef kvec_t(Input) InputList;
 typedef kvec_t(InputMapping) InputMappingList;
+
+
+
+typedef struct Transforms
+{
+	size_t capacity;
+	size_t count;
+	
+	mat4x4 * matrix; ///< The final transformation matrices, kept contiguous for OpenGL's use.
+
+	vec3 * posLclPx; ///< Position in local px.
+	vec3 * posWldPx; ///< Position in world/screen px.
+	vec3 * posNdc; ///< Position in NDC range.
+	
+	size_t * parent;
+
+	/*	
+	float posLclPx[3]; ///< Position in local px.
+	float posWldPx[3]; ///< Position in world/screen px.
+	float posNdc[3]; ///< Position in NDC range.
+	
+	float orientation[3]; ///< Orientation in user-defined units.
+	float orientationWorld[3]; ///< Position in user-defined units.
+	
+	float scale[3]; ///< Scale in user-defined units.
+	*/
+	//Engine * engine;
+} Transforms;
+
 
 typedef struct Capabilities
 {
