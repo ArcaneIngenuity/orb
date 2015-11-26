@@ -499,6 +499,7 @@ typedef struct Renderable
 	//-a ShaderPath/Pipe, which consists of multiple shader Programs running in sequence
 	//-the parameters needed to populate that pipe at each stage
 	
+	//a link back to the data this Renderable represents
 	void * userData;
 } Renderable;
 
@@ -909,7 +910,8 @@ typedef struct Transforms
 
 	vec3 * posLclPx; ///< Position in local px.
 	vec3 * posWldPx; ///< Position in world/screen px.
-	vec3 * posNdc; ///< Position in NDC range.
+	//TODO remove - not operated on by orb:
+	vec3 * posNdc; ///< Position in NDC range. 
 	
 	size_t * parent;
 

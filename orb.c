@@ -1061,7 +1061,7 @@ void Transforms_allocate(Transforms * this, size_t capacity)
 	this->matrix 	= malloc(sizeof(mat4x4) 	* capacity);
 	this->posLclPx 	= malloc(sizeof(vec3) 		* capacity);
 	this->posWldPx 	= malloc(sizeof(vec3) 		* capacity);
-	this->posNdc 	= malloc(sizeof(vec3) 		* capacity);
+	this->posNdc 	= malloc(sizeof(vec3) 		* capacity); //TODO remove - not operated on by orb
 	this->parent	= malloc(sizeof(uint16_t)	* capacity);
 }
 
@@ -1070,7 +1070,7 @@ void Transforms_clear(Transforms * this)
 	memset(this->matrix, 0, this->capacity);
 	memset(this->posLclPx, 0, this->capacity);
 	memset(this->posWldPx, 0, this->capacity);
-	memset(this->posNdc, 0, this->capacity);
+	memset(this->posNdc, 0, this->capacity); //TODO remove - not operated on by orb
 	memset(this->parent, SIZE_MAX, this->capacity);
 }
 
@@ -1091,8 +1091,6 @@ void Transforms_updateOne(Transforms * this, size_t index)
 		}
 		ancestorIndex = this->parent[ancestorIndex];
 	}
-
-	//LOGI("vorb->posWldPx=%.3f\n", this->posNdc[XX]);
 }
 
 /*
