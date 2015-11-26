@@ -347,10 +347,12 @@ enum UniformType
 {
 	UniformVector,
 	UniformMatrix,
+	//UniformMatrixTransposed, //to place boolean matrixTranspose in Uniform - more compact/efficient
 	UniformTexture
 };
 
-//TODO lists of Uniforms should stand alone, and be able to run whenever calling code sees fit,
+//TODO lists of Uniforms should stand alone, and should not necessarily run every frame:
+//be able to run whenever calling code sees fit,
 //whether that be once in a blue moon, once every frame for a group of renderables, or once
 //every frame for each distinct renderable (based on its state).
 typedef struct Uniform
@@ -363,6 +365,8 @@ typedef struct Uniform
 	GLsizei elements; //count of array size
 	
 	void * values; //"values" since many glUniform* are non-scalar
+	
+	//TODO should make UniformType contain 
 	GLboolean matrixTranspose; //for glUniformMatrix calls - applies only if type == matrix
 	//GLint location; //cached from glgetUniformLocation
 } Uniform;
@@ -627,6 +631,9 @@ typedef struct Material
 {
 	Program program;
 	Texture * texture;
+	
+	//some uniforms are general - these are those - setting for the entire Material so to speak
+	//others are specific to the Renderable(Set)
 	khash_t(StrInt) uniforms; //for referencing uniforms by name
 	khash_t(StrInt) attributes; //ref attribs by name
 	
