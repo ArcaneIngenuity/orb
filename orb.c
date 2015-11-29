@@ -1064,8 +1064,8 @@ void Transforms_allocate(Transforms * this, size_t capacity)
 	this->capacity = capacity;
 	
 	this->matrix 	= malloc(sizeof(mat4x4) 	* capacity);
-	this->posLclPx 	= malloc(sizeof(vec3) 		* capacity);
-	this->posWldPx 	= malloc(sizeof(vec3) 		* capacity);
+	this->posLcl 	= malloc(sizeof(vec3) 		* capacity);
+	this->posWld 	= malloc(sizeof(vec3) 		* capacity);
 	this->posNdc 	= malloc(sizeof(vec3) 		* capacity); //TODO remove - not operated on by orb
 	this->parent	= malloc(sizeof(uint16_t)	* capacity);
 }
@@ -1073,8 +1073,8 @@ void Transforms_allocate(Transforms * this, size_t capacity)
 void Transforms_clear(Transforms * this)
 {
 	memset(this->matrix, 0, this->capacity);
-	memset(this->posLclPx, 0, this->capacity);
-	memset(this->posWldPx, 0, this->capacity);
+	memset(this->posLcl, 0, this->capacity);
+	memset(this->posWld, 0, this->capacity);
 	memset(this->posNdc, 0, this->capacity); //TODO remove - not operated on by orb
 	memset(this->parent, SIZE_MAX, this->capacity);
 }
@@ -1084,7 +1084,7 @@ void Transforms_updateOne(Transforms * this, size_t index)
 	//clear position world in order to build it up.
 	for (int a = 0; a < 3; ++a) //TODO maybe i should iterate discrete axis list?
 	{
-		this->posWldPx[index][a] = this->posLclPx[index][a];
+		this->posWld[index][a] = this->posLcl[index][a];
 	}
 	size_t ancestorIndex = this->parent[index];
 
@@ -1092,7 +1092,7 @@ void Transforms_updateOne(Transforms * this, size_t index)
 	{
 		for (int a = 0; a < 3; ++a) //TODO maybe a should iterate discrete axis list?
 		{
-			this->posWldPx[index][a] += this->posLclPx[ancestorIndex][a];
+			this->posWld[index][a] += this->posLcl[ancestorIndex][a];
 		}
 		ancestorIndex = this->parent[ancestorIndex];
 	}

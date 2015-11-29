@@ -920,16 +920,16 @@ typedef struct Transforms
 	
 	mat4x4 * matrix; ///< The final transformation matrices, kept contiguous for OpenGL's use.
 
-	vec3 * posLclPx; ///< Position in local px.
-	vec3 * posWldPx; ///< Position in world/screen px.
+	vec3 * posLcl; ///< Position in local px.
+	vec3 * posWld; ///< Position in world/screen px.
 	//TODO remove - not operated on by orb:
 	vec3 * posNdc; ///< Position in NDC range. 
 	
 	size_t * parent;
 
 	/*	
-	float posLclPx[3]; ///< Position in local px.
-	float posWldPx[3]; ///< Position in world/screen px.
+	float posLcl[3]; ///< Position in local px.
+	float posWld[3]; ///< Position in world/screen px.
 	float posNdc[3]; ///< Position in NDC range.
 	
 	float orientation[3]; ///< Orientation in user-defined units.
