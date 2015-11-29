@@ -624,6 +624,11 @@ void Loop_processInputs(Engine * engine)
 			//char * key = kh_key(engine->devicesByName, k);
 			Device * device = kh_val(engine->devicesByName, k);
 			device->consumed = false; //reset this each global update
+			for (int j = 0; j < kv_size(device->channels); ++j) //for every raw input that may trigger said mapping
+			{
+				DeviceChannel * channel = &kv_A(device->channels, j);
+				channel->consumed = false;
+			}
 			if (device->update)
 				device->update(device);
 		}

@@ -840,6 +840,7 @@ typedef struct DeviceChannel
 	InputBasis basis;
 	//bool blocked;
 	bool active; //framework-private, particularly useful for multi-touch or devices that have disconnected but are waiting on clean-up by OS etc.
+	bool consumed; ///< Has input from this channel already been consumed during this Hub_update()? (prevents a device being used twice) TODO prefer Input.consumed!
 } DeviceChannel;
 
 typedef struct Device
@@ -852,7 +853,7 @@ typedef struct Device
 	char ** indexToName; ///< Maps numeric index to string name, e.g. "ORB_KEY_SPACE" to enum index of same name ORB_KEY_SPACE.
 	void (*initialise)	(struct Device * const this);
 	void (*update)		(struct Device * const this);
-	bool consumed; ///< Has input from this device already been consumed during this Hub_update()? (prevents a device being used twice)
+	bool consumed; ///< Has input from this device already been consumed during this Hub_update()? (prevents a device being used twice) TODO prefer Input.consumed!
 } Device;
 
 typedef void (*DeviceUpdate)	(Device * device);
@@ -872,8 +873,9 @@ typedef struct TouchDevice
 	size_t fingerCount; //fingers in actual use at this moment
 }
 */
-typedef float (*InputFunction) ();
-typedef void  (*ResponseFunction) (void * model, float value, float valueLast);
+typedef float (*InputFunction) 		();
+typedef void  (*ResponseFunction) 	(void * context, float value, float valueLast);
+typedef bool  (*HasFocusFunction) 	(void * context);
 
 
 //abstracts raw channel inputs into game logic inputs, provides a response for same, and stores recent values
@@ -883,6 +885,7 @@ typedef struct Input
 	uint16_t code; //index of channel in device
 	bool negate; //if true, flip the sign on the incoming value
 	//TODO optional custom function for combining raw channel values?
+	bool consumed; ///< Has this input already been consumed during this Hub_update()? (prevents a device being used twice) - PREFER to channel.consumed! as this is game logic related
 } Input;
 const struct Input inputEmpty;
 
@@ -895,7 +898,9 @@ const struct Input inputEmpty;
 typedef struct InputMapping
 {
 	char name[STRLEN_MAX]; //same as key into khash holding all InputMappings
-	ResponseFunction func;
+	ResponseFunction ctrlResponse;
+	ResponseFunction viewResponse;
+	HasFocusFunction hasFocus;
 	InputBasis basis;
 	kvec_t(Input) inputsList; //the inputs which can trigger a function call
 	
