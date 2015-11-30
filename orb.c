@@ -1354,7 +1354,7 @@ void RenderTexture_createColor(Texture * const this, GLuint i, uint16_t width, u
 void Texture_prepare(Texture * this, Program * program)
 {
 	glActiveTexture(GL_TEXTURE0 + this->unit); //"glActiveTexture specifies which texture unit a texture object is bound to when glBindTexture is called."
-	glBindTexture(GL_TEXTURE_2D, this->id); //ensure the correct texture is bound to the texture unit that the shader will use (?)
+	glBindTexture(this->dimensions, this->id); //ensure the correct texture is bound to the texture unit that the shader will use (?)
 	GLint uniformTexture = glGetUniformLocation(program->id, this->name);
 	//LOGI("tex name=%s loc=%d unit=%d\n", this->name, uniformTexture, this->unit);
 	glUniform1i(uniformTexture, this->unit); //let shader's sampler bind to appropriate texture unit
@@ -1369,14 +1369,14 @@ GLuint Texture_getTextureUnitConstant(Texture * this)
 void Texture_fresh(Texture * this)
 {
 	glActiveTexture(GL_TEXTURE0 + this->unit); //"which texture unit a texture object is bound to when glBindTexture is called."
-	glBindTexture(GL_TEXTURE_2D, this->id); //binds the texture with id specified, to the 2D target
+	glBindTexture(this->dimensions, this->id); //binds the texture with id specified, to the 2D target
 	glTexImage2D (GL_TEXTURE_2D, 0, this->arrangedInternal, this->width, this->height, 0, this->arrangedExternal, this->atomTypeExternal, 0);
 }
 
 void Texture_refresh(Texture * this)
 {
 	glActiveTexture(GL_TEXTURE0 + this->unit); //"glActiveTexture specifies which texture unit a texture object is bound to when glBindTexture is called."
-	glBindTexture(GL_TEXTURE_2D, this->id); //binds the texture with id specified, to the 2D target
+	glBindTexture(this->dimensions, this->id); //binds the texture with id specified, to the 2D target
 	glTexImage2D (GL_TEXTURE_2D, 0, this->arrangedInternal, this->width, this->height, 0, this->arrangedExternal, this->atomTypeExternal, this->data); //uploads specified image data to the 2D target
 	//glTexSubImage2D (GL_TEXTURE_2D, 0, GL_RGBA, this->width, this->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, texture->data); //uploads specified image data to the 2D target
 }
@@ -1412,7 +1412,7 @@ void Texture_setDimensionCount(Texture * this, GLenum dimensions)
 void Texture_applyParameters(Texture * this)
 {
 	glActiveTexture(GL_TEXTURE0 + this->unit);
-	glBindTexture(GL_TEXTURE_2D, this->id);
+	glBindTexture(this->dimensions, this->id);
 
 	for (k = kh_begin(this->intParametersByName); k != kh_end(this->intParametersByName); ++k)
 	{
