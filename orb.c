@@ -853,7 +853,7 @@ void Mesh_resize(Mesh * this, size_t size)
 	}
 }
 
-void Mesh_appendFace(Mesh * mesh, GLushort a, GLushort b, GLushort c)
+void Mesh_appendTri(Mesh * mesh, GLushort a, GLushort b, GLushort c)
 {
 	//LOGI("MESH index count=%d a=%u b=%u c=%u\n", mesh->indexCount, a, b, c);
 	mesh->index[mesh->indexCount + 0] = a;
@@ -861,6 +861,16 @@ void Mesh_appendFace(Mesh * mesh, GLushort a, GLushort b, GLushort c)
 	mesh->index[mesh->indexCount + 2] = c;
 
 	mesh->indexCount+=3;
+	//TODO reallocate array if indexCount > size
+}
+
+void Mesh_appendLine(Mesh * mesh, GLushort a, GLushort b)
+{
+	//LOGI("MESH index count=%d a=%u b=%u c=%u\n", mesh->indexCount, a, b, c);
+	mesh->index[mesh->indexCount + 0] = a;
+	mesh->index[mesh->indexCount + 1] = b;
+
+	mesh->indexCount+=2;
 	//TODO reallocate array if indexCount > size
 }
 
@@ -918,6 +928,7 @@ void Mesh_clear(Mesh * this)
 	memset(this->vertexArray, 0, sizeof(this->vertexArray));
 }
 
+//ASSUMES TRIS!
 void Mesh_merge(Mesh * this, Mesh * other)
 {
 	int vertexCount = this->vertexCount;
@@ -927,7 +938,7 @@ void Mesh_merge(Mesh * this, Mesh * other)
 	}
 	for (int i = 0; i < other->indexCount; i+=3)
 	{
-		Mesh_appendFace(this, 	vertexCount + other->index[i+0],
+		Mesh_appendTri(this, 	vertexCount + other->index[i+0],
 								vertexCount + other->index[i+1],
 								vertexCount + other->index[i+2]);
 		//LOGI("index other: %d %d %d\n", other->index[i+0], other->index[i+1], other->index[i+2]);
@@ -1133,6 +1144,7 @@ void Texture_createData(Texture * texture)
 	texture->data = calloc(1, texture->width*texture->height*texture->components*sizeof(GLubyte));
 }
 
+//ASSUMES RGB!
 void Texture_clearData(Texture * texture, bool alphaFull)
 {
 	memset(texture->data, 0, texture->width*texture->height*texture->components*sizeof(GLubyte));

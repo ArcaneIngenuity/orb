@@ -1023,7 +1023,6 @@ Attribute * Mesh_activateAttributeAt(Mesh * this, size_t i);
 void Mesh_submit(Mesh * mesh, Engine * engine);
 void Mesh_calculateNormals(Mesh * this);
 void Mesh_appendTri(Mesh * mesh, GLushort a, GLushort b, GLushort c);
-#define Mesh_appendFace(mesh, a, b, c) Mesh_appendTri(mesh, a, b, c)
 
 void Attribute_submitData(Attribute * attribute, Mesh * mesh, Engine * engine);
 void Attribute_prepare(Attribute * attribute, Mesh * mesh);
