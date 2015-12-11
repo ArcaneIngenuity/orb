@@ -911,36 +911,6 @@ typedef struct InputMapping
 typedef kvec_t(Input) InputList;
 typedef kvec_t(InputMapping) InputMappingList;
 
-
-
-typedef struct Transforms
-{
-	size_t capacity;
-	size_t count;
-	
-	mat4x4 * matrix; ///< The final transformation matrices, kept contiguous for OpenGL's use.
-
-	vec3 * posLcl; ///< Position in local px.
-	vec3 * posWld; ///< Position in world/screen px.
-	//TODO remove - not operated on by orb:
-	vec3 * posNdc; ///< Position in NDC range. 
-	
-	size_t * parent;
-
-	/*	
-	float posLcl[3]; ///< Position in local px.
-	float posWld[3]; ///< Position in world/screen px.
-	float posNdc[3]; ///< Position in NDC range.
-	
-	float orientation[3]; ///< Orientation in user-defined units.
-	float orientationWorld[3]; ///< Position in user-defined units.
-	
-	float scale[3]; ///< Scale in user-defined units.
-	*/
-	//Engine * engine;
-} Transforms;
-
-
 typedef struct Capabilities
 {
 	bool vao;
@@ -1085,10 +1055,6 @@ void Texture_write3(int x, int y, int z);
 //#define TextureAtlas_initialise(atlas) atlas = kh_init(Str_TextureAtlasEntry)
 TextureAtlas * TextureAtlas_construct();
 void TextureAtlas_load(TextureAtlas * atlas, const char * filename);
-
-void Transform_finalise(mat4x4 * matTrans, mat4x4 * matPos, mat4x4 * matRot);
-void Transform_rotate(mat4x4 * matRot, vec3 * rotation, vec3 delta);
-void Transform_translate(mat4x4 * matPos, vec3 * position, vec3 delta);
 
 void RenderTexture_createDepth(Texture * const this, GLuint i, uint16_t width, uint16_t height);
 void RenderTexture_createColor(Texture * const this, GLuint i, uint16_t width, uint16_t height, GLenum format);
