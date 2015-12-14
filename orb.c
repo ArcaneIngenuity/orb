@@ -1610,40 +1610,75 @@ void Engine_clearDepth()
 	 glClear(GL_DEPTH_BUFFER_BIT);
 }
 
-
-/*
-void Engine_many(Program * program, RenderableSet * renderableSet, const GLfloat * matVP)
-{
-	Mesh * mesh = renderableSet->mesh;
-
-	glUseProgram(program->id);
-	glBindVertexArray(mesh->vao);
-	
-	//prep uniforms...(general to all instances)
-	//...view-projection matrix (general to all instancing approaches)
-	GLint vpLoc = glGetUniformLocation(program->id, "vp");
-	glUniformMatrix4fv(vpLoc, 1, GL_FALSE, (GLfloat *)matVP);
-	
-	//upload instance data
-	glBindBuffer(GL_ARRAY_BUFFER, renderableSet->buffer); //TODO use const instead of literal buffer name
-	glBufferData(GL_ARRAY_BUFFER, sizeof(mat4x4) * renderableSet->count, renderableSet->data, GL_DYNAMIC_DRAW); 
-	//TODO specify usage (e.g. GL_DYNAMIC_DRAW) on the Mesh? Or better yet, on the particular Renderable using Mesh.
-	//TODO glBufferSubData(GL_ARRAY_BUFFER,
-	//TODO consider storing 2 buffers for each dynamic object - from https://www.opengl.org/sdk/docs/man3/xhtml/glBufferSubData.xml
-	//"Consider using multiple buffer objects to avoid stalling the rendering pipeline during data store updates.
+//TODO glBufferSubData(GL_ARRAY_BUFFER,
+//TODO consider storing 2 buffers for each dynamic object - from https://www.opengl.org/sdk/docs/man3/xhtml/glBufferSubData.xml
+//"Consider using multiple buffer objects to avoid stalling the rendering pipeline during data store updates.
 	//If any rendering in the pipeline makes reference to data in the buffer object being updated by glBufferSubData, especially
 	//from the specific region being updated, that rendering must drain from the pipeline before the data store can be updated."
-	//TODO the above is per-instance model matrix. We additionally need per-instance ID so we don't have to repeat ID ad nauseam as a vertex attribute.
+void Engine_many(Engine * this, Renderable * renderable, RenderableInstances * instances)
+{
+	Mesh * mesh = renderable->mesh;
 	
-	//bind vertex array & draw
-	glDrawElementsInstanced(program->topology, mesh->indexCount, GL_UNSIGNED_SHORT, mesh->index, renderableSet->count);
-	//TODO optimise draw call by reducing index type for character parts(!) to only use GL_UNSIGNED_BYTE if possible,
-	//i.e. 0-255 vertices - could be faster, see http://www.songho.ca/opengl/gl_vertexarray.html, search on "maximum".
+	//bind attributes
+	if (this->capabilities.vao)
+		glBindVertexArray(mesh->vao);
+	else
+	{				
+		glBindBuffer(GL_ARRAY_BUFFER, mesh->id);
+		//glBufferData(GL_ARRAY_BUFFER, mesh->vertexBytes, mesh->vertexArray, mesh->usage);
+		size_t offset = 0;
+		for (int i = 0; i < kv_size(mesh->attributeActive); ++i)
+		{
+			Attribute * attribute = kv_A(mesh->attributeActive, i);
+			glVertexAttribPointer(attribute->index, attribute->components, attribute->type, attribute->normalized, mesh->stride, offset); 
+			glEnableVertexAttribArray(attribute->index); //enable attribute for use
+			
+			offset += attribute->components * glSizeof(attribute->type);//sizeof(float);
+		}
+	}
+	
+	//bind instanced attributes
+	glBindBuffer(GL_ARRAY_BUFFER, instances->buffer); //TODO use const instead of literal buffer name
+	glBufferData(GL_ARRAY_BUFFER, instances->sizeofElement * instances->count, instances->data, GL_DYNAMIC_DRAW); 
+		
+	//potentially split over multiple attributes to accomodate greater attribute in question (matrices)
+	//HERE BE HACKS...
+	GLuint firstLocation = 3;
+	const int MAT4X4_COMPONENTS = 16;
+	const int VEC4_COMPONENTS = 4; //the max line size that an attribute can accomodate
+	int attributeCount = MAT4X4_COMPONENTS / VEC4_COMPONENTS; //number of attributes needed to accomodate the variable in question
+	
+	for (int i = 0; i < attributeCount; ++i)
+	{
+		int j = firstLocation + i;
+		glEnableVertexAttribArray(j); 
+		glVertexAttribPointer(j, VEC4_COMPONENTS, GL_FLOAT, GL_FALSE, attributeCount * sizeof(vec4), (GLvoid*)(i * sizeof(vec4)));
+		glVertexAttribDivisor(j, 1);
+	}
+	//...HERE BE HACKS.
 
-	glBindVertexArray(0);	
-	glUseProgram(0);
+	//uniforms
+	UniformGroup_update(renderable->uniformsByName, this->program);
+
+	//render
+	if (mesh->index == NULL)
+	{
+		//TODO
+		//glDrawArrays(mesh->topology, 0, mesh->vertexCount);
+		//glDrawArraysInstanced(mesh->topology, 0, mesh->vertexCount, GL_UNSIGNED_SHORT, mesh->index, renderableSet->count);
+	}
+	else
+		//glDrawElements(mesh->topology, mesh->indexCount, GL_UNSIGNED_SHORT, mesh->index);
+		glDrawElementsInstanced(mesh->topology, mesh->indexCount, GL_UNSIGNED_SHORT, mesh->index, instances->count);
+		
+	//unbind attributes
+	if (this->capabilities.vao)
+	{
+		glBindBuffer(GL_ARRAY_BUFFER, 0); //vertex attribute array target no longer bound
+		glBindVertexArray(0);
+	}
 }
-*/
+
 //TODO should pass Mesh instead of RenderableSet, though in same arg position.
 //TODO instead of matM, a void * arg pointing to wherever all the uniforms for this object lie. same for attributes?
 void Engine_one(Engine * this, Renderable * renderable)

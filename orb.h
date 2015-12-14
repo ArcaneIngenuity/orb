@@ -445,11 +445,11 @@ typedef struct TextureAtlas
 } TextureAtlas;
 
 
-typedef struct Face
+typedef struct Triangle
 {
 	GLushort index[VERTICES_PER_TRIANGLE]; //into the owning Mesh's arrays: position, texcoord etc.
 	GLfloat normal[VERTICES_PER_TRIANGLE];
-} Face;
+} Triangle;
 
 typedef struct Mesh
 {	
@@ -487,40 +487,27 @@ typedef struct Mesh
 //It is optional for grouping these related render-time aspects together. It is best used where efficiency is not of the essence, e.g. UI (where efficiency is important, rather use multiple arrays with same index into each). 
 //Materials are either treated explicitly or simply as the input interface + matching renderable information for a given ProgramPath
 typedef struct Renderable
-{
-	//char * id;
-	Uniform * uniforms;
-	uint8_t uniformsCount;
-	
+{	
 	khash_t(StrPtr) * uniformsByName;
 	
 	//occasional upload i.e. not performance-critical, so these objects can be pointers to structs.
 	Mesh * mesh;
-	
-	//TODO Material (with Texture)
-	//Material materials[];
-	//A Material consists of:
-	//-a ShaderPath/Pipe, which consists of multiple shader Programs running in sequence
-	//-the parameters needed to populate that pipe at each stage
-	
+
 	//a link back to the data this Renderable represents
-	void * userData;
+	//void * userData;
 } Renderable;
 
 //TODO you will need to memcpy out the range of units used in a single instances draw call
 //TODO make it use a particular Mesh, Material (with Texture) etc.
-typedef struct RenderableSet
+typedef struct RenderableInstances
 {
-	//Renderable * renderable;
-	Mesh * mesh;
-	Texture * textures[HH_TEXTURES_RENDERABLE_MAX];
-
 	//we always need a contiguous buffer. So to keep things fast, client app *should*
 	//memcpy out a contiguous block from a super-array: this means pre-sorting.
+	GLsizei	sizeofElement;
 	GLsizei count;
 	GLuint buffer;
-	const GLvoid * data; //for now, model matrices.
-} RenderableSet;
+	GLvoid * data; //for now, model matrices.
+} RenderableInstances;
 
 //both ShaderComponents will have these (duplicated) -- however we will check in against out and type against type
 typedef struct ShaderVariable
@@ -1078,7 +1065,7 @@ void Engine_dispose(Engine * engine);
 void Engine_clear(); //TODO should be Render_clear?
 Program * Engine_setCurrentProgram(Engine * this, char * name);
 Program * Engine_getCurrentProgram(Engine * this);
-void Engine_many(Program * program, RenderableSet * renderableSet, const GLfloat * matVP);
+void Engine_many(Engine * this, Renderable * renderable, RenderableInstances * instances);
 void Engine_one(Engine * this, Renderable * renderable);
 
 float Engine_smoothstep(float t);
