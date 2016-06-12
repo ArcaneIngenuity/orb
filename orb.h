@@ -7,13 +7,14 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <errno.h>
 
-#include "log/log.h"
+#include "../log/log.h"
 #include "linmath.h"
-#include "klib/kvec.h"
+#include "../klib/kvec.h"
 
 //KHASH...
-#include "klib/khash.h"
+#include "../klib/khash.h"
 // setup khash for key/value types
 // shorthand way to get the key from hashtable or defVal if not found
 #define kh_get_val(kname, hash, key, defVal) ({k=kh_get(kname, hash, key);(k!=kh_end(hash)?kh_val(hash,k):defVal);})
@@ -22,9 +23,7 @@
 // returns 0=replaced existing item, 1=bucket empty (new key), 2-adding element previously deleted
 #define kh_set(kname, hash, key, val) ({int ret; k = kh_put(kname, hash,key,&ret); kh_value(hash,k) = val; ret;})
 
-#define glSizeof(key) _glSizeof(key)
-
-#include "ezxml/ezxml.h"
+#include "../ezxml/ezxml.h"
 
 static const int StrInt = 33;
 static const int IntInt = 34;
@@ -357,14 +356,14 @@ enum UniformType
 //every frame for each distinct renderable (based on its state).
 typedef struct Uniform
 {
-	char * name;
+	const char * name;
 	enum UniformType type;
 	enum UniformTypeNumeric typeNumeric; //float, int or whatever - applies only if type != texture
 	GLsizei componentsMajor; //count major (for matrices and vectors)
 	GLsizei componentsMinor; //count minor (for matrices only)
 	GLsizei elements; //count of array size
 	
-	void * values; //"values" since many glUniform* are non-scalar
+	GLvoid * values; //"values" since many glUniform* are non-scalar
 	
 	//TODO should make UniformType contain 
 	GLboolean matrixTranspose; //for glUniformMatrix calls - applies only if type == matrix
@@ -802,15 +801,6 @@ static const char * MouseButtonString[] =
 	FOREACH_MOUSE_BUTTON(GENERATE_STRING)
 };
 
-
-typedef enum Mouse
-{
-    ORB_BUTTON_LEFT,
-	ORB_BUTTON_RIGHT,
-	ORB_BUTTON_MIDDLE
-} Mouse;
-
-
 void Key_setupStringToKey();
 
 typedef enum InputBasis
@@ -971,10 +961,10 @@ typedef struct Engine
 	void (*userInitialiseFunc)();
 	bool   userInitialised;
 	
-	void (*userUpdateFunc)(void *);
+	void (*userUpdateFunc)(void * const);
 	void * userUpdateArg;
 	
-	void (*userSuspendFunc)(void *);
+	void (*userSuspendFunc)(void * const);
 	void * userSuspendArg;
 	
 	float deltaSec;
@@ -1010,6 +1000,15 @@ Attribute * Mesh_activateAttributeAt(Mesh * this, size_t i);
 void Mesh_submit(Mesh * mesh, Engine * engine);
 void Mesh_calculateNormals(Mesh * this);
 void Mesh_appendTri(Mesh * mesh, GLushort a, GLushort b, GLushort c);
+void Mesh_appendLine(Mesh * mesh, GLushort a, GLushort b);
+Index Mesh_appendVertex(Mesh * mesh, void * vertex);
+void Mesh_initialise(Mesh * this, 
+	GLuint topology,
+	GLenum usage,
+	size_t stride);
+void Mesh_clear(Mesh * this);
+Attribute * Mesh_addAttribute(Mesh * this, GLuint index, GLint components, GLenum type, GLboolean normalized);
+void Mesh_merge(Mesh * this, Mesh * other);
 
 void Attribute_submitData(Attribute * attribute, Mesh * mesh, Engine * engine);
 void Attribute_prepare(Attribute * attribute, Mesh * mesh);
@@ -1041,6 +1040,8 @@ void Texture_write3(int x, int y, int z);
 //#define TextureAtlas_initialise(atlas) atlas = kh_init(Str_TextureAtlasEntry)
 TextureAtlas * TextureAtlas_construct();
 void TextureAtlas_load(TextureAtlas * atlas, const char * filename);
+void TextureAtlas_parse(TextureAtlas * atlas, ezxml_t atlasXml);
+void Texture_applyParameters(Texture * this);
 
 void RenderTexture_createDepth(Texture * const this, GLuint i, uint16_t width, uint16_t height);
 void RenderTexture_createColor(Texture * const this, GLuint i, uint16_t width, uint16_t height, GLenum format);
@@ -1067,7 +1068,7 @@ Program * Engine_setCurrentProgram(Engine * this, char * name);
 Program * Engine_getCurrentProgram(Engine * this);
 void Engine_many(Engine * this, Renderable * renderable, RenderableInstances * instances);
 void Engine_one(Engine * this, Renderable * renderable);
-
+void Engine_getPath(Engine * engine, const char * path, int pathLength, const char * partial);
 float Engine_smoothstep(float t);
 
 char* Text_load(char* filename);
@@ -1075,7 +1076,7 @@ char* Text_load(char* filename);
 void Loop_initialise(Engine * engine,
 	int windowWidth, //ignored for Android
 	int windowHeight, //ignored for Android
-	int windowTitle); //ignored for Android
+	const char *  windowTitle); //ignored for Android
 void Loop_run(Engine * engine);
 
 void GLFW_errorCallback(int error, const char * description);
@@ -1087,7 +1088,22 @@ typedef struct Keyboard
 {
 	Device base;
 } Keyboard;
+void Keyboard_initialise(Device * device);
+void Keyboard_update(Device * device);
+Device * Keyboard_construct();
 
+typedef enum Mouse
+{
+    ORB_BUTTON_LEFT,
+	ORB_BUTTON_RIGHT,
+	ORB_BUTTON_MIDDLE
+} Mouse;
+void Mouse_initialise(Device * device);
+void Mouse_update(Device * device);
+Device * Mouse_construct();
+
+int _glSizeof(const int key);
+#define glSizeof(key) _glSizeof(key)
 
 ///////////// PLATFORM SPECIFIC FUNCTIONS //////////////
 

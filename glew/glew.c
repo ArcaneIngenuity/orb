@@ -31,12 +31,12 @@
 ** THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include <glew/glew.h>
+#include "glew.h"
 
 #if defined(_WIN32)
-#  include <glew/wglew.h>
+#  include "wglew.h"
 #elif !defined(__ANDROID__) && !defined(__native_client__) && !defined(__HAIKU__) && (!defined(__APPLE__) || defined(GLEW_APPLE_GLX))
-#  include <glew/glxew.h>
+#  include "glxew.h"
 #endif
 
 #include <stddef.h>  /* For size_t */

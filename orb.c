@@ -41,7 +41,7 @@ char *str_replace(char *orig, char *rep, char *with)
     len_with = strlen(with);
 
     ins = orig;
-    for (count = 0; tmp = strstr(ins, rep); ++count) {
+    for (count = 0; (tmp = strstr(ins, rep)); ++count) {
         ins = tmp + len_rep;
     }
 
@@ -614,17 +614,17 @@ void Loop_processInputs(Engine * engine)
 {
 	#ifdef DESKTOP //glfw!
 	
-	Device * device;
-	DeviceChannel * channel;
+	//Device * device;
+	//DeviceChannel * channel;
 	
 	for (k = kh_begin(engine->devicesByName); k != kh_end(engine->devicesByName); ++k)
 	{
 		if (kh_exist(engine->devicesByName, k))
 		{
 			//char * key = kh_key(engine->devicesByName, k);
-			Device * device = kh_val(engine->devicesByName, k);
+			Device * device = (Device *) kh_val(engine->devicesByName, k);
 			device->consumed = false; //reset this each global update
-			for (int j = 0; j < kv_size(device->channels); ++j) //for every raw input that may trigger said mapping
+			for (uint32_t j = 0; j < kv_size(device->channels); ++j) //for every raw input that may trigger said mapping
 			{
 				DeviceChannel * channel = &kv_A(device->channels, j);
 				channel->consumed = false;
@@ -636,7 +636,7 @@ void Loop_processInputs(Engine * engine)
 
 	#endif//DESKTOP
 }
-void Loop_initialise(Engine * engine, int windowWidth, int windowHeight, int windowTitle)
+void Loop_initialise(Engine * engine, int windowWidth, int windowHeight, const char * windowTitle)
 {
 	#ifdef __ANDROID__
 	//app_dummy();
@@ -696,7 +696,7 @@ void Loop_run(Engine * engine)
 		k = kh_get(StrPtr, engine->devicesByName, "cursor");
 		Device * device = kh_val(engine->devicesByName, k);
 	
-		for (int i = 0; i < 8; i++)
+		for (uint32_t i = 0; i < 8; i++)
 		{
 			DeviceChannel * channel = &device->channels[i];
 			//DeviceChannel_setCurrentDelta(channel);
@@ -762,7 +762,7 @@ void UniformGroup_update(khash_t(StrPtr) * uniformsByName, Program * programPtr)
 		{
 			//const char * key = kh_key(uniformsByName,k);
 			//LOGI("key=%s\n", key);
-			Uniform * uniform = kh_value(uniformsByName, k);
+			Uniform * uniform = (Uniform *) kh_value(uniformsByName, k);
 			GLint location = glGetUniformLocation(programPtr->id, uniform->name);
 			
 			switch (uniform->type)
@@ -902,11 +902,9 @@ void Mesh_submit(Mesh * mesh, Engine * engine)
 	//set up attribute pointers / arrays
 	if (engine->capabilities.vao)
 	{
-		Attribute * attribute;
-		
-		size_t offset = 0;
+		void * offset = NULL;
 		//ORDER HERE *MUST* MATCH THAT OF VERTEX STRUCT MEMBERS! - set via Mesh_initialise()
-		for (int i = 0; i < kv_size(mesh->attributeActive); ++i)
+		for (uint32_t i = 0; i < kv_size(mesh->attributeActive); ++i)
 		{
 			Attribute * attribute = kv_A(mesh->attributeActive, i);
 			glVertexAttribPointer(attribute->index, attribute->components, attribute->type, attribute->normalized, mesh->stride, offset); 
@@ -969,7 +967,8 @@ void Axes_create(float radius, float bodyLength, float headLength, GLushort * in
 		int c = (a + 2) % 3;
 	
 		int i = a * 3 * 3; //index into vertex attribute array
-		int j = a * 14; //index into triangle index array
+		//int j = a * 14; //index into triangle index array
+		
 		//create 9 vertex positions per axis:
 		//arrow base near origin (4 vertices * 3 components = 12 floats)
 		position[i+a] = radius;
@@ -1065,7 +1064,7 @@ void IndexedRenderableManager_create(
 	IndexedRenderableFunction fnc,
 	void * model)
 {
-	for (int ii = 0; ii < kv_size(*indexListPtr); ii++)
+	for (uint32_t ii = 0; ii < kv_size(*indexListPtr); ii++)
 	{
 		int i = kv_A(*indexListPtr, ii);
 		
@@ -1086,7 +1085,7 @@ void IndexedRenderableManager_update(
 	IndexedRenderableFunction fnc,
 	void * model)
 {
-	for (int ii = 0; ii < kv_size(*indexListPtr); ii++)
+	for (uint32_t ii = 0; ii < kv_size(*indexListPtr); ii++)
 	{
 		int i = kv_A(*indexListPtr, ii);
 		
@@ -1103,7 +1102,7 @@ void IndexedRenderableManager_render(
 	IndexList * indexRenderListPtr,
 	Engine * enginePtr)
 {	
-	for (int ii = 0; ii < kv_size(*indexRenderListPtr); ++ii)
+	for (uint32_t ii = 0; ii < kv_size(*indexRenderListPtr); ++ii)
 	{
 		int i = kv_A(*indexRenderListPtr, ii);
 		
@@ -1150,7 +1149,7 @@ void Texture_clearData(Texture * texture, bool alphaFull)
 	memset(texture->data, 0, texture->width*texture->height*texture->components*sizeof(GLubyte));
 	if (alphaFull)
 	{
-		for (int i = 3; i < texture->width*texture->height*texture->components*sizeof(GLubyte); i+=4)
+		for (uint32_t i = 3; i < texture->width*texture->height*texture->components*sizeof(GLubyte); i+=4)
 		{
 			texture->data[i] = 255;
 		}
@@ -1175,7 +1174,7 @@ void Texture_loadData(Texture * texture, const char * filename)
 		LOGI("WARNING: texture %s not loaded.\n", filename); 
 	#endif//DESKTOP
 	
-	return texture;
+	//return texture;
 }
 
 void RenderTexture_createDepth(Texture * const this, GLuint i, uint16_t width, uint16_t height)
@@ -1187,7 +1186,7 @@ void RenderTexture_createDepth(Texture * const this, GLuint i, uint16_t width, u
 	Texture_setDimensionCount(this, GL_TEXTURE_2D);
 	Texture_setTexelFormats(this, GL_DEPTH_COMPONENT16, GL_FLOAT);
 	
-	int ret, is_missing;
+	//int ret, is_missing;
 	
 	kh_set(IntInt, this->intParametersByName, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	kh_set(IntInt, this->intParametersByName, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -1210,7 +1209,7 @@ void RenderTexture_createColor(Texture * const this, GLuint i, uint16_t width, u
 	Texture_setDimensionCount(this, GL_TEXTURE_2D);
 	Texture_setTexelFormats(this, format, GL_UNSIGNED_BYTE);
 	
-	int ret, is_missing;
+	//int ret, is_missing;
 	
 	kh_set(IntInt, this->intParametersByName, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	kh_set(IntInt, this->intParametersByName, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -1335,7 +1334,7 @@ void TextureAtlas_parse(TextureAtlas * atlas, ezxml_t atlasXml)
 	{
 		TextureAtlasEntry entry = {0};
 		//strcpy(entry.name, ezxml_attr(xml, "n"));
-		entry.name = ezxml_attr(xml, "n");
+		entry.name = (char *) ezxml_attr(xml, "n");
 		//LOGI("*********************************name=%s\n", entry.name);
 
 		entry.x = (uint16_t)atoi(ezxml_attr(xml, "x"));
@@ -1449,7 +1448,7 @@ void Shader_initialiseFromSource(Shader * this)//, const char* shader_str, GLenu
 		{
 			GLchar infoLog[sizeof(char) * infoLogLength + 1];
 			glGetShaderInfoLog(id, infoLogLength + 1, NULL, infoLog);
-			LOGI("%s\n", infoLog, this->source);
+			LOGI("%s\n", infoLog);//, this->source);
 		}
 		else
 		{
@@ -1521,8 +1520,9 @@ Program * Program_construct()
 	
 	this->id = glCreateProgram();
 	
-	this->attributeLocationsByName = kh_init(StrPtr);
+	this->attributeLocationsByName = kh_init(Str_AttributeLocation);
 	//kv_init(this->attributeLocationsByIndex);
+	return this;
 }
 
 void Program_initialiseFromShaders(Program * this, GLuint vertex_shader, GLuint fragment_shader)
@@ -1626,8 +1626,8 @@ void Engine_many(Engine * this, Renderable * renderable, RenderableInstances * i
 	{				
 		glBindBuffer(GL_ARRAY_BUFFER, mesh->id);
 		//glBufferData(GL_ARRAY_BUFFER, mesh->vertexBytes, mesh->vertexArray, mesh->usage);
-		size_t offset = 0;
-		for (int i = 0; i < kv_size(mesh->attributeActive); ++i)
+		void * offset = NULL;
+		for (uint32_t i = 0; i < kv_size(mesh->attributeActive); ++i)
 		{
 			Attribute * attribute = kv_A(mesh->attributeActive, i);
 			glVertexAttribPointer(attribute->index, attribute->components, attribute->type, attribute->normalized, mesh->stride, offset); 
@@ -1691,8 +1691,8 @@ void Engine_one(Engine * this, Renderable * renderable)
 	{				
 		glBindBuffer(GL_ARRAY_BUFFER, mesh->id);
 		//glBufferData(GL_ARRAY_BUFFER, mesh->vertexBytes, mesh->vertexArray, mesh->usage);
-		size_t offset = 0;
-		for (int i = 0; i < kv_size(mesh->attributeActive); ++i)
+		void * offset = NULL;
+		for (uint32_t i = 0; i < kv_size(mesh->attributeActive); ++i)
 		{
 			Attribute * attribute = kv_A(mesh->attributeActive, i);
 			glVertexAttribPointer(attribute->index, attribute->components, attribute->type, attribute->normalized, mesh->stride, offset); 
@@ -1715,6 +1715,22 @@ void Engine_one(Engine * this, Renderable * renderable)
 		glBindVertexArray(0);
 	}
 }
+void glUniform1fv_wrapper(int a, int b, const int * c)
+{
+	glUniform1fv(a, b, (const float *) c);
+}
+void glUniform2fv_wrapper(int a, int b, const int * c)
+{
+	glUniform2fv(a, b, (const float *) c);
+}
+void glUniform3fv_wrapper(int a, int b, const int * c)
+{
+	glUniform3fv(a, b, (const float *) c);
+}
+void glUniform4fv_wrapper(int a, int b, const int * c)
+{
+	glUniform4fv(a, b, (const float *) c);
+}
 
 void Engine_initialise(Engine * this, int width, int height, const char * windowTitle)
 {
@@ -1729,9 +1745,10 @@ void Engine_initialise(Engine * this, int width, int height, const char * window
 	else
 		printf("GLFW initialised.\n");
 
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
-	glfwWindowHint(GLFW_SAMPLES, 4); //HW AA
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+	glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
+	//glfwWindowHint(GLFW_SAMPLES, 4); //HW AA
 	//glfwWindowHint(GLFW_REFRESH_RATE, 10);
 	
 	this->width = width;
@@ -1947,15 +1964,18 @@ void Engine_initialise(Engine * this, int width, int height, const char * window
 	//	mat4x4_identity(renderable->matrix[i]);
 
 	//these get set here; brace initialisation not allowed due to glew not having function pointers ready yet(?)
-	glUniformVectorFunctions[1-1][0] = glUniform1fv;
+	
 	glUniformVectorFunctions[1-1][1] = glUniform1iv;
-	glUniformVectorFunctions[2-1][0] = glUniform2fv;
 	glUniformVectorFunctions[2-1][1] = glUniform2iv;
-	glUniformVectorFunctions[3-1][0] = glUniform3fv;
 	glUniformVectorFunctions[3-1][1] = glUniform3iv;
-	glUniformVectorFunctions[4-1][0] = glUniform4fv;
 	glUniformVectorFunctions[4-1][1] = glUniform4iv;
 	
+	//wrapper functions allow us to use a void (*) (int, int, const * int for all without compiler warning about incompatible signatures)
+	//bearing in mind - C cannot cast function signature types easily - try with the non-wrapped versions to see the warnings.
+	glUniformVectorFunctions[1-1][0] = glUniform1fv_wrapper;
+	glUniformVectorFunctions[2-1][0] = glUniform2fv_wrapper;
+	glUniformVectorFunctions[3-1][0] = glUniform3fv_wrapper;
+	glUniformVectorFunctions[4-1][0] = glUniform4fv_wrapper;
 
 	//TODO once this is encapsulated, it can easily just be a 3x3(x1) array (there are no 1's here, and only floats!)
 	glUniformMatrixFunctions[2-1][2-1][0] = glUniformMatrix2fv;
@@ -1977,7 +1997,7 @@ void Engine_dispose(Engine * engine)
 	//TODO free engine collections.
 	
 	#ifdef DESKTOP
-	Window_terminate(&engine);
+	Window_terminate(engine);
 	#endif//DESKTOP
 }
 
@@ -1996,7 +2016,7 @@ Program * Engine_setCurrentProgram(Engine * this, char * name)
 	else
 	{
 		k = kh_get(StrPtr, this->programsByName, name);
-		this->program = kh_val(this->programsByName, k);
+		this->program = (Program *) kh_val(this->programsByName, k);
 		assert (this->program != NULL);
 		glUseProgram(this->program->id);
 	}
@@ -2009,7 +2029,7 @@ Program * Engine_getCurrentProgram(Engine * this)
 }
 
 /// Takes Linux-canonical (single forward slash) paths.
-const char * Engine_getPath(Engine * engine, const char * path, int pathLength, const char * partial)
+void Engine_getPath(Engine * engine, const char * path, int pathLength, const char * partial)
 {
 	//get paths ready for loading shaders
 	#if _WIN32
@@ -2030,8 +2050,8 @@ const char * Engine_getPath(Engine * engine, const char * path, int pathLength, 
 	#elif __linux__
 	char * prefix = "./";
 	//char * pathTemp = malloc(sizeof(char) * (strlen(prefix) + strlen(partial)));
-	strcpy(path, prefix); 
-	strcat(path, partial); 
+	strcpy((char *)path, prefix); 
+	strcat((char *)path, partial); 
 	///path = pathTemp;
 	#else //all other supported OS?
 	//relative path?
@@ -2039,14 +2059,14 @@ const char * Engine_getPath(Engine * engine, const char * path, int pathLength, 
 	//char * path = "./shd/";
 	#endif //OS
 	
-	//LOGI("@@ %s", path);
+	LOGI("@@ %s", path);
 }
 
 char* Text_load(char* filename)
 {
 	//should be portable - http://stackoverflow.com/questions/14002954/c-programming-how-to-read-the-whole-file-contents-into-a-buffer
 	
-	char * str;
+	char * str = NULL;
 
 	FILE *file = fopen(filename, "rb"); //open for reading
 	if (file)
@@ -2054,34 +2074,39 @@ char* Text_load(char* filename)
 		fseek(file, 0, SEEK_END); //seek to end
 		long fileSize = ftell(file); //get current position in stream
 		fseek(file, 0, SEEK_SET); //seek to start
-		LOGI(filename);
+		LOGI("%s\n", filename);
 		
-		str = malloc(fileSize + 1); //allocate enough room for file + null terminator (\0)
-
-		if (str != NULL) //if allocation succeeded
+		if (fileSize > -1)
 		{
-			
-			LOGI("fileSize...%ld\n", fileSize);
-			size_t freadResult;
-			freadResult = fread(str, 1, fileSize, file); //read elements as one byte each, into string, from file. 
-			//LOGI("freadResult...%d\n", freadResult);
-			
-			if (freadResult != fileSize)
-			{
-				fputs ("Reading error", stderr);
-				//exit (3);
-				
-				str = NULL;
-				return str;
-			}
-			
-			fclose(file);
+			str = malloc(fileSize + 1); //allocate enough room for file + null terminator (\0)
 
-			str[fileSize] = 0; //'\0';
+			if (str != NULL) //if allocation succeeded
+			{
+				
+				LOGI("fileSize...%ld\n", fileSize);
+				size_t freadResult;
+				freadResult = fread(str, 1, fileSize, file); //read elements as one byte each, into string, from file. 
+				//LOGI("freadResult...%d\n", freadResult);
+				
+				if (freadResult != (uint64_t) fileSize)
+				{
+					fputs ("Reading error", stderr);
+					//exit (3);
+					
+					str = NULL;
+					return str;
+				}
+				
+				fclose(file);
+
+				str[fileSize] = 0; //'\0';
+			}
 		}
+		else
+			LOGI("File size invalid: %ld, errno=%i\n", fileSize, errno);
 	}
 	else
-		LOGI("File not found: %s", filename);
+		LOGI("File not found: %s\n", filename);
 	
 	return str;
 }
@@ -2098,7 +2123,7 @@ float Engine_smoothstep(float t)
 
 void Keyboard_initialise(Device * device)
 {
-	device->indexToName = KeyString;
+	device->indexToName = (char**)KeyString;
 	device->nameToIndex = kh_init(StrInt);
 	khiter_t k; int ret; int c = 0;
 	FOREACH_KEY(GENERATE_KH)
@@ -2132,7 +2157,7 @@ Device * Keyboard_construct()
 
 void Mouse_initialise(Device * device)
 {
-	device->indexToName = MouseButtonString;
+	device->indexToName = (char**)MouseButtonString;
 	device->nameToIndex = kh_init(StrInt);
 	khiter_t k; int ret; int c = 0;
 	FOREACH_MOUSE_BUTTON(GENERATE_KH)
