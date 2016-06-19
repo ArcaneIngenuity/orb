@@ -409,7 +409,7 @@ typedef struct Texture
 } Texture;
 
 
-typedef struct TextureAtlasEntry
+typedef struct AtlasEntry
 {
 	//char name[STRLEN_MAX];
 	char * name;
@@ -427,21 +427,21 @@ typedef struct TextureAtlasEntry
 	float xPivot; ///< x pivot as alpha value (0.0->1.0) across width
 	float yPivot; ///< y pivot as alpha value (0.0->1.0) across height
 	
-} TextureAtlasEntry;
+} AtlasEntry;
 
-#ifndef KH_DECL_Str_TextureAtlasEntry
-#define KH_DECL_Str_TextureAtlasEntry
-static const int Str_TextureAtlasEntry = 1000;
-KHASH_DECLARE(Str_TextureAtlasEntry, kh_cstr_t, TextureAtlasEntry)
-#endif//KH_DECL_Str_TextureAtlasEntry
+#ifndef KH_DECL_Str_AtlasEntry
+#define KH_DECL_Str_AtlasEntry
+static const int Str_AtlasEntry = 1000;
+KHASH_DECLARE(Str_AtlasEntry, kh_cstr_t, AtlasEntry)
+#endif//KH_DECL_Str_AtlasEntry
 
-typedef struct TextureAtlas
+typedef struct Atlas
 {
-	khash_t(Str_TextureAtlasEntry) * entriesByName;
+	khash_t(Str_AtlasEntry) * entriesByName;
 	uint16_t w;
 	uint16_t h;
-	
-} TextureAtlas;
+	void * config; //for now, ezxml_t
+} Atlas;
 
 
 typedef struct Triangle
@@ -452,6 +452,8 @@ typedef struct Triangle
 
 typedef struct Mesh
 {	
+	char name[STRLEN_MAX];
+
 	GLuint id; //buffer id
 	GLuint topology; //GL_TRIANGLES or whatever (see also Program)
 	GLenum usage; //as  used by glBufferData for all Attributes
@@ -829,12 +831,14 @@ typedef struct Device
 	khash_t(StrInt) * nameToIndex; ///< Maps string name to numeric index, e.g. "ORB_KEY_SPACE" to enum index of same name ORB_KEY_SPACE.
 	char ** indexToName; ///< Maps numeric index to string name, e.g. "ORB_KEY_SPACE" to enum index of same name ORB_KEY_SPACE.
 	void (*initialise)	(struct Device * const this);
+	void (*dispose)	(struct Device * const this);
 	void (*update)		(struct Device * const this);
 	bool consumed; ///< Has input from this device already been consumed during this Hub_update()? (prevents a device being used twice) TODO prefer Input.consumed!
 } Device;
 
-typedef void (*DeviceUpdate)	(Device * device);
-typedef void (*DeviceInitialise)(Device * device);
+//typedef void (*DeviceUpdate)	(Device * device);
+//typedef void (*DeviceInitialise)(Device * device);
+//typedef void (*DeviceDispose)(Device * device);
 
 /*
 typedef struct Finger
@@ -903,6 +907,7 @@ typedef struct Engine
 	khash_t(StrPtr) * programsByName;
 	khash_t(StrPtr) * shadersByName;
 	khash_t(StrPtr) * texturesByName;
+	khash_t(StrPtr) * atlasesByName;
 	khash_t(StrPtr) * materialsByName;
 	khash_t(StrPtr) * meshesByName;
 	khash_t(StrPtr) * renderPathsByName;
@@ -1035,12 +1040,13 @@ void Texture_write2(int x, int y, void * texel);
 void * Texture_read3(int x, int y, int z);
 void Texture_write3(int x, int y, int z);
 
-#define TextureAtlas_put(atlas, entry) kh_set(Str_TextureAtlasEntry, atlas->entriesByName, entry.name, entry) 
-#define TextureAtlas_get(atlas, name)  kh_get_val(Str_TextureAtlasEntry, atlas->entriesByName, name, (TextureAtlasEntry){0})
-//#define TextureAtlas_initialise(atlas) atlas = kh_init(Str_TextureAtlasEntry)
-TextureAtlas * TextureAtlas_construct();
-void TextureAtlas_load(TextureAtlas * atlas, const char * filename);
-void TextureAtlas_parse(TextureAtlas * atlas, ezxml_t atlasXml);
+#define Atlas_put(atlas, entry) kh_set(Str_AtlasEntry, atlas->entriesByName, entry.name, entry) 
+#define Atlas_get(atlas, name)  kh_get_val(Str_AtlasEntry, atlas->entriesByName, name, (AtlasEntry){0})
+//#define Atlas_initialise(atlas) atlas = kh_init(Str_AtlasEntry)
+Atlas * Atlas_construct();
+void Atlas_load(Atlas * atlas, const char * filename);
+void Atlas_parse(Atlas * atlas, ezxml_t atlasXml);
+void Atlas_dispose(Atlas * atlas);
 void Texture_applyParameters(Texture * this);
 
 void RenderTexture_createDepth(Texture * const this, GLuint i, uint16_t width, uint16_t height);
@@ -1070,6 +1076,11 @@ void Engine_many(Engine * this, Renderable * renderable, RenderableInstances * i
 void Engine_one(Engine * this, Renderable * renderable);
 void Engine_getPath(Engine * engine, const char * path, int pathLength, const char * partial);
 float Engine_smoothstep(float t);
+Mesh * Engine_addMesh(Engine * this, const char * name);
+void Engine_removeMesh(Engine * this, const char * name);
+Atlas * Engine_addAtlas(Engine * this, const char * name);
+void Engine_removeAtlas(Engine * this, const char * name);
+
 
 char* Text_load(char* filename);
 

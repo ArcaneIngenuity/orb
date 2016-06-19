@@ -71,7 +71,10 @@ char *str_replace(char *orig, char *rep, char *with)
 
 void Window_terminate(Engine * engine)
 {
+	LOGI("WINDOW_TERMINATE\n");
+	
 	#ifdef DESKTOP
+	glfwDestroyWindow(window);
 	glfwTerminate();//free()s any windows
 	window = NULL; //JIC
 	#elif MOBILE
@@ -101,6 +104,13 @@ Device * Device_construct()
 	Device * device = calloc(1, sizeof(Device));
 	device->nameToIndex = kh_init(StrInt);
 	return device;
+}
+void Device_dispose(Device * this)
+{
+	kv_destroy(this->channels);
+	kh_destroy(StrPtr,  this->nameToIndex);
+	//kvec_t(DeviceChannel) ;
+	//khash_t(StrInt) * nameToIndex
 }
 
 void DeviceChannel_setCurrentDelta(DeviceChannel * this)
@@ -813,6 +823,15 @@ Attribute * Mesh_addAttribute(Mesh * this, GLuint index, GLint components, GLenu
 	return attribute;
 }
 
+void Mesh_removeAttributes(Mesh * this)
+{
+	/*
+		for (uint32_t i = 0; i < kv_size(this->attribute); ++i)
+		{
+			Attribute * attribute = kv_A(this->attribute, i);
+*/
+}
+
 void Mesh_initialise(Mesh * this, 
 	GLuint topology,
 	GLenum usage,
@@ -833,6 +852,13 @@ void Mesh_initialise(Mesh * this,
 	
 	this->vertexCount = 0;
 	this->vertexArray = malloc(stride * MESH_VERTICES_SHORT_MAX);
+}
+
+void Mesh_dispose(Mesh * this)
+{
+	free(this->index);
+	free(this->vertexArray);
+	kv_destroy(this->attributeActive);
 }
 
 //TODO use size-doubling, and do this dynamically? - last step 2^16 will have to have a special case in it however to restrict.
@@ -1302,28 +1328,28 @@ void Texture_applyParameters(Texture * this)
 	//TODO loop over float params
 }
 
-//------------------TextureAtlas/Entry------------------//
-KHASH_DEFINE(Str_TextureAtlasEntry, kh_cstr_t, TextureAtlasEntry, kh_str_hash_func, kh_str_hash_equal, 1)
+//------------------Atlas/Entry------------------//
+KHASH_DEFINE(Str_AtlasEntry, kh_cstr_t, AtlasEntry, kh_str_hash_func, kh_str_hash_equal, 1)
 
 static khiter_t k;
 
-TextureAtlas * TextureAtlas_construct()
+Atlas * Atlas_construct()
 {
-	TextureAtlas * atlas = calloc(1, sizeof(TextureAtlas));
-	atlas->entriesByName = kh_init(Str_TextureAtlasEntry);
+	Atlas * atlas = calloc(1, sizeof(Atlas));
+	atlas->entriesByName = kh_init(Str_AtlasEntry);
 	return atlas;
 }
 
-void TextureAtlas_load(TextureAtlas * atlas, const char * filename)
+void Atlas_load(Atlas * atlas, const char * filename)
 {
-	ezxml_t atlasXml = ezxml_parse_file(filename);
-	if (atlasXml)
+	atlas->config = ezxml_parse_file(filename);
+	if (atlas->config)
 		LOGI("ATLAS LOADED.\n");
 	
-	TextureAtlas_parse(atlas, atlasXml);
+	Atlas_parse(atlas, (ezxml_t)atlas->config);
 }
 
-void TextureAtlas_parse(TextureAtlas * atlas, ezxml_t atlasXml)
+void Atlas_parse(Atlas * atlas, ezxml_t atlasXml) //don't need ezxml-typed parameter? take from atlas->config? but then how can generic function know what to do?
 {
 	//LOGI("*********************************\n");
 	
@@ -1332,7 +1358,7 @@ void TextureAtlas_parse(TextureAtlas * atlas, ezxml_t atlasXml)
 	
 	for (ezxml_t xml = ezxml_child(atlasXml, "sprite"); xml; xml = xml->next)
 	{
-		TextureAtlasEntry entry = {0};
+		AtlasEntry entry = {0};
 		//strcpy(entry.name, ezxml_attr(xml, "n"));
 		entry.name = (char *) ezxml_attr(xml, "n");
 		//LOGI("*********************************name=%s\n", entry.name);
@@ -1356,8 +1382,13 @@ void TextureAtlas_parse(TextureAtlas * atlas, ezxml_t atlasXml)
 		const char * pY = ezxml_attr(xml, "pY");
 		if (pY) entry.yPivot = atoi(pY);
 		
-		TextureAtlas_put(atlas, entry);
+		Atlas_put(atlas, entry);
 	}
+}
+
+void Atlas_dispose(Atlas * atlas)
+{
+	ezxml_free((ezxml_t)atlas->config);
 }
 
 
@@ -1941,10 +1972,12 @@ void Engine_initialise(Engine * this, int width, int height, const char * window
 	//initialise collection objects
 	//TODO "this" should be "orb" instance
 
-	this->programsByName 		= kh_init(StrPtr);
+	this->programsByName 	= kh_init(StrPtr);
 	this->shadersByName 		= kh_init(StrPtr);
 	this->devicesByName 		= kh_init(StrPtr);
 	this->texturesByName 		= kh_init(StrPtr);
+	this->atlasesByName 		= kh_init(StrPtr);
+	this->meshesByName 		= kh_init(StrPtr);
 	
 	glSizesByName			= kh_init(IntInt);
 	kh_set(IntInt, glSizesByName, GL_BYTE, sizeof(char));
@@ -1995,6 +2028,33 @@ void Engine_initialise(Engine * this, int width, int height, const char * window
 void Engine_dispose(Engine * engine)
 {
 	//TODO free engine collections.
+	kh_cstr_t name;
+	
+	Mesh * mesh;
+	kh_foreach(engine->meshesByName, name, mesh, 
+		LOGI("removed %s.\n", name);
+		Engine_removeMesh(engine, name);
+	)
+	kh_destroy(StrPtr, engine->meshesByName);
+	
+	Device * device;
+	kh_foreach(engine->devicesByName, name, device, 
+		LOGI("removed %s.\n", name);
+		//Engine_removeDevice(engine, name);
+		device->dispose(device);
+		free (device);
+	)
+	kh_destroy(StrPtr, engine->devicesByName);
+	
+	Atlas * atlas;
+	kh_foreach(engine->atlasesByName, name, atlas, 
+		LOGI("removed %s.\n", name);
+		Engine_removeAtlas(engine, name);
+
+	)
+	kh_destroy(StrPtr, engine->atlasesByName);
+	
+	//Atlas_dispose(atlas); //TODO actually, all atlases should be tracked and removed in Orb
 	
 	#ifdef DESKTOP
 	Window_terminate(engine);
@@ -2062,6 +2122,39 @@ void Engine_getPath(Engine * engine, const char * path, int pathLength, const ch
 	LOGI("@@ %s", path);
 }
 
+Mesh * Engine_addMesh(Engine * this, const char * name)
+{
+	Mesh * mesh = calloc(1, sizeof(Mesh));
+	strncpy(mesh->name, name, STRLEN_MAX); //since we just calloc'ed, we can assume mesh->name is all zero bytes
+	//..also, strncpy will silently truncate excessively long names
+	kh_set(StrPtr, this->meshesByName, mesh->name, (uintptr_t) mesh);	
+	return mesh;
+}
+
+//TODO use an arg "poolOnRemove" which sends it to a pool for reuse by _addMesh(), which should be modified to use pooled instances.
+void Engine_removeMesh(Engine * this, const char * name)
+{
+	Mesh * mesh = (Mesh *) kh_get_val(StrPtr, this->meshesByName, name, NULL);	
+	//it makes sense to dispose here, but shouldn't we pool the members that were disposed...?
+	Mesh_dispose(mesh);
+	free(mesh);
+}
+
+Atlas *  Engine_addAtlas(Engine * this, const char * name)
+{
+		Atlas * atlas = Atlas_construct();
+		return atlas;
+}
+
+//TODO use an arg "poolOnRemove" which sends it to a pool for reuse by _addMesh(), which should be modified to use pooled instances.
+void Engine_removeAtlas(Engine * this, const char * name)
+{
+	Atlas * atlas = (Atlas *) kh_get_val(StrPtr, this->atlasesByName, name, NULL);	
+	//it makes sense to dispose here, but shouldn't we pool the members that were disposed...?
+	Atlas_dispose(atlas);
+	free(atlas);
+}
+
 char* Text_load(char* filename)
 {
 	//should be portable - http://stackoverflow.com/questions/14002954/c-programming-how-to-read-the-whole-file-contents-into-a-buffer
@@ -2097,13 +2190,14 @@ char* Text_load(char* filename)
 					return str;
 				}
 				
-				fclose(file);
+				
 
 				str[fileSize] = 0; //'\0';
 			}
 		}
 		else
 			LOGI("File size invalid: %ld, errno=%i\n", fileSize, errno);
+		fclose(file);
 	}
 	else
 		LOGI("File not found: %s\n", filename);
@@ -2150,6 +2244,7 @@ Device * Keyboard_construct()
 	Device * device = Device_construct();
 	device->initialise = Keyboard_initialise;
 	device->update = Keyboard_update;
+	device->dispose = Device_dispose;
 	return device;
 }
 
@@ -2203,5 +2298,6 @@ Device * Mouse_construct()
 	Device * device = Device_construct();
 	device->initialise = Mouse_initialise;
 	device->update = Mouse_update;
+	device->dispose = Device_dispose;
 	return device;
 }
