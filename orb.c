@@ -108,7 +108,7 @@ Device * Device_construct()
 void Device_dispose(Device * this)
 {
 	kv_destroy(this->channels);
-	kh_destroy(StrPtr,  this->nameToIndex);
+	kh_destroy(StrInt,  this->nameToIndex);
 	//kvec_t(DeviceChannel) ;
 	//khash_t(StrInt) * nameToIndex
 }
@@ -2218,7 +2218,6 @@ float Engine_smoothstep(float t)
 void Keyboard_initialise(Device * device)
 {
 	device->indexToName = (char**)KeyString;
-	device->nameToIndex = kh_init(StrInt);
 	khiter_t k; int ret; int c = 0;
 	FOREACH_KEY(GENERATE_KH)
 	
@@ -2253,7 +2252,6 @@ Device * Keyboard_construct()
 void Mouse_initialise(Device * device)
 {
 	device->indexToName = (char**)MouseButtonString;
-	device->nameToIndex = kh_init(StrInt);
 	khiter_t k; int ret; int c = 0;
 	FOREACH_MOUSE_BUTTON(GENERATE_KH)
 	
