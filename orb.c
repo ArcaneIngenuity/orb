@@ -19,7 +19,14 @@ glUniformMatrixFunction glUniformMatrixFunctions[4][4][2];
 
 static khash_t(IntInt) * glSizesByName;
 
+//The window we'll be rendering to
+
+
+//OpenGL context
+SDL_GLContext gContext;
+
 //helpers...
+
 // You must free the result if result is non-NULL.
 char *str_replace(char *orig, char *rep, char *with)
 {
@@ -69,6 +76,7 @@ char *str_replace(char *orig, char *rep, char *with)
 }
 //...helpers.
 
+/*
 void Window_terminate(Engine * engine)
 {
 	LOGI("WINDOW_TERMINATE\n");
@@ -98,6 +106,7 @@ void Window_terminate(Engine * engine)
 	#endif//__ANDROID__
 	#endif//DESKTOP/MOBILE
 }
+*/
 
 Device * Device_construct()
 {
@@ -287,6 +296,7 @@ void Android_frame(Engine * engine)
  * Process the next main command.
  */
  //PRIVATE
+ /*
 void Android_onAppCmd(struct android_app* app, int32_t cmd)
 {
 	Engine * engine = (Engine *)app->userData;
@@ -300,11 +310,11 @@ void Android_onAppCmd(struct android_app* app, int32_t cmd)
 		LOGI("INPUT_CHANGED");
 		break;
 	case APP_CMD_SAVE_STATE:
-	/*
-		app->savedState = malloc(sizeof(struct saved_state));
-        *((struct saved_state*)engine->app->savedState) = engine->state;
-        app->savedStateSize = sizeof(struct saved_state);
-*/
+	
+		// app->savedState = malloc(sizeof(struct saved_state));
+        // *((struct saved_state*)engine->app->savedState) = engine->state;
+        // app->savedStateSize = sizeof(struct saved_state);
+
 		LOGI("SAVE_STATE");
 		break;
 	case APP_CMD_INIT_WINDOW:
@@ -351,25 +361,25 @@ void Android_onAppCmd(struct android_app* app, int32_t cmd)
 	case APP_CMD_RESUME:
 		LOGI("RESUME");
 		engine->paused = false; //TODO actually should be done when eglContextMakeCurrent() succeeds
-		/*
-		if (!engine->context)
-		{
-		engine->context = eglCreateContext(engine->display, engine->config, NULL, engine->attribsList);
-
-		if (eglMakeCurrent(engine->display, engine->surface, engine->surface, engine->context) == EGL_FALSE)
-		{
-			LOGW("Unable to eglMakeCurrent");
-			//return -1;
-		}
-		else
-			LOGI("Success eglMakeCurrent");
 		
-		}
-		*/
+		// if (!engine->context)
+		// {
+		// engine->context = eglCreateContext(engine->display, engine->config, NULL, engine->attribsList);
+
+		// if (eglMakeCurrent(engine->display, engine->surface, engine->surface, engine->context) == EGL_FALSE)
+		// {
+			// LOGW("Unable to eglMakeCurrent");
+			// // return -1;
+		// }
+		// else
+			// LOGI("Success eglMakeCurrent");
+		
+		// }
+		
 		break;
 	}
 }
-
+*/
 void Android_ensureValidDataPath(struct android_app * app)
 {
 	if (app->activity->internalDataPath == NULL)
@@ -461,10 +471,11 @@ void Android_extractAssetsFromAPK(struct android_app * app, const char * apkDirs
 #endif //__ANDROID__
 
 #ifdef DESKTOP //glfw!
-static short buttonOrbToGlfw[] =
+//must be same order as in corresponding header
+static int buttonOrbToSDL[] =
 {
 	XX,
-	YY,
+	YY/*,
 	GLFW_MOUSE_BUTTON_1,
 	GLFW_MOUSE_BUTTON_2,
 	GLFW_MOUSE_BUTTON_3,
@@ -473,160 +484,148 @@ static short buttonOrbToGlfw[] =
 	GLFW_MOUSE_BUTTON_6,
 	GLFW_MOUSE_BUTTON_7,
 	GLFW_MOUSE_BUTTON_8
+	*/
 };
+/*
 #define GLFW_MOUSE_BUTTON_LEFT   GLFW_MOUSE_BUTTON_1
 #define GLFW_MOUSE_BUTTON_RIGHT   GLFW_MOUSE_BUTTON_2
 #define GLFW_MOUSE_BUTTON_MIDDLE   GLFW_MOUSE_BUTTON_3
 #define GLFW_MOUSE_BUTTON_LAST   GLFW_MOUSE_BUTTON_8
+*/
 
-static short keyOrbToGlfw[] =
+//must be same order as in corresponding header
+static int keyOrbToSDL[] =
 {
-	GLFW_KEY_UNKNOWN,
-	GLFW_KEY_0,
-	GLFW_KEY_1,
-	GLFW_KEY_2,
-	GLFW_KEY_3,
-	GLFW_KEY_4,
-	GLFW_KEY_5,
-	GLFW_KEY_6,
-	GLFW_KEY_7,
-	GLFW_KEY_8,
-	GLFW_KEY_9,
+	SDL_SCANCODE_UNKNOWN,
+	SDL_SCANCODE_0,
+	SDL_SCANCODE_1,
+	SDL_SCANCODE_2,
+	SDL_SCANCODE_3,
+	SDL_SCANCODE_4,
+	SDL_SCANCODE_5,
+	SDL_SCANCODE_6,
+	SDL_SCANCODE_7,
+	SDL_SCANCODE_8,
+	SDL_SCANCODE_9,
+	SDL_SCANCODE_KP_0,
+	SDL_SCANCODE_KP_1,
+	SDL_SCANCODE_KP_2,
+	SDL_SCANCODE_KP_3,
+	SDL_SCANCODE_KP_4,
+	SDL_SCANCODE_KP_5,
+	SDL_SCANCODE_KP_6,
+	SDL_SCANCODE_KP_7,
+	SDL_SCANCODE_KP_8,
+	SDL_SCANCODE_KP_9,
+	SDL_SCANCODE_A,
+	SDL_SCANCODE_B,
+	SDL_SCANCODE_C,
+	SDL_SCANCODE_D,
+	SDL_SCANCODE_E,
+	SDL_SCANCODE_F,
+	SDL_SCANCODE_G,
+	SDL_SCANCODE_H,
+	SDL_SCANCODE_I,
+	SDL_SCANCODE_J,
+	SDL_SCANCODE_K,
+	SDL_SCANCODE_L,
+	SDL_SCANCODE_M,
+	SDL_SCANCODE_N,
+	SDL_SCANCODE_O,
+	SDL_SCANCODE_P,
+	SDL_SCANCODE_Q,
+	SDL_SCANCODE_R,
+	SDL_SCANCODE_S,
+	SDL_SCANCODE_T,
+	SDL_SCANCODE_U,
+	SDL_SCANCODE_V,
+	SDL_SCANCODE_W,
+	SDL_SCANCODE_X,
+	SDL_SCANCODE_Y,
+	SDL_SCANCODE_Z,
+	SDL_SCANCODE_F1,
+	SDL_SCANCODE_F2,
+	SDL_SCANCODE_F3,
+	SDL_SCANCODE_F4,
+	SDL_SCANCODE_F5,
+	SDL_SCANCODE_F6,
+	SDL_SCANCODE_F7,
+	SDL_SCANCODE_F8,
+	SDL_SCANCODE_F9,
+	SDL_SCANCODE_F10,
+	SDL_SCANCODE_F11,
+	SDL_SCANCODE_F12,
+	SDL_SCANCODE_F13,
+	SDL_SCANCODE_F14,
+	SDL_SCANCODE_F15,
+	SDL_SCANCODE_F16,
+	SDL_SCANCODE_F17,
+	SDL_SCANCODE_F18,
+	SDL_SCANCODE_F19,
+	SDL_SCANCODE_F20,
+	SDL_SCANCODE_F21,
+	SDL_SCANCODE_F22,
+	SDL_SCANCODE_F23,
+	SDL_SCANCODE_F24,
+	SDL_SCANCODE_RIGHT,
+	SDL_SCANCODE_LEFT,
+	SDL_SCANCODE_DOWN,
+	SDL_SCANCODE_UP,
+	SDL_SCANCODE_LSHIFT,
+	SDL_SCANCODE_LCTRL,
+	SDL_SCANCODE_LALT,
+	SDL_SCANCODE_LGUI,
+	SDL_SCANCODE_RSHIFT,
+	SDL_SCANCODE_RCTRL,
+	SDL_SCANCODE_RALT,
+	SDL_SCANCODE_RGUI,
+	SDL_SCANCODE_SPACE,
+	SDL_SCANCODE_APOSTROPHE,
+	SDL_SCANCODE_COMMA,
+	SDL_SCANCODE_MINUS,
+	SDL_SCANCODE_PERIOD,
+	SDL_SCANCODE_SLASH,
+	SDL_SCANCODE_SEMICOLON,
+	SDL_SCANCODE_EQUALS,
+	SDL_SCANCODE_BACKSLASH,
+	SDL_SCANCODE_LEFTBRACKET,
+	SDL_SCANCODE_RIGHTBRACKET,
+	SDL_SCANCODE_GRAVE,
+	SDL_SCANCODE_ESCAPE,
+	SDL_SCANCODE_RETURN,
+	SDL_SCANCODE_TAB,
+	SDL_SCANCODE_BACKSPACE,
+	SDL_SCANCODE_INSERT,
+	SDL_SCANCODE_DELETE,
+	SDL_SCANCODE_PAGEUP,
+	SDL_SCANCODE_PAGEDOWN,
+	SDL_SCANCODE_HOME,
+	SDL_SCANCODE_END,
+	SDL_SCANCODE_CAPSLOCK,
+	SDL_SCANCODE_SCROLLLOCK,
+	SDL_SCANCODE_NUMLOCKCLEAR,
+	SDL_SCANCODE_PRINTSCREEN,
+	SDL_SCANCODE_PAUSE,
+	SDL_SCANCODE_KP_PERIOD,
+	SDL_SCANCODE_KP_DIVIDE,
+	SDL_SCANCODE_KP_MULTIPLY,
+	SDL_SCANCODE_KP_MINUS,
+	SDL_SCANCODE_KP_PLUS,
+	SDL_SCANCODE_KP_ENTER,
+	SDL_SCANCODE_KP_EQUALS,
+	SDL_SCANCODE_MENU
 	
-	GLFW_KEY_KP_0,
-	GLFW_KEY_KP_1,
-	GLFW_KEY_KP_2,
-	GLFW_KEY_KP_3,
-	GLFW_KEY_KP_4,
-	GLFW_KEY_KP_5,
-	GLFW_KEY_KP_6,
-	GLFW_KEY_KP_7,
-	GLFW_KEY_KP_8,
-	GLFW_KEY_KP_9,
-	
-	GLFW_KEY_A,
-	GLFW_KEY_B,
-	GLFW_KEY_C,
-	GLFW_KEY_D,
-	GLFW_KEY_E,
-	GLFW_KEY_F,
-	GLFW_KEY_G,
-	GLFW_KEY_H,
-	GLFW_KEY_I,
-	GLFW_KEY_J,
-	GLFW_KEY_K,
-	GLFW_KEY_L,
-	GLFW_KEY_M,
-	GLFW_KEY_N,
-	GLFW_KEY_O,
-	GLFW_KEY_P,
-	GLFW_KEY_Q,
-	GLFW_KEY_R,
-	GLFW_KEY_S,
-	GLFW_KEY_T,
-	GLFW_KEY_U,
-	GLFW_KEY_V,
-	GLFW_KEY_W,
-	GLFW_KEY_X,
-	GLFW_KEY_Y,
-	GLFW_KEY_Z,
-	
-	GLFW_KEY_F1,
-	GLFW_KEY_F2,
-	GLFW_KEY_F3,
-	GLFW_KEY_F4,
-	GLFW_KEY_F5,
-	GLFW_KEY_F6,
-	GLFW_KEY_F7,
-	GLFW_KEY_F8,
-	GLFW_KEY_F9,
-	GLFW_KEY_F10,
-	GLFW_KEY_F11,
-	GLFW_KEY_F12,
-	GLFW_KEY_F13,
-	GLFW_KEY_F14,
-	GLFW_KEY_F15,
-	GLFW_KEY_F16,
-	GLFW_KEY_F17,
-	GLFW_KEY_F18,
-	GLFW_KEY_F19,
-	GLFW_KEY_F20,
-	GLFW_KEY_F21,
-	GLFW_KEY_F22,
-	GLFW_KEY_F23,
-	GLFW_KEY_F24,
-	GLFW_KEY_F25,
-	
-	GLFW_KEY_RIGHT,
-	GLFW_KEY_LEFT,
-	GLFW_KEY_DOWN,
-	GLFW_KEY_UP,
-	
-	GLFW_KEY_LEFT_SHIFT,
-	GLFW_KEY_LEFT_CONTROL,
-	GLFW_KEY_LEFT_ALT,
-	GLFW_KEY_LEFT_SUPER,
-	GLFW_KEY_RIGHT_SHIFT,
-	GLFW_KEY_RIGHT_CONTROL,
-	GLFW_KEY_RIGHT_ALT,
-	GLFW_KEY_RIGHT_SUPER,
-	
-	GLFW_KEY_SPACE,
-	GLFW_KEY_APOSTROPHE,
-	GLFW_KEY_COMMA,
-	GLFW_KEY_MINUS,
-	GLFW_KEY_PERIOD,
-	GLFW_KEY_SLASH,
-	GLFW_KEY_SEMICOLON,
-	GLFW_KEY_EQUAL,
-	GLFW_KEY_BACKSLASH,
-	GLFW_KEY_LEFT_BRACKET,
-	GLFW_KEY_RIGHT_BRACKET,
-	GLFW_KEY_GRAVE_ACCENT,
-	GLFW_KEY_WORLD_1, //non-US #1
-	GLFW_KEY_WORLD_2, //non-US #2
-	GLFW_KEY_ESCAPE,
-	GLFW_KEY_ENTER,
-	GLFW_KEY_TAB,
-	GLFW_KEY_BACKSPACE,
-	GLFW_KEY_INSERT,
-	GLFW_KEY_DELETE,
-	GLFW_KEY_PAGE_UP,
-	GLFW_KEY_PAGE_DOWN,
-	GLFW_KEY_HOME,
-	GLFW_KEY_END,
-	GLFW_KEY_CAPS_LOCK,
-	GLFW_KEY_SCROLL_LOCK,
-	GLFW_KEY_NUM_LOCK,
-	GLFW_KEY_PRINT_SCREEN,
-	GLFW_KEY_PAUSE,
-	GLFW_KEY_KP_DECIMAL,
-	GLFW_KEY_KP_DIVIDE,
-	GLFW_KEY_KP_MULTIPLY,
-	GLFW_KEY_KP_SUBTRACT,
-	GLFW_KEY_KP_ADD,
-	GLFW_KEY_KP_ENTER,
-	GLFW_KEY_KP_EQUAL,
-	GLFW_KEY_MENU
+	//TODO need to include the full list from https://wiki.libsdl.org/SDL_Keycode
 };
 
 
-void GLFW_updateKey(int i, Device * keyboard)
-{
-	DeviceChannel * channel = &keyboard->channels.a[i]; //orb index as from enum Key
-	DeviceChannel_setPreviousState(channel);
-	channel->state[CURRENT] = (float)glfwGetKey(window, keyOrbToGlfw[i]) == GLFW_PRESS;
-	DeviceChannel_setCurrentDelta(channel);
-}
 #endif// DESKTOP //glfw!
 
 void Loop_processInputs(Engine * engine)
 {
 	#ifdef DESKTOP //glfw!
 	
-	//Device * device;
-	//DeviceChannel * channel;
-	
+	//update low-level input (raw)
 	for (k = kh_begin(engine->devicesByName); k != kh_end(engine->devicesByName); ++k)
 	{
 		if (kh_exist(engine->devicesByName, k))
@@ -643,11 +642,99 @@ void Loop_processInputs(Engine * engine)
 				device->update(device);
 		}
 	}
+	//TODO update high-level input (mappings)
 
 	#endif//DESKTOP
 }
+
+bool Engine_initialiseWindowAndContext(Engine * engine, int width, int height, char * title)
+{
+	//Initialization flag
+	bool success = true;
+
+	//Initialize SDL
+	if( SDL_Init( SDL_INIT_VIDEO ) < 0 )
+	{
+		printf( "SDL could not initialize! SDL Error: %s\n", SDL_GetError() );
+		success = false;
+	}
+	else
+	{
+		SDL_version compiled;
+		SDL_version linked;
+		SDL_VERSION(&compiled);
+		SDL_GetVersion(&linked);
+		LOGI("SDL version compiled against: %d.%d.%d\n",
+			   compiled.major, compiled.minor, compiled.patch);
+		LOGI("SDL version linked   against: %d.%d.%d\n",
+			   linked.major, linked.minor, linked.patch);
+		if (compiled.major != compiled.major ||
+			compiled.minor != compiled.minor ||
+			compiled.patch != compiled.patch)
+			success = false;
+		else
+		{
+			//Create window
+			engine->window = NULL; //or was this already done in engine = {0}?
+			engine->window = SDL_CreateWindow(title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 400, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN );
+			if( engine->window == NULL )
+			{
+				LOGI( "Window could not be created. SDL Error: %s\n", SDL_GetError() );
+				success = false;
+			}
+			else
+			{
+				LOGI( "Window created.\n");
+				//Create context
+				gContext = SDL_GL_CreateContext( engine->window );
+				if( gContext == NULL )
+				{
+					LOGI( "OpenGL context could not be created. SDL Error: %s\n", SDL_GetError() );
+					success = false;
+				}
+				else
+				{
+					SDL_GL_SetAttribute( SDL_GL_CONTEXT_PROFILE_MASK, GL_ES );
+					SDL_GL_SetAttribute( SDL_GL_CONTEXT_MAJOR_VERSION, GL_VER_MAJOR );
+					SDL_GL_SetAttribute( SDL_GL_CONTEXT_MINOR_VERSION, GL_VER_MINOR );
+					LOGI ("OpenGL %s %i.%i context created.\n", GL_ES ? "ES" : "", GL_VER_MAJOR, GL_VER_MINOR);
+					
+					//Initialize GLEW
+					glewExperimental = GL_TRUE; 
+					GLenum glewError = glewInit();
+					if( glewError != GLEW_OK )
+					{
+						LOGI( "Error initializing GL Extension Wrangler. %s\n", glewGetErrorString( glewError ) );
+					}
+					else
+					{
+						LOGI( "GL Extension Wrangler initialised.\n");
+					}
+
+					//Use Vsync
+					if( SDL_GL_SetSwapInterval( 1 ) < 0 )
+					{
+						LOGI( "Warning: Could not enable VSync. SDL Error: %s\n", SDL_GetError() );
+					}
+					else
+					{
+						LOGI( "VSync enabled.\n");
+						
+					}
+				}
+			}
+		}
+	}
+
+	return success;
+}
+
+static float deltaSecFixed = (float) 1.0f / 60.f;
+
+
 void Loop_initialise(Engine * engine, int windowWidth, int windowHeight, const char * windowTitle)
 {
+	/*
 	#ifdef __ANDROID__
 	//app_dummy();
 	struct android_app * app = engine->app;
@@ -658,34 +745,113 @@ void Loop_initialise(Engine * engine, int windowWidth, int windowHeight, const c
 
 
 	#endif//__ANDROID__
+	*/
+	
+	//TODO #if ORB_FIXED_REFRESH_RATE
+	engine->deltaSec = deltaSecFixed;
+	
 	#ifdef DESKTOP
 	Engine_initialise(engine, windowWidth, windowHeight, windowTitle); 
 	engine->userInitialiseFunc(); //!!! For now, Ctrl_init must go after Engine_initialise(), because it still relies on glfw for input AND glReadPixels
 	engine->userInitialised = true;
 	#endif//DESKTOP
 }
+static int nbFrames = 0;
 
 void Loop_run(Engine * engine)
 {
 	#ifdef DESKTOP
 	double t1, t2 = 0;
+	//else
+	if (true) //TODO remove - see crazy foo SDL tut
+	{
+		bool quit = false;
+		SDL_Event e;
+		SDL_StartTextInput();
+		
+		while( !quit )
+		{
+			//Handle events on queue
+			while( SDL_PollEvent( &e ) != 0 )
+			{
+				//User requests quit
+				if( e.type == SDL_QUIT )
+				{
+					quit = true;
+				}
+				//Handle keypress with current mouse position
+				else if( e.type == SDL_TEXTINPUT )
+				{
+					if(  e.text.text[ 0 ] == 'q' )
+					{
+						quit = true;
+						break;
+					}
+				}
+				else if (e.type == SDL_KEYDOWN && e.key.repeat == 0)
+				{
+					//LOGI("KEY\n");
+				}
+			}
+
+			Loop_processInputs(engine);
+		
+			engine->userUpdateFunc(engine->userUpdateArg);
+			
+			//Update screen
+			SDL_GL_SwapWindow( engine->window );
+		}
+		
+		//Disable text input
+		SDL_StopTextInput();
+	}
+
+	//Free resources and close SDL
+	/*
 	while (!glfwWindowShouldClose(window))
 	{
+
+		
+		//t2 = t1;
+		t1 = glfwGetTime();
+		engine->deltaSec = t1 - t2;
+		//printf("deltaSec %.10f\n", engine->deltaSec);
+		
+		nbFrames++;
+
+		
+		// if ( engine->deltaSec >= 1.0 ) // If last cout was more than 1 sec ago
+		// {
+			// char title [256];
+			// title [255] = '\0';
+
+			// snprintf ( title, 255,
+					 // "%s v.%s - [FPS: %3.2f]",
+					   // "War & Adventure", "0.00", (float)nbFrames / engine->deltaSec);
+
+			// glfwSetWindowTitle (window, title);
+
+			// nbFrames = 0;
+			// // t2 += 1.0;
+			// // t2 = t1;
+		// }
+		
+		
+		//if (deltaSecFixed >= engine->deltaSec)
+		//{
 		glfwPollEvents();
 		
 		Loop_processInputs(engine);
 		
-		t2 = t1;
-		t1 = glfwGetTime();
-		engine->deltaSec = t1 - t2;
-		//printf("deltaSec %.10f\n", deltaSec);
-
-		//TODO
 		engine->userUpdateFunc(engine->userUpdateArg);
 		
 		glfwSwapBuffers(window);
+		
+		t2 = t1;
 	}
+	*/
 	#elif MOBILE
+	/*
 	#ifdef __ANDROID__
 	while (1)
 	{
@@ -750,18 +916,9 @@ void Loop_run(Engine * engine)
 			Android_frame(engine);
 	}
 	#endif//__ANDROID__
+	*/
 	#endif//DESKTOP/MOBILE
 }
-
-#ifdef DESKTOP
-//TODO see "I/O callbacks" in stbi_image.h for loading images out of a data file
-void GLFW_errorCallback(int error, const char * description)
-{
-    //fputs(description, stderr);
-	LOGI ("GLFW ERROR: code %i msg: %s\n", error, description);
-}
-#endif//DESKTOP
-
 
 //Updates uniforms for the current program.
 void UniformGroup_update(khash_t(StrPtr) * uniformsByName, Program * programPtr)
@@ -1418,12 +1575,13 @@ Shader * Shader_load(const char * path, const char * name, GLenum type)//, const
 	char pathname[lengthPath+lengthName+1]; //1 = '\0'
 	strcpy(pathname, path);
 	strcat(pathname, name);
-	LOGI("pathname %s\n", pathname);
+	#ifdef   ORB_DEBUG_SHADER_PROGRAMS
+	LOGI("pathname %s name %s\n", pathname, shader->name);
+	#endif //ORB_DEBUG_SHADER_PROGRAMS
 	shader->source = Text_load(pathname);
 	shader->type = type;
 	shader->id = glCreateShader(shader->type);
 	Shader_initialiseFromSource(shader);
-	LOGI("name %s\n", shader->name);
 	return shader;
 }
 
@@ -1445,19 +1603,22 @@ void Shader_initialiseFromSource(Shader * this)//, const char* shader_str, GLenu
 		
 		GLint infoLogLength;
 		glGetShaderiv(id, GL_INFO_LOG_LENGTH, &infoLogLength);
+		#ifdef   ORB_DEBUG_SHADER_PROGRAMS
 		LOGI("glCompileShader() failed:\n");
+		#endif //ORB_DEBUG_SHADER_PROGRAMS
 		if(infoLogLength > 1)
 		{
 			//GLchar infoLog[sizeof(char) * infoLogLength + 1];
 			char* infoLog = malloc(sizeof(char) * infoLogLength);
 			glGetShaderInfoLog(id, infoLogLength, NULL, infoLog);
+			#ifdef   ORB_DEBUG_SHADER_PROGRAMS
 			LOGI("error: %s\n", infoLog);
 			LOGI("source: \n%s\n", this->source);
-	
+			#endif //ORB_DEBUG_SHADER_PROGRAMS
 			//TODO encapsulate the below in a exitOnFatalError() that can be used anywhere.
 			//TODO set up error codes for untimely exit.
 			#ifdef DESKTOP
-			glfwTerminate();
+			//glfwTerminate();
 			#endif//DESKTOP
 			exit(EXIT_FAILURE);
 			
@@ -1467,23 +1628,31 @@ void Shader_initialiseFromSource(Shader * this)//, const char* shader_str, GLenu
 		}
 		else
 		{
+			#ifdef   ORB_DEBUG_SHADER_PROGRAMS
 			LOGI("<no GL info log available>\n");
+			#endif //ORB_DEBUG_SHADER_PROGRAMS
 		}
 	}
 	else
 	{
+		#ifdef   ORB_DEBUG_SHADER_PROGRAMS
 		LOGI("glCompileShader() success.\n");
+		#endif //ORB_DEBUG_SHADER_PROGRAMS
 		GLint infoLogLength;
 		glGetShaderiv(id, GL_INFO_LOG_LENGTH, &infoLogLength);
 		if(infoLogLength > 1)
 		{
 			GLchar infoLog[sizeof(char) * infoLogLength + 1];
 			glGetShaderInfoLog(id, infoLogLength + 1, NULL, infoLog);
+			#ifdef   ORB_DEBUG_SHADER_PROGRAMS
 			LOGI("%s\n", infoLog);//, this->source);
+			#endif //ORB_DEBUG_SHADER_PROGRAMS
 		}
 		else
 		{
+			#ifdef   ORB_DEBUG_SHADER_PROGRAMS
 			LOGI("<no GL info log available>\n");
+			#endif //ORB_DEBUG_SHADER_PROGRAMS
 		}
 	}
 }
@@ -1582,21 +1751,27 @@ void Program_initialiseFromShaders(Program * this, GLuint vertex_shader, GLuint 
 	
 	if (!linked)
 	{
+		#ifdef   ORB_DEBUG_SHADER_PROGRAMS
 		LOGI("glLinkProgram() failed:\n");
+		#endif //ORB_DEBUG_SHADER_PROGRAMS
 		
 		GLint infoLogLength;
 		glGetProgramiv(id, GL_INFO_LOG_LENGTH, &infoLogLength);
 		
 		if (infoLogLength > 1)
 		{
+			#ifdef   ORB_DEBUG_SHADER_PROGRAMS
 			LOGI("infoLogLength=%i\n", infoLogLength);
+			#endif //ORB_DEBUG_SHADER_PROGRAMS
 			//GLchar infoLog[sizeof(char) * infoLogLength + 1];
 			char* infoLog = malloc(sizeof(char) * infoLogLength);
 			glGetProgramInfoLog(id, infoLogLength, NULL, infoLog);
+			#ifdef   ORB_DEBUG_SHADER_PROGRAMS
 			LOGI("%s\n", infoLog);
+			#endif //ORB_DEBUG_SHADER_PROGRAMS
 			
 			#ifdef DESKTOP
-			glfwTerminate();
+			//glfwTerminate();
 			#endif//DESKTOP
 			exit(EXIT_FAILURE);
 			
@@ -1616,11 +1791,17 @@ void Program_initialiseFromShaders(Program * this, GLuint vertex_shader, GLuint 
 		}
 		else
 		{
+			#ifdef   ORB_DEBUG_SHADER_PROGRAMS
 			LOGI("<no GL info log available>\n");
+			#endif //ORB_DEBUG_SHADER_PROGRAMS
 		}
 	}
 	else
+	{
+		#ifdef   ORB_DEBUG_SHADER_PROGRAMS
 		LOGI("glLinkProgram() success.\n");
+		#endif //ORB_DEBUG_SHADER_PROGRAMS
+	}
 }
 
 //--------------Render-------------------//
@@ -1765,8 +1946,19 @@ void glUniform4fv_wrapper(int a, int b, const int * c)
 
 void Engine_initialise(Engine * this, int width, int height, const char * windowTitle)
 {
-	LOGI("Engine initialising...\n");
+	LOGI("[ORB] Engine initialise...\n");
+	bool success = Engine_initialiseWindowAndContext(this, this->width, this->height, windowTitle);
+	//LOGI("[ORB] %s\n",  success ? "...Engine initialise" : "Engine failed to initialise.");
+	if (success)
+	{
+	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 	
+	/*
+	int maj, min, rev;
+	glfwGetVersion(&maj, &min, &rev);
+	LOGI("GLFW version %i.%i.%i\n", maj, min, rev);
+	engine = this; //DEV, for glfwSetCursorPosCallback
 	#ifdef DESKTOP
 	//WINDOW, CONTEXT & INPUT
 	//glfwSetErrorCallback(GLFW_errorCallback);
@@ -1780,11 +1972,12 @@ void Engine_initialise(Engine * this, int width, int height, const char * window
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
 	//glfwWindowHint(GLFW_SAMPLES, 4); //HW AA
-	//glfwWindowHint(GLFW_REFRESH_RATE, 10);
+	glfwWindowHint(GLFW_REFRESH_RATE, 60);
 	
 	this->width = width;
 	this->height = height;
-	window = glfwCreateWindow(this->width, this->height, windowTitle, NULL, NULL);
+	window = glfwCreateWindow(this->width, this->height, windowTitle, //glfwGetPrimaryMonitor()
+		NULL, NULL);
 
 	if (!window)
 	{
@@ -1818,6 +2011,8 @@ void Engine_initialise(Engine * this, int width, int height, const char * window
 		printf("GLEW initialised.\n");
 	}
 	printf("OPENGL ERROR %i\n", glGetError());
+	*/
+	
 	
 	//some debug info on texture capabilities
 	GLint maxSize, maxUnits, maxAttachments;
@@ -1833,7 +2028,9 @@ void Engine_initialise(Engine * this, int width, int height, const char * window
 	if (this->debugDesktopNoVAO)
 		this->capabilities.vao = false;
 	
+	/*
 	#elif MOBILE
+	
 	#if __ANDROID__
 
 	ANativeActivity* activity = this->app->activity;
@@ -1867,17 +2064,20 @@ void Engine_initialise(Engine * this, int width, int height, const char * window
 
 	bool r = eglInitialize(this->display, 0, 0);
 	//LOGI("r=%d", r);
+	*/
 	/* Here, the application chooses the configuration it desires. In this
 	 * sample, we have a very simplified selection process, where we pick
 	 * the first EGLConfig that matches our criteria */
+	/*
 	eglChooseConfig(this->display, configAttribs, &this->config, 1, &numConfigs);
 
 	//LOGI("numConfigs=%d",numConfigs);
-	
+	*/
 	/* EGL_NATIVE_VISUAL_ID is an attribute of the EGLConfig that is
 	 * guaranteed to be accepted by ANativeWindow_setBuffersGeometry().
 	 * As soon as we picked a EGLConfig, we can safely reconfigure the
 	 * ANativeWindow buffers to match, using EGL_NATIVE_VISUAL_ID. */
+	/*
 	bool re = eglGetConfigAttrib(this->display, this->config, EGL_NATIVE_VISUAL_ID, &format);
 	//LOGI("re=%d", re);
 	ANativeWindow_setBuffersGeometry(this->app->window, 0, 0, format);
@@ -1966,6 +2166,7 @@ void Engine_initialise(Engine * this, int width, int height, const char * window
 	
 	#endif//__ANDROID__
 	#endif//DESKTOP/MOBILE
+	*/
 	
 	//MISCELLANEOUS
 	
@@ -2022,11 +2223,14 @@ void Engine_initialise(Engine * this, int width, int height, const char * window
 	glUniformMatrixFunctions[3-1][4-1][0] = glUniformMatrix3x4fv;
 	glUniformMatrixFunctions[4-1][3-1][0] = glUniformMatrix4x3fv;
 	#endif//DESKTOP
-	LOGI("Engine initialised.\n");
+	LOGI("[ORB] ...Engine initialise\n");
+	}
+	else
+		exit(EXIT_FAILURE);
 }
 
 void Engine_dispose(Engine * engine)
-{
+{	
 	//TODO free engine collections.
 	kh_cstr_t name;
 	
@@ -2056,9 +2260,20 @@ void Engine_dispose(Engine * engine)
 	
 	//Atlas_dispose(atlas); //TODO actually, all atlases should be tracked and removed in Orb
 	
+	/*
 	#ifdef DESKTOP
 	Window_terminate(engine);
 	#endif//DESKTOP
+	*/
+	//Deallocate program
+	//glDeleteProgram( gProgramID );
+
+	//Destroy window	
+	SDL_DestroyWindow( engine->window );
+	engine->window = NULL;
+
+	//Quit SDL subsystems
+	SDL_Quit();
 }
 
 int _glSizeof(const int key)
@@ -2167,7 +2382,10 @@ char* Text_load(char* filename)
 		fseek(file, 0, SEEK_END); //seek to end
 		long fileSize = ftell(file); //get current position in stream
 		fseek(file, 0, SEEK_SET); //seek to start
-		LOGI("%s\n", filename);
+		
+		#ifdef   DEBUG_TEXT_LOADING
+		LOGI("[ORB](loadTextFile) filename=%s\n", filename);
+		#endif //DEBUG_TEXT_LOADING
 		
 		if (fileSize > -1)
 		{
@@ -2175,15 +2393,17 @@ char* Text_load(char* filename)
 
 			if (str != NULL) //if allocation succeeded
 			{
-				
-				LOGI("fileSize...%ld\n", fileSize);
+				#ifdef   DEBUG_TEXT_LOADING
+				LOGI("[ORB](loadTextFile) fileSize...%ld\n", fileSize);
+				#endif //DEBUG_TEXT_LOADING
+
 				size_t freadResult;
 				freadResult = fread(str, 1, fileSize, file); //read elements as one byte each, into string, from file. 
 				//LOGI("freadResult...%d\n", freadResult);
 				
 				if (freadResult != (uint64_t) fileSize)
 				{
-					fputs ("Reading error", stderr);
+					fputs ("Reading error", stderr);//TODO fix to use LOGE()
 					//exit (3);
 					
 					str = NULL;
@@ -2195,12 +2415,17 @@ char* Text_load(char* filename)
 				str[fileSize] = 0; //'\0';
 			}
 		}
+		#ifdef   DEBUG_TEXT_LOADING
 		else
-			LOGI("File size invalid: %ld, errno=%i\n", fileSize, errno);
+			LOGI("[ORB](loadTextFile) fileSize invalid: %ld, errno=%i\n", fileSize, errno);
+		#endif //DEBUG_TEXT_LOADING
+
 		fclose(file);
 	}
+	#ifdef   DEBUG_TEXT_LOADING
 	else
 		LOGI("File not found: %s\n", filename);
+	#endif //DEBUG_TEXT_LOADING
 	
 	return str;
 }
@@ -2210,6 +2435,8 @@ float Engine_smoothstep(float t)
 	return 3 * t * t - 2 * t * t * t;
 }
 
+
+///////////// INPUT MAPPING //////////////
 
 ///////////// DEVICE TYPES //////////////
 
@@ -2230,11 +2457,21 @@ void Keyboard_initialise(Device * device)
 	}
 }
 
+void Key_update(int i, Device * keyboard, uint8_t * state)
+{
+	DeviceChannel * channel = &keyboard->channels.a[i]; //orb index as from enum Key
+	DeviceChannel_setPreviousState(channel);
+	channel->state[CURRENT] = 
+		(float)state[keyOrbToSDL[i]];
+	DeviceChannel_setCurrentDelta(channel);
+}
+
 void Keyboard_update(Device * device)
 {
+	uint8_t * state = SDL_GetKeyboardState(NULL);
 	for (int i = 0; i < ORB_KEYS_COUNT; ++i)
 	{
-		GLFW_updateKey(i, device); //TODO should be some generic function pointer that has been preset to the GLFW function
+		Key_update(i, device, state);
 	}
 }
 
@@ -2246,8 +2483,6 @@ Device * Keyboard_construct()
 	device->dispose = Device_dispose;
 	return device;
 }
-
-//MOUSE
 
 void Mouse_initialise(Device * device)
 {
@@ -2266,29 +2501,43 @@ void Mouse_initialise(Device * device)
 
 void Mouse_update(Device * device)
 {
-	//LOGI("ORB_MOUSE_BUTTONS_COUNT=%d\n", ORB_MOUSE_BUTTONS_COUNT);
+	int state[2] = {0, 0};
+	int delta[2] = {0, 0};
+	//TODO SDL_GetMouseState()
+	//if (channel->basis == DELTA)
+	//else //channel->basis == STATE
+	SDL_GetRelativeMouseState(&delta[XX], &delta[YY]); //do not move into loop - it clears state on read!
+	
 	for (int i = 0; i < ORB_MOUSE_BUTTONS_COUNT; ++i) //x & y
 	{
 		DeviceChannel * channel = &device->channels.a[i];
 		
 		if (i < 2) //first 2 are motion axes
 		{
-			//TODO if USE_GLFW
-			//relative to mouse start point: For FPS
-			double p[2];
-			glfwGetCursorPos(window, &p[XX], &p[YY]);
 			DeviceChannel_setPreviousState(channel);
-			channel->state[CURRENT] = p[i];
+			channel->delta[CURRENT] = delta[i];
+			DeviceChannel_setCurrentState(channel);
+		
+			/*	
+			DeviceChannel_setPreviousState(channel);
+			channel->state[CURRENT] = state[i];
 			DeviceChannel_setCurrentDelta(channel);
+			*/			
 		}
-		else
+		else //rest are buttons
 		{
-			DeviceChannel_setPreviousState(channel);
-			//LOGI("buttonOrbToGlfw[i]=%d\n", buttonOrbToGlfw[i]);
-			channel->state[CURRENT] = (float)glfwGetMouseButton(window, buttonOrbToGlfw[i]) == GLFW_PRESS;
-			DeviceChannel_setCurrentDelta(channel);
+			// DeviceChannel_setPreviousState(channel);
+			uint32_t buttonFlags;
+			
+			//if (channel->basis == STATE)
+			//SDL_GetRelativeMouseState
+			// channel->state[CURRENT] = (float)glfwGetMouseButton(window, buttonOrbToSDL[i]) == GLFW_PRESS;
+			// DeviceChannel_setCurrentDelta(channel);
 		}
 	}
+	
+	LOGI("mx=d%f, s%f p%f\n", device->channels.a[XX].delta[CURRENT], device->channels.a[XX].state[CURRENT], device->channels.a[XX].state[PREVIOUS]);
+	LOGI("my=d%f, s%f p%f\n", device->channels.a[YY].delta[CURRENT], device->channels.a[YY].state[CURRENT], device->channels.a[YY].state[PREVIOUS]);
 }
 
 Device * Mouse_construct()

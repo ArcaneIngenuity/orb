@@ -31,6 +31,8 @@ static const int IntFloat = 35;
 
 typedef uint16_t Index;
 
+
+
 //KHASH_DECLARE
 KHASH_DECLARE(StrInt, kh_cstr_t, int)
 KHASH_DECLARE(IntInt, khint32_t, int)
@@ -133,7 +135,14 @@ KHASH_DECLARE(Str_AttributeLocation, kh_cstr_t, struct AttributeLocation)
 	
 	#define GLEW_STATIC
 	#include "glew/glew.h"
-	#include "glfw/glfw3.h"
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_opengl.h>
+#define GL_ES SDL_GL_CONTEXT_PROFILE_ES
+#define GL_VER_MAJOR 2
+#define GL_VER_MINOR 0
+//#include <gl\glu.h>
+//#include <stdio.h>
+//#include <string>
 
 	//#include "stb_image_aug.h"
 	#define STB_IMAGE_STATIC 1
@@ -234,18 +243,6 @@ KHASH_DECLARE(Str_AttributeLocation, kh_cstr_t, struct AttributeLocation)
 #endif
 
 #define STRLEN_MAX 64
-
-typedef struct Window
-{
-	#ifdef DESKTOP
-	GLFWwindow * window;
-	#else //DEV, ANDROID
-		#ifdef __ANDROID__
-	ANativeWindow * window;
-		#endif //__ANDROID__
-	#endif //DESKTOP
-} Window;
-//TODO set up other functions to wrap the different window types' provision of information e.g. resolution
 
 typedef struct BMFontInfo
 {
@@ -640,6 +637,7 @@ typedef struct Color
 	float a;
 } Color;
 
+//must be same order as in corresponding source
 #define FOREACH_MOUSE_BUTTON(HANDLER) \
 	HANDLER(ORB_MOUSE_X) \
 	HANDLER(ORB_MOUSE_Y) \
@@ -653,6 +651,7 @@ typedef struct Color
 	HANDLER(ORB_MOUSE_BUTTON_8) \
 	HANDLER(ORB_MOUSE_BUTTONS_COUNT)
 
+//must be same order as in corresponding source
 #define FOREACH_KEY(HANDLER) \
 	HANDLER(ORB_KEY_UNKNOWN) \
 	HANDLER(ORB_KEY_0) \
@@ -725,7 +724,6 @@ typedef struct Color
 	HANDLER(ORB_KEY_F22) \
 	HANDLER(ORB_KEY_F23) \
 	HANDLER(ORB_KEY_F24) \
-	HANDLER(ORB_KEY_F25) \
 	HANDLER(ORB_KEY_RIGHT) \
 	HANDLER(ORB_KEY_LEFT) \
 	HANDLER(ORB_KEY_DOWN) \
@@ -733,25 +731,23 @@ typedef struct Color
 	HANDLER(ORB_KEY_LEFT_SHIFT) \
 	HANDLER(ORB_KEY_LEFT_CONTROL) \
 	HANDLER(ORB_KEY_LEFT_ALT) \
-	HANDLER(ORB_KEY_LEFT_SUPER) \
+	HANDLER(ORB_KEY_LEFT_SPECIAL) \
 	HANDLER(ORB_KEY_RIGHT_SHIFT) \
 	HANDLER(ORB_KEY_RIGHT_CONTROL) \
 	HANDLER(ORB_KEY_RIGHT_ALT) \
-	HANDLER(ORB_KEY_RIGHT_SUPER) \
+	HANDLER(ORB_KEY_RIGHT_SPECIAL) \
 	HANDLER(ORB_KEY_SPACE) \
-	HANDLER(ORB_KEY_APOSTROPHE) \
+	HANDLER(ORB_KEY_QUOTE) \
 	HANDLER(ORB_KEY_COMMA) \
 	HANDLER(ORB_KEY_MINUS) \
 	HANDLER(ORB_KEY_PERIOD) \
 	HANDLER(ORB_KEY_SLASH) \
 	HANDLER(ORB_KEY_SEMICOLON) \
-	HANDLER(ORB_KEY_EQUAL) \
+	HANDLER(ORB_KEY_EQUALS) \
 	HANDLER(ORB_KEY_BACKSLASH) \
 	HANDLER(ORB_KEY_LEFT_BRACKET) \
 	HANDLER(ORB_KEY_RIGHT_BRACKET) \
-	HANDLER(ORB_KEY_GRAVE_ACCENT) \
-	HANDLER(ORB_KEY_WORLD_1) \
-	HANDLER(ORB_KEY_WORLD_2) \
+	HANDLER(ORB_KEY_BACKQUOTE) \
 	HANDLER(ORB_KEY_ESCAPE) \
 	HANDLER(ORB_KEY_ENTER) \
 	HANDLER(ORB_KEY_TAB) \
@@ -782,7 +778,7 @@ typedef struct Color
 #define GENERATE_STRING(value) #value,
 #define GENERATE_KH(value) k = kh_put(StrInt,device->nameToIndex,#value,&ret); kh_value(device->nameToIndex,k) = c; c++;
 
-//unlike e.g. GLFW, these are ordered zero-based, compact so they may be used as indices into an packed array
+//these are ordered zero-based, compact so they may be used as indices into an packed array
 typedef enum Key
 {
     FOREACH_KEY(GENERATE_ENUM)
@@ -973,6 +969,8 @@ typedef struct Engine
 	void * userSuspendArg;
 	
 	float deltaSec;
+	
+	SDL_Window* window;
 } Engine;
 
 typedef void (*IndexedRenderableFunction)(struct Renderable * renderable, uint16_t i, void * model);
@@ -1090,8 +1088,7 @@ void Loop_initialise(Engine * engine,
 	const char *  windowTitle); //ignored for Android
 void Loop_run(Engine * engine);
 
-void GLFW_errorCallback(int error, const char * description);
-bool GLTool_isExtensionSupported(const char * extension); //redundant, see GLFW
+bool GLTool_isExtensionSupported(const char * extension); //redundant? check SDL / glew?
 
 ///////////// DEVICE TYPES //////////////
 
@@ -1126,13 +1123,5 @@ void 	Android_onAppCmd(struct android_app* app, int32_t cmd);
 int32_t Android_onInputEvent(struct android_app* app, AInputEvent* event);
 #endif//__ANDROID__
 */
-
-//globals
-//Engine engine; //allows every other file to ref as extern, and no requirement to include main from renderer etc.
-#ifdef DESKTOP
-GLFWwindow * window; //TODO include as void * window in Engine
-#endif//DESKTOP
-#ifdef __ANDROID__
-#endif//__ANDROID__
 
 #endif //COM_ARCANEINGENUITY_ORB_H
